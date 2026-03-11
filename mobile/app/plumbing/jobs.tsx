@@ -1,0 +1,165 @@
+import React, { useCallback, useState } from "react";
+import {
+View,
+Text,
+StyleSheet,
+ScrollView,
+Pressable,
+Alert,
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect, useRouter } from "expo-router";
+
+type SavedJob = {
+id: string;
+jobType: string;
+jobName: string;
+jobAddr: string;
+confidence: number;
+relevant: boolean;
+detected: string[];
+unclear: string[];
+missing: string[];
+action: string;
+createdAt: string;
+};
+
+export default function JobsScreen() {
+const router = useRouter();
+const [jobs, setJobs] = useState<SavedJob[]>([]);
+
+const loadJobs = async () => {
+try {
+const existing = await AsyncStorage.getItem("elemetric_jobs");
+const parsed = existing ? JSON.parse(existing) : [];
+setJobs(parsed);
+} catch {
+setJobs([]);
+}
+};
+
+useFocusEffect(
+useCallback(() => {
+loadJobs();
+}, [])
+);
+
+const clearJobs = async () => {
+Alert.alert("Clear Jobs", "Delete all saved jobs?", [
+{ text: "Cancel", style: "cancel" },
+{
+text: "Delete",
+style: "destructive",
+onPress: async () => {
+await AsyncStorage.removeItem("elemetric_jobs");
+setJobs([]);
+},
+},
+]);
+};
+
+const openJob = (job: SavedJob) => {
+router.push({
+pathname: "/plumbing/job-detail",
+params: {
+job: JSON.stringify(job),
+},
+});
+};
+
+return (
+<View style={styles.screen}>
+<View style={styles.header}>
+<Text style={styles.brand}>ELEMETRIC</Text>
+<Text style={styles.title}>Saved Jobs</Text>
+<Text style={styles.subtitle}>Your previous AI scans</Text>
+</View>
+
+<ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+{jobs.length === 0 ? (
+<View style={styles.emptyCard}>
+<Text style={styles.emptyText}>No saved jobs yet.</Text>
+</View>
+) : (
+jobs.map((job) => (
+<Pressable
+key={job.id}
+style={styles.card}
+onPress={() => openJob(job)}
+>
+<Text style={styles.jobTitle}>{job.jobName}</Text>
+<Text style={styles.jobMeta}>Type: {job.jobType}</Text>
+<Text style={styles.jobMeta}>Address: {job.jobAddr}</Text>
+<Text style={styles.jobMeta}>Confidence: {job.confidence}%</Text>
+<Text style={styles.jobMeta}>
+Date: {new Date(job.createdAt).toLocaleString()}
+</Text>
+
+<View style={styles.openRow}>
+<Text style={styles.openText}>Open full review →</Text>
+</View>
+</Pressable>
+))
+)}
+
+<Pressable style={styles.clearBtn} onPress={clearJobs}>
+<Text style={styles.clearText}>Clear All Jobs</Text>
+</Pressable>
+
+<Pressable onPress={() => router.back()} style={styles.back}>
+<Text style={styles.backText}>← Back</Text>
+</Pressable>
+</ScrollView>
+</View>
+);
+}
+
+const styles = StyleSheet.create({
+screen: { flex: 1, backgroundColor: "#07152b" },
+header: { paddingTop: 18, paddingHorizontal: 18, paddingBottom: 10 },
+brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
+title: { marginTop: 6, color: "white", fontSize: 22, fontWeight: "900" },
+subtitle: { marginTop: 4, color: "rgba(255,255,255,0.75)" },
+body: { padding: 18, gap: 12 },
+
+emptyCard: {
+borderRadius: 16,
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.10)",
+backgroundColor: "rgba(255,255,255,0.04)",
+padding: 16,
+},
+emptyText: { color: "rgba(255,255,255,0.7)" },
+
+card: {
+borderRadius: 16,
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.10)",
+backgroundColor: "rgba(255,255,255,0.04)",
+padding: 16,
+gap: 6,
+},
+jobTitle: { color: "white", fontWeight: "900", fontSize: 18 },
+jobMeta: { color: "rgba(255,255,255,0.75)" },
+
+openRow: {
+marginTop: 8,
+},
+openText: {
+color: "#f97316",
+fontWeight: "900",
+},
+
+clearBtn: {
+borderRadius: 14,
+paddingVertical: 14,
+alignItems: "center",
+backgroundColor: "rgba(255,255,255,0.08)",
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.12)",
+},
+clearText: { color: "white", fontWeight: "900" },
+
+back: { marginTop: 6, alignItems: "center" },
+backText: { color: "rgba(255,255,255,0.75)", fontWeight: "700" },
+});
