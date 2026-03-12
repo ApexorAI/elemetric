@@ -234,7 +234,7 @@ setLoading(true);
 
 try {
 const reviewPhotos: ReviewPhoto[] = [];
-const images: { mime: string; data: string }[] = [];
+const images: { mime: string; data: string; label: string }[] = [];
 
 for (const item of HOTWATER_ITEMS) {
 const itemUris = photoMap[item.id] || [];
@@ -252,6 +252,7 @@ mime: converted.mime,
 images.push({
 mime: converted.mime,
 data: converted.base64,
+label: item.title,
 });
 }
 }
