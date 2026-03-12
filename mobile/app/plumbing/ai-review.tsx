@@ -235,7 +235,13 @@ ${checklistItems
 <tr>
 <td style="border:1px solid #d1d5db; padding:8px;">${item.label}</td>
 <td style="border:1px solid #d1d5db; padding:8px;">${
-checklistChecked[item.id] ? "Complete" : "Not completed"
+detected.includes(item.label)
+? "Complete"
+: missing.includes(item.label)
+? "Incomplete \u2014 Retake Required"
+: unclear.includes(item.label)
+? "Unclear \u2014 Review Needed"
+: "Not assessed"
 }</td>
 </tr>
 `
