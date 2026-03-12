@@ -17,7 +17,7 @@ export default function PlumbingHome() {
         <Text style={styles.cardTitle}>New Plumbing Job</Text>
         <Text style={styles.cardSub}>Choose a job type, complete checklist, add photos, run AI overview.</Text>
 
-        <Pressable style={styles.cta} onPress={() => router.push("/plumbing/job-types")}>
+        <Pressable style={styles.cta} onPress={() => router.push("/plumbing/new-job")}>
           <Text style={styles.ctaText}>Choose Job Type →</Text>
         </Pressable>
       </View>

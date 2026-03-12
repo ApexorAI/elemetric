@@ -31,31 +31,31 @@ photoMap: Record<string, string[]>;
 const HOTWATER_ITEMS: ChecklistItem[] = [
 {
 id: "before",
-title: "Photo: Existing system (before)",
+title: "Existing system (before)",
 subtitle: "Photo required",
 kind: "photo",
 },
 {
 id: "ptr",
-title: "Photo: PTR valve installed",
+title: "PTR valve installed",
 subtitle: "Photo required",
 kind: "photo",
 },
 {
 id: "tempering",
-title: "Photo: Tempering valve",
+title: "Tempering valve",
 subtitle: "Photo required",
 kind: "photo",
 },
 {
 id: "plate",
-title: "Photo: Compliance plate / label",
+title: "Compliance plate / label",
 subtitle: "Photo required",
 kind: "photo",
 },
 {
 id: "isolation",
-title: "Photo: Isolation valve",
+title: "Isolation valve",
 subtitle: "Photo required",
 kind: "photo",
 },

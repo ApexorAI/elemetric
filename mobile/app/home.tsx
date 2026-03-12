@@ -29,13 +29,6 @@ onPress={() => router.push("/plumbing/jobs")}
 </Pressable>
 
 <Pressable
-style={styles.button}
-onPress={() => router.push("/trade")}
->
-<Text style={styles.buttonText}>Plumbing</Text>
-</Pressable>
-
-<Pressable
 style={styles.disabled}
 >
 <Text style={styles.disabledText}>

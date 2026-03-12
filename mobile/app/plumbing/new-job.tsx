@@ -26,7 +26,6 @@ const currentJob = {
 type,
 jobName: jobName.trim() || "Untitled Job",
 jobAddr: jobAddr.trim() || "No address",
-debugSavedAt: new Date().toISOString(),
 };
 
 await AsyncStorage.setItem(
@@ -34,18 +33,7 @@ await AsyncStorage.setItem(
 JSON.stringify(currentJob)
 );
 
-const check = await AsyncStorage.getItem("elemetric_current_job");
-
-Alert.alert(
-"DEBUG SAVE",
-check || "NOTHING SAVED",
-[
-{
-text: "Go Next",
-onPress: () => router.push("/plumbing/checklist"),
-},
-]
-);
+router.push("/plumbing/checklist");
 } catch (e: any) {
 Alert.alert("Save Error", e?.message ?? "Could not save job");
 }
@@ -56,7 +44,6 @@ return (
 <View style={styles.header}>
 <Text style={styles.brand}>ELEMETRIC</Text>
 <Text style={styles.title}>New Job</Text>
-<Text style={styles.debug}>NEW JOB DEBUG SCREEN</Text>
 <Text style={styles.subtitle}>Hot Water System Install</Text>
 </View>
 
@@ -66,7 +53,7 @@ return (
 style={styles.input}
 value={jobName}
 onChangeText={setJobName}
-placeholder="Test House"
+placeholder=""
 placeholderTextColor="#777"
 />
 
@@ -75,7 +62,7 @@ placeholderTextColor="#777"
 style={styles.input}
 value={jobAddr}
 onChangeText={setJobAddr}
-placeholder="123 Test Street"
+placeholder=""
 placeholderTextColor="#777"
 />
 
@@ -96,7 +83,6 @@ screen: { flex: 1, backgroundColor: "#07152b" },
 header: { paddingTop: 18, paddingHorizontal: 18 },
 brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
 title: { marginTop: 6, color: "white", fontSize: 22, fontWeight: "900" },
-debug: { marginTop: 6, color: "red", fontSize: 18, fontWeight: "900" },
 subtitle: { marginTop: 4, color: "rgba(255,255,255,0.7)" },
 body: { padding: 18 },
 label: { color: "rgba(255,255,255,0.7)", marginTop: 16, fontWeight: "700" },
