@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View, Text, StyleSheet, TextInput, Pressable, Alert, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Login() {
 const router = useRouter();
@@ -90,6 +91,18 @@ disabled={loading}
 <Text style={styles.signUpText}>Create Account</Text>
 </Pressable>
 
+{__DEV__ && (
+<Pressable
+style={styles.resetBtn}
+onPress={async () => {
+await AsyncStorage.removeItem("elemetric_onboarding_seen");
+router.replace("/onboarding");
+}}
+>
+<Text style={styles.resetText}>Reset Onboarding</Text>
+</Pressable>
+)}
+
 </View>
 );
 }
@@ -152,6 +165,16 @@ signUpText:{
 fontSize:16,
 fontWeight:"800",
 color:"white",
+},
+
+resetBtn:{
+marginTop:40,
+alignItems:"center",
+},
+
+resetText:{
+fontSize:13,
+color:"#444e60",
 },
 
 });
