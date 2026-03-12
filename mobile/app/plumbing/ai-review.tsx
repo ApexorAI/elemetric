@@ -14,6 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
+import { supabase } from "@/lib/supabase";
 
 type AIResult = {
 relevant?: boolean;
@@ -156,9 +157,6 @@ const saveJob = async () => {
 try {
 setSaving(true);
 
-const existing = await AsyncStorage.getItem("elemetric_jobs");
-const jobs = existing ? JSON.parse(existing) : [];
-
 const newJob = {
 id: Date.now().toString(),
 jobType: currentJob.type,
@@ -174,9 +172,35 @@ action,
 createdAt: new Date().toISOString(),
 };
 
+// Save to AsyncStorage as offline fallback
+const existing = await AsyncStorage.getItem("elemetric_jobs");
+const jobs = existing ? JSON.parse(existing) : [];
 jobs.unshift(newJob);
-
 await AsyncStorage.setItem("elemetric_jobs", JSON.stringify(jobs));
+
+// Save to Supabase (best-effort — local save already succeeded)
+try {
+const { data: { user } } = await supabase.auth.getUser();
+if (user) {
+await supabase.from("jobs").insert({
+user_id: user.id,
+job_type: newJob.jobType,
+job_name: newJob.jobName,
+job_addr: newJob.jobAddr,
+installer_name: newJob.installerName,
+confidence: newJob.confidence,
+relevant: newJob.relevant,
+detected: newJob.detected,
+unclear: newJob.unclear,
+missing: newJob.missing,
+action: newJob.action,
+created_at: newJob.createdAt,
+});
+}
+} catch {
+// Cloud save failed — local copy is safe, silently continue
+}
+
 Alert.alert("Saved", "Job saved successfully.");
 } catch (e: any) {
 Alert.alert("Save Error", e?.message ?? "Could not save job.");

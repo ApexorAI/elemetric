@@ -9,6 +9,7 @@ Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
+import { supabase } from "@/lib/supabase";
 
 type SavedJob = {
 id: string;
@@ -29,6 +30,40 @@ const router = useRouter();
 const [jobs, setJobs] = useState<SavedJob[]>([]);
 
 const loadJobs = async () => {
+try {
+// Try Supabase first
+const { data: { user } } = await supabase.auth.getUser();
+if (user) {
+const { data, error } = await supabase
+.from("jobs")
+.select("*")
+.eq("user_id", user.id)
+.order("created_at", { ascending: false });
+
+if (!error && data) {
+// Normalise Supabase column names to match the local SavedJob shape
+const remoteJobs: SavedJob[] = data.map((row: any) => ({
+id: row.id,
+jobType: row.job_type,
+jobName: row.job_name,
+jobAddr: row.job_addr,
+confidence: row.confidence,
+relevant: row.relevant,
+detected: row.detected ?? [],
+unclear: row.unclear ?? [],
+missing: row.missing ?? [],
+action: row.action ?? "",
+createdAt: row.created_at,
+}));
+setJobs(remoteJobs);
+return;
+}
+}
+} catch {
+// Fall through to local fallback
+}
+
+// Offline fallback — load from AsyncStorage
 try {
 const existing = await AsyncStorage.getItem("elemetric_jobs");
 const parsed = existing ? JSON.parse(existing) : [];

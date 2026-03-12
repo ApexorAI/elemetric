@@ -14,6 +14,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as ImageManipulator from "expo-image-manipulator";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "@/lib/supabase";
 
 const API_BASE = "https://elemetric-ai-production.up.railway.app";
 const CHECKLIST_KEY = "elemetric_current_checklist";
@@ -259,6 +260,24 @@ const payload = JSON.stringify(reviewPhotos);
 await FileSystem.writeAsStringAsync(REVIEW_PHOTOS_FILE, payload, {
 encoding: FileSystem.EncodingType.UTF8,
 });
+
+// Upload photos to Supabase Storage (best-effort — does not block AI)
+try {
+const { data: { user } } = await supabase.auth.getUser();
+if (user) {
+const jobId = Date.now().toString();
+for (const photo of reviewPhotos) {
+const safeLabel = photo.label.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9-]/g, "");
+const path = `${user.id}/${jobId}/${safeLabel}.jpg`;
+const byteArray = Uint8Array.from(atob(photo.base64), (c) => c.charCodeAt(0));
+await supabase.storage
+.from("job-photos")
+.upload(path, byteArray, { contentType: "image/jpeg", upsert: true });
+}
+}
+} catch {
+// Storage upload failed — continue to AI review regardless
+}
 
 const res = await fetch(`${API_BASE}/review`, {
 method: "POST",
