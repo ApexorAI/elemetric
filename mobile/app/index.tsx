@@ -1,51 +1,27 @@
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { useEffect } from "react";
+import { View, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export default function Welcome() {
+const ONBOARDING_KEY = "elemetric_onboarding_seen";
+
+export default function Entry() {
 const router = useRouter();
 
-return (
-<View style={styles.container}>
-<Text style={styles.logo}>ELEMETRIC</Text>
-<Text style={styles.title}>AI Compliance Documentation for Trades</Text>
+useEffect(() => {
+const redirect = async () => {
+const seen = await AsyncStorage.getItem(ONBOARDING_KEY);
+router.replace(seen ? "/login" : "/onboarding");
+};
+redirect();
+}, []);
 
-<Pressable style={styles.button} onPress={() => router.push("/login")}>
-<Text style={styles.buttonText}>Continue</Text>
-</Pressable>
-</View>
-);
+return <View style={styles.screen} />;
 }
 
 const styles = StyleSheet.create({
-container: {
+screen: {
 flex: 1,
 backgroundColor: "#07152b",
-justifyContent: "center",
-alignItems: "center",
-padding: 30,
-},
-logo: {
-fontSize: 42,
-fontWeight: "900",
-color: "#f97316",
-letterSpacing: 4,
-},
-title: {
-color: "white",
-fontSize: 20,
-textAlign: "center",
-marginTop: 20,
-marginBottom: 50,
-},
-button: {
-backgroundColor: "#f97316",
-paddingVertical: 16,
-paddingHorizontal: 40,
-borderRadius: 12,
-},
-buttonText: {
-fontSize: 18,
-fontWeight: "800",
-color: "#07152b",
 },
 });
