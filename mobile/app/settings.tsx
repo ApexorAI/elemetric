@@ -205,6 +205,15 @@ Employer
 )}
 </View>
 
+{/* Subscription */}
+<Text style={styles.sectionLabel}>SUBSCRIPTION</Text>
+<View style={styles.group}>
+<Pressable style={styles.row} onPress={() => router.push("/subscription")}>
+<Text style={styles.rowAction}>Manage Subscription</Text>
+<Text style={styles.rowChevron}>›</Text>
+</Pressable>
+</View>
+
 {/* Legal */}
 <Text style={styles.sectionLabel}>LEGAL</Text>
 <View style={styles.group}>

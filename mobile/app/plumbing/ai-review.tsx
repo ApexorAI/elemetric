@@ -8,6 +8,9 @@ ScrollView,
 ActivityIndicator,
 Alert,
 TextInput,
+Modal,
+Share,
+Linking,
 } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -84,6 +87,8 @@ licenceNumber: "",
 companyName: "",
 });
 const [toast, setToast] = useState<string | null>(null);
+const [showShareModal, setShowShareModal] = useState(false);
+const [generatedPdfUri, setGeneratedPdfUri] = useState<string | null>(null);
 
 useEffect(() => {
 if (!toast) return;
@@ -501,17 +506,8 @@ await supabase
 }
 } catch {}
 
-const canShare = await Sharing.isAvailableAsync();
-if (!canShare) {
-Alert.alert("PDF Created", `Report saved to: ${uri}`);
-return;
-}
-
-await Sharing.shareAsync(uri, {
-mimeType: "application/pdf",
-dialogTitle: "Share Compliance Report",
-UTI: "com.adobe.pdf",
-});
+setGeneratedPdfUri(uri);
+setShowShareModal(true);
 } catch (e: any) {
 Alert.alert("PDF Error", e?.message ?? "Could not generate report.");
 } finally {
@@ -666,6 +662,132 @@ disabled={generatingPdf}
 <Text style={styles.toastText}>{toast}</Text>
 </View>
 )}
+
+{/* ── Share options modal ── */}
+<Modal
+visible={showShareModal}
+transparent
+animationType="slide"
+onRequestClose={() => setShowShareModal(false)}
+>
+<Pressable style={shareStyles.overlay} onPress={() => setShowShareModal(false)}>
+<Pressable style={shareStyles.sheet} onPress={() => {}}>
+<View style={shareStyles.handle} />
+<Text style={shareStyles.sheetTitle}>Share Report</Text>
+<Text style={shareStyles.sheetSubtitle}>{currentJob.jobName} · {currentJob.jobAddr}</Text>
+
+{/* Share PDF */}
+<Pressable
+style={shareStyles.option}
+onPress={async () => {
+if (!generatedPdfUri) return;
+setShowShareModal(false);
+try {
+const canShare = await Sharing.isAvailableAsync();
+if (canShare) {
+await Sharing.shareAsync(generatedPdfUri, {
+mimeType: "application/pdf",
+dialogTitle: "Share Compliance Report",
+UTI: "com.adobe.pdf",
+});
+} else {
+Alert.alert("PDF Created", `Saved to: ${generatedPdfUri}`);
+}
+} catch (e: any) {
+Alert.alert("Error", e?.message ?? "Could not share PDF.");
+}
+}}
+>
+<View style={shareStyles.optionIcon}><Text style={shareStyles.optionEmoji}>📄</Text></View>
+<View style={shareStyles.optionText}>
+<Text style={shareStyles.optionTitle}>Share PDF</Text>
+<Text style={shareStyles.optionDesc}>Send via AirDrop, Messages, Files & more</Text>
+</View>
+<Text style={shareStyles.optionChevron}>›</Text>
+</Pressable>
+
+{/* Email to Client */}
+<Pressable
+style={shareStyles.option}
+onPress={() => {
+setShowShareModal(false);
+const subject = encodeURIComponent(`Compliance Report — ${currentJob.jobName}`);
+const body = encodeURIComponent(
+`Hi,\n\nPlease find attached the compliance report for the recent work completed at ${currentJob.jobAddr}.\n\nJob Details:\n• Job: ${currentJob.jobName}\n• Address: ${currentJob.jobAddr}\n• Type: ${currentJob.type}\n• AI Confidence: ${confidence}%\n${action ? `\nRecommended Action: ${action}\n` : ""}\nThis report was generated using Elemetric — AI-powered compliance reporting for Australian tradespeople.\n\nRegards,\n${installerName || "Your Tradesperson"}`
+);
+Linking.openURL(`mailto:?subject=${subject}&body=${body}`).catch(() =>
+Alert.alert("Cannot open email", "No email client found on this device.")
+);
+}}
+>
+<View style={shareStyles.optionIcon}><Text style={shareStyles.optionEmoji}>✉️</Text></View>
+<View style={shareStyles.optionText}>
+<Text style={shareStyles.optionTitle}>Email to Client</Text>
+<Text style={shareStyles.optionDesc}>Pre-filled professional email template</Text>
+</View>
+<Text style={shareStyles.optionChevron}>›</Text>
+</Pressable>
+
+{/* Save to Files */}
+<Pressable
+style={shareStyles.option}
+onPress={async () => {
+if (!generatedPdfUri) return;
+setShowShareModal(false);
+try {
+const canShare = await Sharing.isAvailableAsync();
+if (canShare) {
+await Sharing.shareAsync(generatedPdfUri, {
+mimeType: "application/pdf",
+UTI: "com.adobe.pdf",
+});
+}
+} catch {}
+}}
+>
+<View style={shareStyles.optionIcon}><Text style={shareStyles.optionEmoji}>🗂️</Text></View>
+<View style={shareStyles.optionText}>
+<Text style={shareStyles.optionTitle}>Save to Files</Text>
+<Text style={shareStyles.optionDesc}>Save PDF to your device storage</Text>
+</View>
+<Text style={shareStyles.optionChevron}>›</Text>
+</Pressable>
+
+{/* Share Summary Text */}
+<Pressable
+style={shareStyles.option}
+onPress={async () => {
+setShowShareModal(false);
+const summary = [
+`Elemetric Compliance Report`,
+`Job: ${currentJob.jobName}`,
+`Address: ${currentJob.jobAddr}`,
+`Type: ${currentJob.type}`,
+`AI Confidence: ${confidence}%`,
+action ? `Action: ${action}` : null,
+detected.length ? `Verified: ${detected.join(", ")}` : null,
+missing.length ? `Incomplete: ${missing.join(", ")}` : null,
+`Generated: ${new Date().toLocaleString("en-AU")}`,
+].filter(Boolean).join("\n");
+try {
+await Share.share({ message: summary, title: `Elemetric Report — ${currentJob.jobName}` });
+} catch {}
+}}
+>
+<View style={shareStyles.optionIcon}><Text style={shareStyles.optionEmoji}>📋</Text></View>
+<View style={shareStyles.optionText}>
+<Text style={shareStyles.optionTitle}>Share Summary Text</Text>
+<Text style={shareStyles.optionDesc}>Copy or send a plain text job summary</Text>
+</View>
+<Text style={shareStyles.optionChevron}>›</Text>
+</Pressable>
+
+<Pressable style={shareStyles.cancelBtn} onPress={() => setShowShareModal(false)}>
+<Text style={shareStyles.cancelText}>Cancel</Text>
+</Pressable>
+</Pressable>
+</Pressable>
+</Modal>
 </View>
 );
 }
@@ -820,4 +942,54 @@ padding: 14,
 alignItems: "center",
 },
 toastText: { color: "white", fontWeight: "900", fontSize: 15 },
+});
+
+const shareStyles = StyleSheet.create({
+overlay: {
+flex: 1,
+backgroundColor: "rgba(0,0,0,0.65)",
+justifyContent: "flex-end",
+},
+sheet: {
+backgroundColor: "#0d1e38",
+borderTopLeftRadius: 24,
+borderTopRightRadius: 24,
+padding: 20,
+paddingBottom: 40,
+gap: 4,
+},
+handle: {
+width: 40, height: 4, borderRadius: 2,
+backgroundColor: "rgba(255,255,255,0.2)",
+alignSelf: "center",
+marginBottom: 12,
+},
+sheetTitle: { color: "white", fontWeight: "900", fontSize: 20, marginBottom: 2 },
+sheetSubtitle: { color: "rgba(255,255,255,0.45)", fontSize: 13, marginBottom: 12 },
+option: {
+flexDirection: "row",
+alignItems: "center",
+gap: 14,
+paddingVertical: 14,
+borderBottomWidth: 1,
+borderBottomColor: "rgba(255,255,255,0.07)",
+},
+optionIcon: {
+width: 44, height: 44, borderRadius: 12,
+backgroundColor: "rgba(255,255,255,0.08)",
+alignItems: "center", justifyContent: "center",
+},
+optionEmoji: { fontSize: 22 },
+optionText: { flex: 1 },
+optionTitle: { color: "white", fontWeight: "800", fontSize: 15 },
+optionDesc: { color: "rgba(255,255,255,0.45)", fontSize: 12, marginTop: 2 },
+optionChevron: { color: "rgba(255,255,255,0.35)", fontSize: 22, fontWeight: "300" },
+cancelBtn: {
+marginTop: 10,
+paddingVertical: 14,
+alignItems: "center",
+backgroundColor: "rgba(255,255,255,0.06)",
+borderRadius: 14,
+},
+cancelText: { color: "rgba(255,255,255,0.6)", fontWeight: "800", fontSize: 15 },
 });

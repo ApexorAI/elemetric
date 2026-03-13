@@ -126,7 +126,7 @@ export default function AssignJob() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in.");
 
-      const { error } = await supabase.from("jobs").insert({
+      const { data: insertedJob, error } = await supabase.from("jobs").insert({
         user_id: user.id,
         job_type: selectedType,
         job_name: jobName.trim(),
@@ -141,9 +141,23 @@ export default function AssignJob() {
         missing: [],
         action: "",
         created_at: new Date().toISOString(),
-      });
+      }).select("id").single();
 
       if (error) throw error;
+
+      // Insert in-app notification for the assignee (best-effort)
+      if (selectedUserId) {
+        try {
+          const dateStr = scheduledDate.trim() || "date TBC";
+          await supabase.from("notifications").insert({
+            user_id: selectedUserId,
+            title: "New job assigned",
+            body: `${jobAddr.trim()} on ${dateStr}. Tap to accept.`,
+            type: "job_assigned",
+            job_id: insertedJob?.id ?? null,
+          });
+        } catch {}
+      }
 
       // Send push notification to the assigned plumber (best-effort)
       if (selectedUserId) {
