@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { sendExpoPushNotification } from "@/lib/notifications";
 
 type TeamMember = {
   userId: string;
@@ -143,6 +144,25 @@ export default function AssignJob() {
       });
 
       if (error) throw error;
+
+      // Send push notification to the assigned plumber (best-effort)
+      if (selectedUserId) {
+        try {
+          const { data: assigneeProfile } = await supabase
+            .from("profiles")
+            .select("push_token")
+            .eq("user_id", selectedUserId)
+            .single();
+          if (assigneeProfile?.push_token) {
+            const dateStr = scheduledDate.trim() || "date TBC";
+            await sendExpoPushNotification(
+              assigneeProfile.push_token,
+              "New job assigned",
+              `${jobAddr.trim()} on ${dateStr}. Open Elemetric to accept.`
+            );
+          }
+        } catch {}
+      }
 
       Alert.alert("Job Created", selectedUserId ? "Job assigned successfully." : "Job created (unassigned).", [
         { text: "OK", onPress: () => router.back() },

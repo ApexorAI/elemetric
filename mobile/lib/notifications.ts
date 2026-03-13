@@ -62,6 +62,34 @@ export async function registerForPushNotifications(): Promise<string | null> {
 }
 
 /**
+ * Send an Expo push notification to a specific device push token.
+ * Uses the Expo push HTTP API — no server required.
+ * Best-effort: silently swallows errors.
+ */
+export async function sendExpoPushNotification(
+  expoPushToken: string,
+  title: string,
+  body: string
+): Promise<void> {
+  if (!expoPushToken || !expoPushToken.startsWith("ExponentPushToken")) return;
+  try {
+    await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        to: expoPushToken,
+        sound: "default",
+        title,
+        body,
+      }),
+    });
+  } catch {}
+}
+
+/**
  * Fire an immediate local notification.
  */
 export async function sendLocalNotification(

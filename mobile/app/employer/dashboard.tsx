@@ -289,6 +289,23 @@ export default function EmployerDashboard() {
         )}
 
         {/* ── Action buttons ── */}
+        <View style={styles.actionRow}>
+          <Pressable
+            style={styles.actionCard}
+            onPress={() => router.push("/employer/job-planner")}
+          >
+            <Text style={styles.actionCardTitle}>Job Planner</Text>
+            <Text style={styles.actionCardSub}>Weekly schedule view</Text>
+          </Pressable>
+          <Pressable
+            style={styles.actionCard}
+            onPress={() => router.push("/employer/team-report")}
+          >
+            <Text style={styles.actionCardTitle}>Team Report</Text>
+            <Text style={styles.actionCardSub}>Monthly compliance PDF</Text>
+          </Pressable>
+        </View>
+
         <Pressable
           style={styles.assignBtn}
           onPress={() => router.push("/employer/assign-job")}
@@ -437,6 +454,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
+
+  actionRow: { flexDirection: "row", gap: 10 },
+  actionCard: {
+    flex: 1,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    padding: 14,
+    gap: 4,
+  },
+  actionCardTitle: { color: "white", fontWeight: "900", fontSize: 14 },
+  actionCardSub: { color: "rgba(255,255,255,0.45)", fontSize: 11 },
 
   assignBtn: {
     backgroundColor: "rgba(249,115,22,0.12)",

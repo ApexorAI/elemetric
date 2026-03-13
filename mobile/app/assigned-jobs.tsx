@@ -194,6 +194,13 @@ export default function AssignedJobs() {
                   <Text style={styles.inProgressNoteText}>Job in progress — generate a PDF to mark complete</Text>
                 </View>
               )}
+
+              <Pressable
+                style={styles.notesBtn}
+                onPress={() => router.push({ pathname: "/job-notes", params: { jobId: job.id, jobName: job.jobName } })}
+              >
+                <Text style={styles.notesBtnText}>View / Add Notes →</Text>
+              </Pressable>
             </View>
           ))
         )}
@@ -299,6 +306,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   inProgressNoteText: { color: "rgba(249,115,22,0.9)", fontSize: 13, fontWeight: "700", textAlign: "center" },
+
+  notesBtn: {
+    borderRadius: 10,
+    paddingVertical: 9,
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+  },
+  notesBtnText: { color: "rgba(255,255,255,0.65)", fontWeight: "700", fontSize: 13 },
 
   back: { marginTop: 6, alignItems: "center" },
   backText: { color: "rgba(255,255,255,0.55)", fontWeight: "700" },
