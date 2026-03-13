@@ -590,7 +590,7 @@ missing.map((x, i) => (
 <TextInput
 value={installerName}
 onChangeText={persistInstallerName}
-placeholder="e.g. Cayde Constable"
+placeholder="e.g. John Smith"
 placeholderTextColor="rgba(255,255,255,0.35)"
 style={styles.input}
 />

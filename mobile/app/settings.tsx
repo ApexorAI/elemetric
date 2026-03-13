@@ -235,7 +235,7 @@ disabled={signingOut}
 <Text style={styles.backText}>← Back</Text>
 </Pressable>
 
-<Text style={styles.versionText}>Version {version}</Text>
+<Text style={styles.versionText}>Elemetric v{version}</Text>
 </ScrollView>
 
 {toast && (

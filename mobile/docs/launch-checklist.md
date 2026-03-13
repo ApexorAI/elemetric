@@ -20,13 +20,13 @@ Complete every item in this list before submitting to the App Store or Google Pl
 
 ## 2. App Configuration
 
-- [ ] Update `app.json` → `"name"` to `"Elemetric"` (not `"mobile"`)
-- [ ] Set `app.json` → `"ios"` → `"bundleIdentifier"`: `"com.elemetric.mobile"`
-- [ ] Set `app.json` → `"android"` → `"package"`: `"com.elemetric.mobile"`
-- [ ] Set `app.json` → `"version"`: `"1.0.0"` (confirm matches App Store Connect)
-- [ ] Set `app.json` → `"ios"` → `"buildNumber"`: `"1"`
-- [ ] Set `app.json` → `"android"` → `"versionCode"`: `1`
-- [ ] Add `"ios"` → `"infoPlist"` with `NSCameraUsageDescription`, `NSLocationWhenInUseUsageDescription`, `NSPhotoLibraryUsageDescription`
+- [x] Update `app.json` → `"name"` to `"Elemetric"` (not `"mobile"`)
+- [x] Set `app.json` → `"ios"` → `"bundleIdentifier"`: `"com.elemetric.mobile"`
+- [x] Set `app.json` → `"android"` → `"package"`: `"com.elemetric.mobile"`
+- [x] Set `app.json` → `"version"`: `"1.0.0"` (confirm matches App Store Connect)
+- [x] Set `app.json` → `"ios"` → `"buildNumber"`: `"1"`
+- [x] Set `app.json` → `"android"` → `"versionCode"`: `1`
+- [x] Add `"ios"` → `"infoPlist"` with `NSCameraUsageDescription`, `NSLocationWhenInUseUsageDescription`, `NSPhotoLibraryUsageDescription`
 - [ ] Fill in `eas.json` → `"submit"` → `"production"` → `"ios"` with real `appleId`, `ascAppId`, `appleTeamId`
 - [ ] Confirm Expo project ID is linked: run `eas project:info` and verify
 
@@ -34,16 +34,15 @@ Complete every item in this list before submitting to the App Store or Google Pl
 
 ## 3. Permissions (iOS Info.plist strings)
 
-Add to `app.json` under `"ios"` → `"infoPlist"`:
+All strings added to `app.json` under `"ios"` → `"infoPlist"`:
 
-```json
-"NSCameraUsageDescription": "Elemetric uses the camera to photograph your work for compliance reports.",
-"NSPhotoLibraryUsageDescription": "Elemetric saves compliance photos to your photo library.",
-"NSLocationWhenInUseUsageDescription": "Elemetric uses your location to auto-fill the job site address.",
-"NSUserNotificationsUsageDescription": "Elemetric notifies you when a job is saved successfully."
-```
-
-- [ ] Verify each permission string is accurate and descriptive (Apple rejects vague strings)
+- [x] `NSCameraUsageDescription` — added ✓
+- [x] `NSPhotoLibraryUsageDescription` — added ✓
+- [x] `NSPhotoLibraryAddUsageDescription` — added ✓
+- [x] `NSLocationWhenInUseUsageDescription` — added ✓
+- [x] `NSUserNotificationsUsageDescription` — added ✓
+- [x] expo-image-picker plugin permissions — added ✓
+- [x] expo-location plugin permissions — added ✓
 - [ ] Test camera permission prompt on a physical device
 - [ ] Test location permission prompt — confirm it only requests "When in Use"
 - [ ] Test photo library permission prompt
