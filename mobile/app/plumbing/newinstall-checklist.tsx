@@ -107,6 +107,8 @@ Object.fromEntries(CHECKS.map((c) => [c.id, { status: null, notes: "", photoUris
 const [aiLoading, setAiLoading] = useState(false);
 const [aiResult, setAiResult] = useState<AIResult | null>(null);
 const [pdfLoading, setPdfLoading] = useState(false);
+const [licenceNumber, setLicenceNumber] = useState("");
+const [companyName, setCompanyName] = useState("");
 
 useFocusEffect(
 useCallback(() => {
@@ -128,10 +130,12 @@ const { data: { user } } = await supabase.auth.getUser();
 if (user && active) {
 const { data } = await supabase
 .from("profiles")
-.select("full_name")
+.select("full_name, licence_number, company_name")
 .eq("user_id", user.id)
 .single();
 if (data?.full_name && active) setPlumberName(data.full_name);
+if (data?.licence_number && active) setLicenceNumber(data.licence_number);
+if (data?.company_name && active) setCompanyName(data.company_name);
 }
 } catch {}
 if (active) setLoaded(true);
@@ -237,14 +241,15 @@ const sigHtml = signatureSvg
 ? `<img src="data:image/svg+xml;utf8,${encodeURIComponent(signatureSvg)}" style="width:200px;height:60px;object-fit:contain;display:block;"/>`
 : `<div style="width:200px;height:40px;border-bottom:1px solid #111827;"></div>`;
 
-const html = `<html>
-<body style="font-family:Arial,sans-serif;padding:0;margin:0;color:#111827;background:#fff;">
-<div style="background:#f97316;color:white;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;">
-<div>
-<div style="font-size:24px;font-weight:bold;letter-spacing:1px;">ELEMETRIC</div>
-<div style="font-size:13px;margin-top:4px;">New Installation Compliance Report — AS/NZS 3500</div>
-</div>
+const html = `<html><head><style>@page{margin:15mm;@bottom-right{content:"Page " counter(page);font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}@bottom-left{content:"ELEMETRIC \00B7 Confidential";font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}}body{margin:0;padding:0;font-family:Arial,sans-serif;color:#111827;background:#fff;}</style></head>
+<body>
+<div style="background:#07152b;color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
+<div style="font-size:28px;font-weight:900;letter-spacing:3px;">ELEMETRIC</div>
 ${qrHtml}
+</div>
+<div style="background:#f97316;color:white;padding:10px 24px;display:flex;justify-content:space-between;align-items:center;">
+<div style="font-size:14px;font-weight:bold;">New Installation Compliance Report · AS/NZS 3500</div>
+<div style="font-size:12px;">${dateShort}</div>
 </div>
 <div style="padding:22px;">
 <div style="margin-bottom:16px;">
@@ -253,6 +258,8 @@ ${qrHtml}
 <tr><td style="padding:5px 0;width:160px;"><strong>Job Name</strong></td><td>${jobName}</td></tr>
 <tr><td style="padding:5px 0;"><strong>Address</strong></td><td>${jobAddr}</td></tr>
 <tr><td style="padding:5px 0;"><strong>Plumber</strong></td><td>${plumberName || "Not entered"}</td></tr>
+<tr><td style="padding:5px 0;"><strong>Licence Number</strong></td><td>${licenceNumber || "Not entered"}</td></tr>
+<tr><td style="padding:5px 0;"><strong>Company</strong></td><td>${companyName || "Not entered"}</td></tr>
 <tr><td style="padding:5px 0;"><strong>Report Date</strong></td><td>${dateStr}</td></tr>
 </table>
 </div>
@@ -274,14 +281,13 @@ ${checkRows}
 ${sigHtml}
 <div style="margin-top:6px;font-size:13px;"><strong>Date:</strong> ${dateShort}</div>
 </div>
-<div style="margin-top:24px;font-size:11px;color:#6b7280;line-height:1.6;border-top:1px solid #e5e7eb;padding-top:12px;">
-This report is a documentation aid only. Final compliance responsibility rests with the licensed plumber. Elemetric AI analysis does not replace statutory obligations under AS/NZS 3500.
-</div>
+<div style="margin-top:24px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;color:#6b7280;line-height:1.6;"><strong style="color:#374151;">Compliance Disclaimer:</strong> This report is a documentation aid only. Final compliance responsibility rests with the licensed plumber. Elemetric AI analysis does not replace statutory obligations under AS/NZS 3500.</div>
 </div>
 </body>
 </html>`;
 
 const { uri } = await Print.printToFileAsync({ html });
+try { await AsyncStorage.setItem("elemetric_pdf_generated", "1"); } catch {}
 const canShare = await Sharing.isAvailableAsync();
 if (canShare) {
 await Sharing.shareAsync(uri, { mimeType: "application/pdf", dialogTitle: "Share Installation Report", UTI: "com.adobe.pdf" });

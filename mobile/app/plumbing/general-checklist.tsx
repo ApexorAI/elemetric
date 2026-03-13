@@ -55,6 +55,8 @@ Object.fromEntries(SECTIONS.map((s) => [s.id, { photoUris: [], notes: "" }]))
 );
 const [generalNotes, setGeneralNotes] = useState("");
 const [pdfLoading, setPdfLoading] = useState(false);
+const [licenceNumber, setLicenceNumber] = useState("");
+const [companyName, setCompanyName] = useState("");
 
 useFocusEffect(
 useCallback(() => {
@@ -76,10 +78,12 @@ const { data: { user } } = await supabase.auth.getUser();
 if (user && active) {
 const { data } = await supabase
 .from("profiles")
-.select("full_name")
+.select("full_name, licence_number, company_name")
 .eq("user_id", user.id)
 .single();
 if (data?.full_name && active) setTradesperson(data.full_name);
+if (data?.licence_number && active) setLicenceNumber(data.licence_number);
+if (data?.company_name && active) setCompanyName(data.company_name);
 }
 } catch {}
 if (active) setLoaded(true);
@@ -168,14 +172,15 @@ const sigHtml = signatureSvg
 ? `<img src="data:image/svg+xml;utf8,${encodeURIComponent(signatureSvg)}" style="width:200px;height:60px;object-fit:contain;display:block;"/>`
 : `<div style="width:200px;height:40px;border-bottom:1px solid #111827;"></div>`;
 
-const html = `<html>
-<body style="font-family:Arial,sans-serif;padding:0;margin:0;color:#111827;background:#fff;">
-<div style="background:#f97316;color:white;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;">
-<div>
-<div style="font-size:24px;font-weight:bold;letter-spacing:1px;">ELEMETRIC</div>
-<div style="font-size:13px;margin-top:4px;">${label} Documentation Report${standard ? ` — ${standard}` : ""}</div>
-</div>
+const html = `<html><head><style>@page{margin:15mm;@bottom-right{content:"Page " counter(page);font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}@bottom-left{content:"ELEMETRIC \00B7 Confidential";font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}}body{margin:0;padding:0;font-family:Arial,sans-serif;color:#111827;background:#fff;}</style></head>
+<body>
+<div style="background:#07152b;color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
+<div style="font-size:28px;font-weight:900;letter-spacing:3px;">ELEMETRIC</div>
 ${qrHtml}
+</div>
+<div style="background:#f97316;color:white;padding:10px 24px;display:flex;justify-content:space-between;align-items:center;">
+<div style="font-size:14px;font-weight:bold;">${label} Documentation Report${standard ? " · " + standard : ""}</div>
+<div style="font-size:12px;">${dateShort}</div>
 </div>
 
 <div style="padding:22px;">
@@ -187,6 +192,8 @@ ${qrHtml}
 <tr><td style="padding:5px 0;"><strong>Address</strong></td><td>${jobAddr}</td></tr>
 <tr><td style="padding:5px 0;"><strong>Trade</strong></td><td>${label}</td></tr>
 <tr><td style="padding:5px 0;"><strong>Tradesperson</strong></td><td>${tradesperson || "Not entered"}</td></tr>
+<tr><td style="padding:5px 0;"><strong>Licence Number</strong></td><td>${licenceNumber || "Not entered"}</td></tr>
+<tr><td style="padding:5px 0;"><strong>Company</strong></td><td>${companyName || "Not entered"}</td></tr>
 <tr><td style="padding:5px 0;"><strong>Report Date</strong></td><td>${dateStr}</td></tr>
 </table>
 </div>
@@ -210,7 +217,7 @@ ${sigHtml}
 <div style="margin-top:6px;font-size:13px;"><strong>Date:</strong> ${dateShort}</div>
 </div>
 
-<div style="margin-top:24px;font-size:11px;color:#6b7280;line-height:1.6;border-top:1px solid #e5e7eb;padding-top:12px;background:#fef3c7;padding:12px;border-radius:6px;border:1px solid #fcd34d;">
+<div style="margin-top:24px;font-size:11px;color:#6b7280;line-height:1.6;background:#fef3c7;padding:12px;border-radius:6px;border:1px solid #fcd34d;">
 <strong style="color:#92400e;">IMPORTANT:</strong> This report is a general documentation record only. AI compliance validation is not available for this trade type. Always consult the relevant Australian standard.
 </div>
 
@@ -219,6 +226,7 @@ ${sigHtml}
 </html>`;
 
 const { uri } = await Print.printToFileAsync({ html });
+try { await AsyncStorage.setItem("elemetric_pdf_generated", "1"); } catch {}
 const canShare = await Sharing.isAvailableAsync();
 if (canShare) {
 await Sharing.shareAsync(uri, {

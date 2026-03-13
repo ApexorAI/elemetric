@@ -533,15 +533,15 @@ const aiSection = aiResult ? `
 <div style="margin-top:4px;">${aiResult.analysis || ""}</div>
 </div>` : "";
 
-const html = `<html>
-<body style="font-family:Arial,sans-serif;padding:0;margin:0;color:#111827;background:#fff;">
-
-<div style="background:#f97316;color:white;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;">
-<div>
-<div style="font-size:24px;font-weight:bold;letter-spacing:1px;">ELEMETRIC</div>
-<div style="font-size:13px;margin-top:4px;">Gas Rough-In Compliance Report — AS/NZS 5601.1:2013 &amp; AS 4575:2019</div>
-</div>
+const html = `<html><head><style>@page{margin:15mm;@bottom-right{content:"Page " counter(page);font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}@bottom-left{content:"ELEMETRIC \00B7 Confidential";font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}}body{margin:0;padding:0;font-family:Arial,sans-serif;color:#111827;background:#fff;}</style></head>
+<body>
+<div style="background:#07152b;color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
+<div style="font-size:28px;font-weight:900;letter-spacing:3px;">ELEMETRIC</div>
 ${qrHtml}
+</div>
+<div style="background:#f97316;color:white;padding:10px 24px;display:flex;justify-content:space-between;align-items:center;">
+<div style="font-size:14px;font-weight:bold;">Gas Rough-In Compliance Report · AS/NZS 5601.1:2013</div>
+<div style="font-size:12px;">${dateShort}</div>
 </div>
 
 <div style="padding:22px;">
@@ -620,15 +620,14 @@ ${supSvg}
 </div>
 </div>
 
-<div style="margin-top:24px;font-size:11px;color:#6b7280;line-height:1.6;border-top:1px solid #e5e7eb;padding-top:12px;">
-This report is a documentation aid only. Final compliance responsibility rests with the licensed gas fitter. Elemetric AI analysis does not replace statutory obligations under AS/NZS 5601.1:2013.
-</div>
+<div style="margin-top:24px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;color:#6b7280;line-height:1.6;"><strong style="color:#374151;">Compliance Disclaimer:</strong> This report is a documentation aid only. Final compliance responsibility rests with the licensed gas fitter. Elemetric AI analysis does not replace statutory obligations under AS/NZS 5601.1:2013.</div>
 
 </div>
 </body>
 </html>`;
 
 const { uri } = await Print.printToFileAsync({ html });
+try { await AsyncStorage.setItem("elemetric_pdf_generated", "1"); } catch {}
 const canShare = await Sharing.isAvailableAsync();
 if (canShare) {
 await Sharing.shareAsync(uri, {
