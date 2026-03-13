@@ -683,15 +683,18 @@ onPress={async () => {
 if (!generatedPdfUri) return;
 setShowShareModal(false);
 try {
+const filename = `elemetric-report-${Date.now()}.pdf`;
+const dest = FileSystem.cacheDirectory + filename;
+await FileSystem.copyAsync({ from: generatedPdfUri, to: dest });
 const canShare = await Sharing.isAvailableAsync();
 if (canShare) {
-await Sharing.shareAsync(generatedPdfUri, {
+await Sharing.shareAsync(dest, {
 mimeType: "application/pdf",
 dialogTitle: "Share Compliance Report",
 UTI: "com.adobe.pdf",
 });
 } else {
-Alert.alert("PDF Created", `Saved to: ${generatedPdfUri}`);
+Alert.alert("PDF Created", `Saved to: ${dest}`);
 }
 } catch (e: any) {
 Alert.alert("Error", e?.message ?? "Could not share PDF.");
@@ -735,14 +738,19 @@ onPress={async () => {
 if (!generatedPdfUri) return;
 setShowShareModal(false);
 try {
+const filename = `elemetric-report-${Date.now()}.pdf`;
+const dest = FileSystem.cacheDirectory + filename;
+await FileSystem.copyAsync({ from: generatedPdfUri, to: dest });
 const canShare = await Sharing.isAvailableAsync();
 if (canShare) {
-await Sharing.shareAsync(generatedPdfUri, {
+await Sharing.shareAsync(dest, {
 mimeType: "application/pdf",
 UTI: "com.adobe.pdf",
 });
 }
-} catch {}
+} catch (e: any) {
+Alert.alert("Error", e?.message ?? "Could not save PDF.");
+}
 }}
 >
 <View style={shareStyles.optionIcon}><Text style={shareStyles.optionEmoji}>🗂️</Text></View>
@@ -757,7 +765,6 @@ UTI: "com.adobe.pdf",
 <Pressable
 style={shareStyles.option}
 onPress={async () => {
-setShowShareModal(false);
 const summary = [
 `Elemetric Compliance Report`,
 `Job: ${currentJob.jobName}`,
@@ -769,8 +776,9 @@ detected.length ? `Verified: ${detected.join(", ")}` : null,
 missing.length ? `Incomplete: ${missing.join(", ")}` : null,
 `Generated: ${new Date().toLocaleString("en-AU")}`,
 ].filter(Boolean).join("\n");
+setShowShareModal(false);
 try {
-await Share.share({ message: summary, title: `Elemetric Report — ${currentJob.jobName}` });
+await Share.share({ message: summary });
 } catch {}
 }}
 >
