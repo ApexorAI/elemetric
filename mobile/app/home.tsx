@@ -10,6 +10,7 @@ const router = useRouter();
 const [profileDone, setProfileDone]   = useState(false);
 const [jobDone,     setJobDone]       = useState(false);
 const [pdfDone,     setPdfDone]       = useState(false);
+const [isEmployer,  setIsEmployer]    = useState(false);
 
 useFocusEffect(
 useCallback(() => {
@@ -21,10 +22,11 @@ const { data: { user } } = await supabase.auth.getUser();
 if (user) {
 const { data } = await supabase
 .from("profiles")
-.select("full_name")
+.select("full_name, role")
 .eq("user_id", user.id)
 .single();
 if (active && data?.full_name?.trim()) setProfileDone(true);
+if (active && data?.role === "employer") setIsEmployer(true);
 }
 } catch {}
 
@@ -74,6 +76,16 @@ return (
 </View>
 <Text style={styles.buttonArrow}>→</Text>
 </Pressable>
+
+{isEmployer && (
+<Pressable style={styles.employerBanner} onPress={() => router.push("/employer/dashboard")}>
+<View>
+<Text style={styles.employerTitle}>Employer Portal</Text>
+<Text style={styles.employerSub}>View your team's compliance</Text>
+</View>
+<Text style={styles.buttonArrow}>→</Text>
+</Pressable>
+)}
 
 {/* Onboarding checklist — hidden once all done */}
 {!allDone && (
@@ -159,6 +171,19 @@ justifyContent: "space-between",
 },
 buttonText: { color: "white", fontSize: 18, fontWeight: "800" },
 buttonArrow: { color: "rgba(255,255,255,0.4)", fontSize: 22, fontWeight: "300" },
+
+employerBanner: {
+backgroundColor: "rgba(249,115,22,0.08)",
+borderRadius: 16,
+padding: 18,
+borderWidth: 1,
+borderColor: "rgba(249,115,22,0.25)",
+flexDirection: "row",
+alignItems: "center",
+justifyContent: "space-between",
+},
+employerTitle: { color: "#f97316", fontSize: 17, fontWeight: "800" },
+employerSub: { color: "rgba(249,115,22,0.65)", fontSize: 12, marginTop: 3 },
 
 nearMissButton: {
 backgroundColor: "rgba(239,68,68,0.08)",

@@ -21,6 +21,8 @@ const [email, setEmail] = useState("");
 const [loading, setLoading] = useState(true);
 const [toast, setToast] = useState<string | null>(null);
 const [signingOut, setSigningOut] = useState(false);
+const [role, setRole] = useState<"individual" | "employer">("individual");
+const [switchingRole, setSwitchingRole] = useState(false);
 
 useFocusEffect(
 useCallback(() => {
@@ -28,7 +30,15 @@ let active = true;
 (async () => {
 try {
 const { data: { user } } = await supabase.auth.getUser();
-if (user && active) setEmail(user.email ?? "");
+if (user && active) {
+setEmail(user.email ?? "");
+const { data: profile } = await supabase
+.from("profiles")
+.select("role")
+.eq("user_id", user.id)
+.single();
+if (active && profile?.role) setRole(profile.role as "individual" | "employer");
+}
 } catch {}
 if (active) setLoading(false);
 })();
@@ -83,6 +93,36 @@ setSigningOut(false);
 ]);
 };
 
+const switchRole = async (newRole: "individual" | "employer") => {
+if (newRole === role) return;
+setSwitchingRole(true);
+try {
+const { data: { user } } = await supabase.auth.getUser();
+if (!user) throw new Error("Not signed in.");
+await supabase.from("profiles").upsert(
+{ user_id: user.id, role: newRole },
+{ onConflict: "user_id" }
+);
+if (newRole === "employer") {
+const { data: existingTeam } = await supabase
+.from("teams")
+.select("id")
+.eq("owner_id", user.id)
+.single();
+if (!existingTeam) {
+const teamName = email.split("@")[0] + "'s Team";
+await supabase.from("teams").insert({ owner_id: user.id, team_name: teamName });
+}
+}
+setRole(newRole);
+showToast(newRole === "employer" ? "Switched to Employer account." : "Switched to Individual account.");
+} catch (e: any) {
+Alert.alert("Error", e?.message ?? "Could not switch role.");
+} finally {
+setSwitchingRole(false);
+}
+};
+
 if (loading) {
 return (
 <View style={styles.loadingScreen}>
@@ -112,6 +152,48 @@ return (
 <Text style={styles.rowAction}>Change Password</Text>
 <Text style={styles.rowChevron}>›</Text>
 </Pressable>
+</View>
+
+{/* View / Role */}
+<Text style={styles.sectionLabel}>VIEW</Text>
+<View style={styles.group}>
+<View style={styles.row}>
+<Text style={styles.rowLabel}>Account Type</Text>
+</View>
+<View style={styles.divider} />
+<View style={[styles.row, { gap: 10 }]}>
+<Pressable
+style={[styles.roleBtn, role === "individual" && styles.roleBtnActive]}
+onPress={() => switchRole("individual")}
+disabled={switchingRole}
+>
+<Text style={[styles.roleBtnText, role === "individual" && styles.roleBtnTextActive]}>
+Individual Plumber
+</Text>
+</Pressable>
+<Pressable
+style={[styles.roleBtn, role === "employer" && styles.roleBtnActive]}
+onPress={() => switchRole("employer")}
+disabled={switchingRole}
+>
+{switchingRole && role !== "employer" ? (
+<ActivityIndicator color="#f97316" size="small" />
+) : (
+<Text style={[styles.roleBtnText, role === "employer" && styles.roleBtnTextActive]}>
+Employer
+</Text>
+)}
+</Pressable>
+</View>
+{role === "employer" && (
+<>
+<View style={styles.divider} />
+<Pressable style={styles.row} onPress={() => router.push("/employer/dashboard")}>
+<Text style={styles.rowAction}>Employer Portal</Text>
+<Text style={styles.rowChevron}>›</Text>
+</Pressable>
+</>
+)}
 </View>
 
 {/* Legal */}
@@ -216,6 +298,27 @@ divider: {
 height: 1,
 backgroundColor: "rgba(255,255,255,0.07)",
 marginHorizontal: 16,
+},
+roleBtn: {
+flex: 1,
+borderRadius: 10,
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.12)",
+backgroundColor: "rgba(255,255,255,0.04)",
+paddingVertical: 10,
+alignItems: "center",
+},
+roleBtnActive: {
+backgroundColor: "rgba(249,115,22,0.15)",
+borderColor: "rgba(249,115,22,0.50)",
+},
+roleBtnText: {
+color: "rgba(255,255,255,0.55)",
+fontSize: 13,
+fontWeight: "700",
+},
+roleBtnTextActive: {
+color: "#f97316",
 },
 signOutBtn: {
 marginTop: 32,
