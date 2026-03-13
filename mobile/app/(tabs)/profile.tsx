@@ -8,11 +8,10 @@ Pressable,
 ScrollView,
 ActivityIndicator,
 } from "react-native";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
 
 export default function Profile() {
-const router = useRouter();
 const [loading, setLoading] = useState(true);
 const [saving, setSaving] = useState(false);
 const [toast, setToast] = useState<string | null>(null);
@@ -140,10 +139,6 @@ disabled={saving}
 : <Text style={styles.buttonText}>Save Profile</Text>
 }
 </Pressable>
-
-<Pressable onPress={() => router.back()} style={styles.back}>
-<Text style={styles.backText}>← Back</Text>
-</Pressable>
 </ScrollView>
 
 {toast && (
@@ -189,8 +184,6 @@ borderRadius: 14,
 alignItems: "center",
 },
 buttonText: { color: "#0b1220", fontWeight: "900", fontSize: 16 },
-back: { marginTop: 16, alignItems: "center" },
-backText: { color: "rgba(255,255,255,0.75)", fontWeight: "700" },
 toast: {
 position: "absolute",
 bottom: 40,

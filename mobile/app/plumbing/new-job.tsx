@@ -33,7 +33,12 @@ await AsyncStorage.setItem(
 JSON.stringify(currentJob)
 );
 
-router.push(type === "gas" ? "/plumbing/gas-checklist" : "/plumbing/checklist");
+const dest =
+type === "gas"        ? "/plumbing/gas-checklist"      :
+type === "drainage"   ? "/plumbing/drainage-checklist"  :
+type === "newinstall" ? "/plumbing/newinstall-checklist" :
+"/plumbing/checklist";
+router.push(dest);
 } catch (e: any) {
 Alert.alert("Save Error", e?.message ?? "Could not save job");
 }
@@ -44,7 +49,12 @@ return (
 <View style={styles.header}>
 <Text style={styles.brand}>ELEMETRIC</Text>
 <Text style={styles.title}>New Job</Text>
-<Text style={styles.subtitle}>{type === "gas" ? "Gas Rough-In" : "Hot Water System Install"}</Text>
+<Text style={styles.subtitle}>
+{type === "gas" ? "Gas Rough-In" :
+type === "drainage" ? "Drainage" :
+type === "newinstall" ? "New Installation" :
+"Hot Water System Install"}
+</Text>
 </View>
 
 <ScrollView contentContainerStyle={styles.body}>
