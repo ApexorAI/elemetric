@@ -9,6 +9,7 @@ ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Haptics from "expo-haptics";
 
 type ChecklistItem = {
 id: string;
@@ -122,6 +123,7 @@ HOTWATER_ITEMS.filter((item) => item.kind === "photo" && checked[item.id]).lengt
 );
 
 const toggleItem = async (id: string) => {
+Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 const nextChecked = {
 ...checked,
 [id]: !checked[id],

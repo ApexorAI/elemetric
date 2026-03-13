@@ -13,6 +13,7 @@ ActivityIndicator,
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import * as Haptics from "expo-haptics";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import QRCode from "qrcode";
@@ -135,6 +136,7 @@ params: { job: JSON.stringify(job) },
 };
 
 const shareJob = async (job: SavedJob) => {
+Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 setSharingJobId(job.id);
 try {
 const dateShort = new Date(job.createdAt).toLocaleDateString("en-AU");

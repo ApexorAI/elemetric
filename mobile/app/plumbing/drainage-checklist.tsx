@@ -17,6 +17,7 @@ import * as Sharing from "expo-sharing";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import * as Haptics from "expo-haptics";
 import QRCode from "qrcode";
 
 const API_BASE = "https://elemetric-ai-production.up.railway.app";
@@ -144,8 +145,10 @@ return () => { active = false; };
 }, [])
 );
 
-const setStatus = (id: string, s: CheckStatus) =>
+const setStatus = (id: string, s: CheckStatus) => {
+Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 setChecks((prev) => ({ ...prev, [id]: { ...prev[id], status: s } }));
+};
 
 const setNotes = (id: string, notes: string) =>
 setChecks((prev) => ({ ...prev, [id]: { ...prev[id], notes } }));
@@ -198,6 +201,7 @@ setAiLoading(false);
 };
 
 const generateReport = async () => {
+Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 setPdfLoading(true);
 try {
 const now = new Date();

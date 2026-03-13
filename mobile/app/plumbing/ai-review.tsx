@@ -16,6 +16,7 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import { supabase } from "@/lib/supabase";
 import { sendLocalNotification } from "@/lib/notifications";
+import * as Haptics from "expo-haptics";
 import QRCode from "qrcode";
 
 type AIResult = {
@@ -191,6 +192,7 @@ await AsyncStorage.setItem(INSTALLER_NAME_KEY, value);
 };
 
 const saveJob = async () => {
+Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 try {
 setSaving(true);
 
@@ -301,6 +303,7 @@ Alert.alert("No AI result", "There is no AI result to turn into a report.");
 return;
 }
 
+Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 try {
 setGeneratingPdf(true);
 

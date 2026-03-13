@@ -11,7 +11,7 @@ const router = useRouter();
 useEffect(() => {
 const redirect = async () => {
 const seen = await AsyncStorage.getItem(ONBOARDING_KEY);
-router.replace(seen ? "/login" : "/onboarding");
+router.replace(seen ? "/login" : "/welcome");
 };
 redirect();
 }, []);

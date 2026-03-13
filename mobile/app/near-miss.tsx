@@ -17,6 +17,7 @@ import * as Sharing from "expo-sharing";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import * as Haptics from "expo-haptics";
 import QRCode from "qrcode";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -146,6 +147,7 @@ export default function NearMiss() {
       Alert.alert("Missing field", "Please enter a description of the issue.");
       return;
     }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setPdfLoading(true);
     try {
       const now = new Date();

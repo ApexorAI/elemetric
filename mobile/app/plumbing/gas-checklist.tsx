@@ -17,6 +17,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import * as Location from "expo-location";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
+import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, useFocusEffect } from "expo-router";
 import Svg, { Path } from "react-native-svg";
@@ -268,7 +269,7 @@ s === "fail" ? styles.sBtnFail :
 styles.sBtnNA
 ),
 ]}
-onPress={() => onSet(id, s)}
+onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onSet(id, s); }}
 >
 <Text style={[styles.statusBtnText, status === s && styles.statusBtnActive]}>
 {s === "pass" ? "Pass" : s === "fail" ? "Fail" : "N/A"}
@@ -505,6 +506,7 @@ setAiLoading(false);
 // ── PDF ───────────────────────────────────────────────────────────────────────
 
 const generateReport = async () => {
+Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 setPdfLoading(true);
 try {
 const now        = new Date();

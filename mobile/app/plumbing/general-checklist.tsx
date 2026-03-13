@@ -13,6 +13,7 @@ ActivityIndicator,
 import * as ImagePicker from "expo-image-picker";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
+import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -128,6 +129,7 @@ const setNotes = (sectionId: string, notes: string) =>
 setSections((prev) => ({ ...prev, [sectionId]: { ...prev[sectionId], notes } }));
 
 const generateReport = async () => {
+Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 setPdfLoading(true);
 try {
 const now = new Date();

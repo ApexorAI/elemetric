@@ -7,6 +7,7 @@
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS role text DEFAULT 'individual';
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS compliance_score int;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS push_token text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarding_complete boolean DEFAULT false;
 
 -- ── teams ─────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS teams (

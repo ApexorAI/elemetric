@@ -17,8 +17,20 @@ return;
 }
 setLoading(true);
 try {
-const { error } = await supabase.auth.signInWithPassword({ email, password });
+const { error, data } = await supabase.auth.signInWithPassword({ email, password });
 if (error) throw error;
+// Check if post-signup onboarding is complete
+try {
+const { data: profile } = await supabase
+.from("profiles")
+.select("onboarding_complete")
+.eq("user_id", data.user.id)
+.single();
+if (!profile?.onboarding_complete) {
+router.replace("/onboarding");
+return;
+}
+} catch {}
 router.replace("/home");
 } catch (e: any) {
 Alert.alert("Sign In Failed", e?.message ?? "Could not sign in.");
