@@ -8,15 +8,18 @@ ScrollView,
 ActivityIndicator,
 Linking,
 Alert,
+Switch,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import Constants from "expo-constants";
+import { useTheme } from "@/lib/theme";
 
 const version = Constants.expoConfig?.version ?? "1.0.0";
 
 export default function Settings() {
 const router = useRouter();
+const { isDark, toggleTheme } = useTheme();
 const [email, setEmail] = useState("");
 const [loading, setLoading] = useState(true);
 const [toast, setToast] = useState<string | null>(null);
@@ -205,11 +208,43 @@ Employer
 )}
 </View>
 
+{/* Appearance */}
+<Text style={styles.sectionLabel}>APPEARANCE</Text>
+<View style={styles.group}>
+<View style={styles.row}>
+<Text style={styles.rowAction}>Dark Mode</Text>
+<Switch
+value={isDark}
+onValueChange={toggleTheme}
+trackColor={{ false: "rgba(255,255,255,0.15)", true: "#f97316" }}
+thumbColor="white"
+ios_backgroundColor="rgba(255,255,255,0.15)"
+/>
+</View>
+</View>
+
 {/* Subscription */}
 <Text style={styles.sectionLabel}>SUBSCRIPTION</Text>
 <View style={styles.group}>
 <Pressable style={styles.row} onPress={() => router.push("/subscription")}>
 <Text style={styles.rowAction}>Manage Subscription</Text>
+<Text style={styles.rowChevron}>›</Text>
+</Pressable>
+</View>
+
+{/* Help */}
+<Text style={styles.sectionLabel}>SUPPORT</Text>
+<View style={styles.group}>
+<Pressable style={styles.row} onPress={() => router.push("/help")}>
+<Text style={styles.rowAction}>Help & FAQ</Text>
+<Text style={styles.rowChevron}>›</Text>
+</Pressable>
+<View style={styles.divider} />
+<Pressable style={styles.row} onPress={() => {
+const subject = encodeURIComponent("Elemetric Support Request");
+Linking.openURL(`mailto:cayde@elemetric.com.au?subject=${subject}`).catch(() => {});
+}}>
+<Text style={styles.rowAction}>Contact Support</Text>
 <Text style={styles.rowChevron}>›</Text>
 </Pressable>
 </View>
