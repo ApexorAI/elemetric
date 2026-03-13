@@ -38,6 +38,24 @@ style={styles.tradeCard}
 </ImageBackground>
 </Pressable>
 
+<Pressable onPress={() => router.push({ pathname: "/plumbing/new-job", params: { type: "gas" } })}>
+<ImageBackground
+source={require("../assets/trades/hvac.jpg")}
+imageStyle={styles.cardImage}
+style={styles.tradeCard}
+>
+<View style={styles.overlay} />
+<View style={styles.cardContent}>
+<Text style={styles.tradeTitle}>GAS ROUGH-IN</Text>
+<Text style={styles.activeText}>● ACTIVE</Text>
+</View>
+
+<View style={styles.arrowCircle}>
+<Text style={styles.arrowText}>→</Text>
+</View>
+</ImageBackground>
+</Pressable>
+
 <View style={styles.lockedCard}>
 <ImageBackground
 source={require("../assets/trades/electrical.jpg")}
