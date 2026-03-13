@@ -194,6 +194,15 @@ Employer
 </Pressable>
 </>
 )}
+{role === "individual" && (
+<>
+<View style={styles.divider} />
+<Pressable style={styles.row} onPress={() => router.push("/employer/join-team")}>
+<Text style={styles.rowAction}>Join a Team</Text>
+<Text style={styles.rowChevron}>›</Text>
+</Pressable>
+</>
+)}
 </View>
 
 {/* Legal */}

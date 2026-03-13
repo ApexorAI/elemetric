@@ -15,6 +15,7 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import { supabase } from "@/lib/supabase";
+import { sendLocalNotification } from "@/lib/notifications";
 import QRCode from "qrcode";
 
 type AIResult = {
@@ -240,8 +241,10 @@ cloudSaveFailed = true;
 
 if (cloudSaveFailed) {
 setToast("No internet connection. Job saved locally and will sync when reconnected.");
+sendLocalNotification("Job Saved", "Saved locally — will sync when back online.");
 } else {
 setToast("Job saved successfully.");
+sendLocalNotification("Job Saved", "Your compliance report has been saved.");
 }
 } catch (e: any) {
 Alert.alert("Save Error", e?.message ?? "Could not save job.");
