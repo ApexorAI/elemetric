@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 type JobType = {
   label: string;
   description: string;
+  pathname?: string;
   params?: Record<string, string>;
 };
 
@@ -59,7 +60,7 @@ const TRADES: Trade[] = [
       {
         label: "General Electrical Documentation",
         description: "Wiring & installation — AS/NZS 3000",
-        params: { type: "electrical" },
+        pathname: "/plumbing/electrical-checklist",
       },
     ],
   },
@@ -134,7 +135,7 @@ export default function TradeScreen() {
                 style={styles.jobTypeRow}
                 onPress={() =>
                   router.push({
-                    pathname: "/plumbing/new-job",
+                    pathname: (job.pathname ?? "/plumbing/new-job") as never,
                     params: job.params ?? {},
                   })
                 }
