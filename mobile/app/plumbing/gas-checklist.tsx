@@ -20,6 +20,7 @@ import * as Sharing from "expo-sharing";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, useFocusEffect } from "expo-router";
 import Svg, { Path } from "react-native-svg";
+import { supabase } from "@/lib/supabase";
 
 const API_BASE = "https://elemetric-ai-production.up.railway.app";
 
@@ -304,6 +305,9 @@ const [nextServiceDate,   setNextServiceDate]   = useState("");
 const [gpsCoords,  setGpsCoords]  = useState<{ lat: number; lng: number } | null>(null);
 const [gpsLoading, setGpsLoading] = useState(false);
 
+// Profile (for PDF)
+const [profileCompany, setProfileCompany] = useState("");
+
 // Checklist state
 const [installChecks, setInstallChecks] = useState<Record<string, InstallEntry>>(() =>
 Object.fromEntries(
@@ -342,6 +346,23 @@ setJobNameState(j.jobName || "Untitled Job");
 setJobAddrState(j.jobAddr  || "No address");
 }
 } catch {}
+
+// Load profile to pre-fill gas fitter details and PDF
+try {
+const { data: { user } } = await supabase.auth.getUser();
+if (user && active) {
+const { data } = await supabase
+.from("profiles")
+.select("full_name, licence_number, company_name")
+.eq("user_id", user.id)
+.single();
+if (data && active) {
+if (data.company_name) setProfileCompany(data.company_name);
+if (data.licence_number) setLicenceNumber((prev) => prev || data.licence_number);
+}
+}
+} catch {}
+
 if (active) setLoaded(true);
 })();
 return () => { active = false; };
@@ -523,6 +544,7 @@ const html = `<html>
 <div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Gas Fitter Details</div>
 <table style="width:100%;border-collapse:collapse;">
 <tr><td style="padding:5px 0;width:180px;"><strong>Licence Number</strong></td><td>${licenceNumber || "Not entered"}</td></tr>
+<tr><td style="padding:5px 0;"><strong>Company</strong></td><td>${profileCompany || "Not entered"}</td></tr>
 <tr><td style="padding:5px 0;"><strong>Supervising Gas Fitter</strong></td><td>${supervisingName || "Not entered"}</td></tr>
 <tr><td style="padding:5px 0;"><strong>Registration Number</strong></td><td>${registrationNumber || "Not entered"}</td></tr>
 </table>
@@ -768,7 +790,7 @@ disabled={aiLoading}
 {aiLoading ? (
 <View style={styles.loadingRow}>
 <ActivityIndicator />
-<Text style={styles.aiBtnText}> Running AI…</Text>
+<Text style={styles.aiBtnText}> Analysing photos against Victorian compliance standards...</Text>
 </View>
 ) : (
 <Text style={styles.aiBtnText}>Run AI Analysis →</Text>

@@ -112,8 +112,13 @@ return (
 
 <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
 {jobs.length === 0 ? (
-<View style={styles.emptyCard}>
-<Text style={styles.emptyText}>No saved jobs yet.</Text>
+<View style={styles.emptyState}>
+<Text style={styles.emptyLogo}>ELEMETRIC</Text>
+<Text style={styles.emptyTitle}>No jobs yet</Text>
+<Text style={styles.emptySubtitle}>Start a new job to see it here</Text>
+<Pressable style={styles.emptyBtn} onPress={() => router.push("/plumbing/new-job")}>
+<Text style={styles.emptyBtnText}>Start New Job →</Text>
+</Pressable>
 </View>
 ) : (
 jobs.map((job) => (
@@ -157,14 +162,32 @@ title: { marginTop: 6, color: "white", fontSize: 22, fontWeight: "900" },
 subtitle: { marginTop: 4, color: "rgba(255,255,255,0.75)" },
 body: { padding: 18, gap: 12 },
 
-emptyCard: {
-borderRadius: 16,
+emptyState: {
+borderRadius: 20,
 borderWidth: 1,
 borderColor: "rgba(255,255,255,0.10)",
 backgroundColor: "rgba(255,255,255,0.04)",
-padding: 16,
+padding: 36,
+alignItems: "center",
+gap: 10,
 },
-emptyText: { color: "rgba(255,255,255,0.7)" },
+emptyLogo: {
+color: "#f97316",
+fontSize: 22,
+fontWeight: "900",
+letterSpacing: 2,
+marginBottom: 4,
+},
+emptyTitle: { color: "white", fontSize: 20, fontWeight: "900" },
+emptySubtitle: { color: "rgba(255,255,255,0.6)", fontSize: 14, textAlign: "center" },
+emptyBtn: {
+marginTop: 10,
+backgroundColor: "#f97316",
+paddingVertical: 14,
+paddingHorizontal: 28,
+borderRadius: 14,
+},
+emptyBtnText: { color: "#0b1220", fontWeight: "900", fontSize: 15 },
 
 card: {
 borderRadius: 16,

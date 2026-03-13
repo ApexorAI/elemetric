@@ -396,7 +396,7 @@ disabled={loading || totalRequiredPhotosAdded === 0}
 {loading ? (
 <View style={styles.loadingRow}>
 <ActivityIndicator />
-<Text style={styles.aiText}>Running AI…</Text>
+<Text style={styles.aiText}>Analysing photos against Victorian compliance standards...</Text>
 </View>
 ) : (
 <Text style={styles.aiText}>Run AI Overview →</Text>

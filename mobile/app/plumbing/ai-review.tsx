@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import {
 View,
 Text,
@@ -76,6 +76,17 @@ const [generatingPdf, setGeneratingPdf] = useState(false);
 const [checklistChecked, setChecklistChecked] = useState<Record<string, boolean>>({});
 const [signatureSvg, setSignatureSvg] = useState<string>("");
 const [installerName, setInstallerName] = useState("");
+const [profile, setProfile] = useState<{ licenceNumber: string; companyName: string }>({
+licenceNumber: "",
+companyName: "",
+});
+const [toast, setToast] = useState<string | null>(null);
+
+useEffect(() => {
+if (!toast) return;
+const t = setTimeout(() => setToast(null), 3500);
+return () => clearTimeout(t);
+}, [toast]);
 
 useFocusEffect(
 useCallback(() => {
@@ -112,7 +123,31 @@ const savedSignature = await AsyncStorage.getItem(SIGNATURE_KEY);
 if (savedSignature && active) setSignatureSvg(savedSignature);
 
 const savedInstallerName = await AsyncStorage.getItem(INSTALLER_NAME_KEY);
-if (savedInstallerName && active) setInstallerName(savedInstallerName);
+const finalInstallerName = savedInstallerName || "";
+if (active) setInstallerName(finalInstallerName);
+
+// Load profile for PDF data
+try {
+const { data: { user } } = await supabase.auth.getUser();
+if (user && active) {
+const { data: profileData } = await supabase
+.from("profiles")
+.select("full_name, licence_number, company_name")
+.eq("user_id", user.id)
+.single();
+if (profileData && active) {
+setProfile({
+licenceNumber: profileData.licence_number || "",
+companyName: profileData.company_name || "",
+});
+if (!finalInstallerName && profileData.full_name && active) {
+setInstallerName(profileData.full_name);
+}
+}
+}
+} catch {
+// profile load failed — continue
+}
 } catch {
 // keep defaults
 }
@@ -179,6 +214,7 @@ jobs.unshift(newJob);
 await AsyncStorage.setItem("elemetric_jobs", JSON.stringify(jobs));
 
 // Save to Supabase (best-effort — local save already succeeded)
+let cloudSaveFailed = false;
 try {
 const { data: { user } } = await supabase.auth.getUser();
 if (user) {
@@ -198,10 +234,14 @@ created_at: newJob.createdAt,
 });
 }
 } catch {
-// Cloud save failed — local copy is safe, silently continue
+cloudSaveFailed = true;
 }
 
-Alert.alert("Saved", "Job saved successfully.");
+if (cloudSaveFailed) {
+setToast("No internet connection. Job saved locally and will sync when reconnected.");
+} else {
+setToast("Job saved successfully.");
+}
 } catch (e: any) {
 Alert.alert("Save Error", e?.message ?? "Could not save job.");
 } finally {
@@ -333,6 +373,14 @@ const html = `
 <tr>
 <td style="padding: 6px 0;"><strong>Installer</strong></td>
 <td style="padding: 6px 0;">${installerName || "Not entered"}</td>
+</tr>
+<tr>
+<td style="padding: 6px 0;"><strong>Licence No.</strong></td>
+<td style="padding: 6px 0;">${profile.licenceNumber || "Not entered"}</td>
+</tr>
+<tr>
+<td style="padding: 6px 0;"><strong>Company</strong></td>
+<td style="padding: 6px 0;">${profile.companyName || "Not entered"}</td>
 </tr>
 <tr>
 <td style="padding: 6px 0;"><strong>Report Date</strong></td>
@@ -531,7 +579,7 @@ style={styles.input}
 <Text style={styles.saveText}>{saving ? "Saving..." : "Save Job"}</Text>
 </Pressable>
 
-<Pressable style={styles.signatureBtn} onPress={() => router.push("/plumbing/signature")}>
+<Pressable style={styles.signatureBtn} onPress={() => router.push("/plumbing/declaration")}>
 <Text style={styles.signatureText}>
 {signatureSvg ? "Edit Signature" : "Add Signature"}
 </Text>
@@ -575,6 +623,12 @@ disabled={generatingPdf}
 <Text style={styles.backText}>← Back</Text>
 </Pressable>
 </ScrollView>
+
+{toast && (
+<View style={styles.toast}>
+<Text style={styles.toastText}>{toast}</Text>
+</View>
+)}
 </View>
 );
 }
@@ -718,4 +772,15 @@ fontSize: 12,
 back: { marginTop: 6, alignItems: "center" },
 backText: { color: "rgba(255,255,255,0.75)", fontWeight: "700" },
 dim: { color: "rgba(255,255,255,0.6)", marginTop: 10, textAlign: "center" },
+toast: {
+position: "absolute",
+bottom: 40,
+left: 20,
+right: 20,
+backgroundColor: "#22c55e",
+borderRadius: 12,
+padding: 14,
+alignItems: "center",
+},
+toastText: { color: "white", fontWeight: "900", fontSize: 15 },
 });
