@@ -15,6 +15,7 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import { supabase } from "@/lib/supabase";
+import QRCode from "qrcode";
 
 type AIResult = {
 relevant?: boolean;
@@ -346,12 +347,29 @@ const reportDate = new Date().toLocaleString();
 const reportDateShort = new Date().toLocaleDateString();
 const statusText = relevant ? "Relevant plumbing photo set" : "Not a plumbing photo set";
 
+// QR code — encodes report identity for verification
+let qrHtml = "";
+try {
+const qrData = `ELM|${currentJob.type}|${currentJob.jobName}|${currentJob.jobAddr}|${reportDateShort}`;
+const qrSvg = await QRCode.toString(qrData, { type: "svg", width: 100, margin: 1 });
+const qrUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrSvg)}`;
+qrHtml = `<div style="text-align:center;">
+<img src="${qrUrl}" style="width:68px;height:68px;background:white;padding:4px;border-radius:4px;display:block;"/>
+<div style="font-size:8px;margin-top:3px;opacity:0.8;">Scan to verify</div>
+</div>`;
+} catch {
+// QR generation failed — PDF still generates without it
+}
+
 const html = `
 <html>
 <body style="font-family: Arial, sans-serif; padding: 0; margin: 0; color: #111827; background: #ffffff;">
-<div style="background: #f97316; color: white; padding: 20px 24px;">
-<div style="font-size: 24px; font-weight: bold; letter-spacing: 1px;">ELEMETRIC</div>
-<div style="font-size: 13px; margin-top: 4px;">Compliance Documentation Report</div>
+<div style="background:#f97316;color:white;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;">
+<div>
+<div style="font-size:24px;font-weight:bold;letter-spacing:1px;">ELEMETRIC</div>
+<div style="font-size:13px;margin-top:4px;">Compliance Documentation Report</div>
+</div>
+${qrHtml}
 </div>
 
 <div style="padding: 22px;">

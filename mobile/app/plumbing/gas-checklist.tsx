@@ -21,6 +21,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, useFocusEffect } from "expo-router";
 import Svg, { Path } from "react-native-svg";
 import { supabase } from "@/lib/supabase";
+import QRCode from "qrcode";
 
 const API_BASE = "https://elemetric-ai-production.up.railway.app";
 
@@ -482,6 +483,18 @@ const dateShort  = now.toLocaleDateString();
 const td = `border:1px solid #d1d5db;padding:8px;`;
 const th = `${td}background:#f3f4f6;text-align:left;`;
 
+// QR code — encodes report identity for verification
+let qrHtml = "";
+try {
+const qrData = `ELM|gas|${jobName}|${jobAddr}|${dateShort}`;
+const qrSvg = await QRCode.toString(qrData, { type: "svg", width: 100, margin: 1 });
+const qrUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrSvg)}`;
+qrHtml = `<div style="text-align:center;">
+<img src="${qrUrl}" style="width:68px;height:68px;background:white;padding:4px;border-radius:4px;display:block;"/>
+<div style="font-size:8px;margin-top:3px;opacity:0.8;">Scan to verify</div>
+</div>`;
+} catch {}
+
 const gasSvg = gasFitterStrokes.length
 ? `<img src="data:image/svg+xml;utf8,${encodeURIComponent(strokesToSvg(gasFitterStrokes, sigW, 160))}" style="width:200px;height:60px;object-fit:contain;display:block;"/>`
 : `<div style="width:200px;height:40px;border-bottom:1px solid #111827;"></div>`;
@@ -523,9 +536,12 @@ const aiSection = aiResult ? `
 const html = `<html>
 <body style="font-family:Arial,sans-serif;padding:0;margin:0;color:#111827;background:#fff;">
 
-<div style="background:#f97316;color:white;padding:20px 24px;">
+<div style="background:#f97316;color:white;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;">
+<div>
 <div style="font-size:24px;font-weight:bold;letter-spacing:1px;">ELEMETRIC</div>
 <div style="font-size:13px;margin-top:4px;">Gas Rough-In Compliance Report — AS/NZS 5601.1:2013 &amp; AS 4575:2019</div>
+</div>
+${qrHtml}
 </div>
 
 <div style="padding:22px;">
