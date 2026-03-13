@@ -8,10 +8,14 @@ Pressable,
 Alert,
 TextInput,
 RefreshControl,
+ActivityIndicator,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
+import QRCode from "qrcode";
 
 type SavedJob = {
 id: string;
@@ -54,6 +58,7 @@ const [jobs, setJobs] = useState<SavedJob[]>([]);
 const [search, setSearch] = useState("");
 const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
 const [refreshing, setRefreshing] = useState(false);
+const [sharingJobId, setSharingJobId] = useState<string | null>(null);
 
 const loadJobs = async () => {
 try {
@@ -127,6 +132,86 @@ router.push({
 pathname: "/plumbing/job-detail",
 params: { job: JSON.stringify(job) },
 });
+};
+
+const shareJob = async (job: SavedJob) => {
+setSharingJobId(job.id);
+try {
+const dateShort = new Date(job.createdAt).toLocaleDateString("en-AU");
+const dateStr = new Date(job.createdAt).toLocaleString("en-AU");
+const td = "border:1px solid #d1d5db;padding:8px;";
+const th = `${td}background:#f3f4f6;text-align:left;`;
+
+let qrHtml = "";
+try {
+const qrSvg = await QRCode.toString(
+`ELM|${job.jobType}|${job.jobName}|${job.jobAddr}|${dateShort}`,
+{ type: "svg", width: 100, margin: 1 }
+);
+const qrUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrSvg)}`;
+qrHtml = `<div style="text-align:center;"><img src="${qrUrl}" style="width:68px;height:68px;background:white;padding:4px;border-radius:4px;display:block;"/><div style="font-size:8px;margin-top:3px;opacity:0.8;">Scan to verify</div></div>`;
+} catch {}
+
+const detectedRows = (job.detected ?? []).map((x) =>
+`<tr><td style="${td}">✓ ${x}</td><td style="${td}color:#16a34a;font-weight:bold;">Verified</td></tr>`
+).join("");
+const unclearRows = (job.unclear ?? []).map((x) =>
+`<tr><td style="${td}">? ${x}</td><td style="${td}color:#d97706;font-weight:bold;">Unclear</td></tr>`
+).join("");
+const missingRows = (job.missing ?? []).map((x) =>
+`<tr><td style="${td}">✗ ${x}</td><td style="${td}color:#dc2626;font-weight:bold;">Incomplete</td></tr>`
+).join("");
+
+const html = `<html><head><style>@page{margin:15mm;@bottom-right{content:"Page " counter(page);font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}@bottom-left{content:"ELEMETRIC \00B7 Confidential";font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}}body{margin:0;padding:0;font-family:Arial,sans-serif;color:#111827;background:#fff;}</style></head>
+<body>
+<div style="background:#07152b;color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
+<div style="font-size:28px;font-weight:900;letter-spacing:3px;">ELEMETRIC</div>
+${qrHtml}
+</div>
+<div style="background:#f97316;color:white;padding:10px 24px;display:flex;justify-content:space-between;align-items:center;">
+<div style="font-size:14px;font-weight:bold;">Job Summary Report — ${JOB_TYPE_LABELS[job.jobType] ?? job.jobType}</div>
+<div style="font-size:12px;">${dateShort}</div>
+</div>
+<div style="padding:22px;">
+<div style="margin-bottom:16px;">
+<div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Job Details</div>
+<table style="width:100%;border-collapse:collapse;">
+<tr><td style="padding:5px 0;width:160px;"><strong>Job Name</strong></td><td>${job.jobName}</td></tr>
+<tr><td style="padding:5px 0;"><strong>Address</strong></td><td>${job.jobAddr}</td></tr>
+<tr><td style="padding:5px 0;"><strong>Job Type</strong></td><td>${JOB_TYPE_LABELS[job.jobType] ?? job.jobType}</td></tr>
+<tr><td style="padding:5px 0;"><strong>Date</strong></td><td>${dateStr}</td></tr>
+<tr><td style="padding:5px 0;"><strong>AI Confidence</strong></td><td><strong style="font-size:18px;">${job.confidence}%</strong></td></tr>
+</table>
+</div>
+${(detectedRows || unclearRows || missingRows) ? `
+<div style="margin-bottom:16px;">
+<div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Checklist Status</div>
+<table style="width:100%;border-collapse:collapse;">
+<tr><th style="${th}width:75%;">Item</th><th style="${th}">Status</th></tr>
+${detectedRows}${unclearRows}${missingRows}
+</table>
+</div>` : ""}
+${job.action ? `<div style="margin-bottom:16px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;"><strong>Recommended Action:</strong> ${job.action}</div>` : ""}
+<div style="margin-top:24px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;color:#6b7280;line-height:1.6;"><strong style="color:#374151;">Compliance Disclaimer:</strong> This is a summary report generated from AI-assisted photo review. It is a documentation aid only. Final compliance responsibility remains with the licensed tradesperson.</div>
+</div>
+</body></html>`;
+
+const { uri } = await Print.printToFileAsync({ html });
+const canShare = await Sharing.isAvailableAsync();
+if (canShare) {
+await Sharing.shareAsync(uri, {
+mimeType: "application/pdf",
+dialogTitle: `Share ${job.jobName} Summary`,
+UTI: "com.adobe.pdf",
+});
+} else {
+Alert.alert("PDF Created", `Saved to: ${uri}`);
+}
+} catch (e: any) {
+Alert.alert("Share Error", e?.message ?? "Could not generate summary.");
+} finally {
+setSharingJobId(null);
+}
 };
 
 // Filter counts
@@ -223,11 +308,8 @@ jobs.length === 0 ? (
 )
 ) : (
 filtered.map((job) => (
-<Pressable
-key={job.id}
-style={styles.card}
-onPress={() => openJob(job)}
->
+<View key={job.id} style={styles.card}>
+<Pressable onPress={() => openJob(job)}>
 <View style={styles.cardTop}>
 <View style={styles.cardTitles}>
 <Text style={styles.jobTitle} numberOfLines={1}>{job.jobName}</Text>
@@ -252,9 +334,24 @@ day: "2-digit", month: "short", year: "numeric",
 </Text>
 </View>
 </View>
-
-<Text style={styles.openText}>Open full review →</Text>
 </Pressable>
+
+<View style={styles.cardActions}>
+<Pressable style={styles.openBtn} onPress={() => openJob(job)}>
+<Text style={styles.openBtnText}>Open review →</Text>
+</Pressable>
+<Pressable
+style={[styles.shareBtn, sharingJobId === job.id && { opacity: 0.6 }]}
+onPress={() => shareJob(job)}
+disabled={sharingJobId === job.id}
+>
+{sharingJobId === job.id
+? <ActivityIndicator size="small" color="#f97316" />
+: <Text style={styles.shareBtnText}>Share PDF</Text>
+}
+</Pressable>
+</View>
+</View>
 ))
 )}
 
@@ -396,7 +493,34 @@ metaItem: { gap: 2 },
 metaKey: { color: "rgba(255,255,255,0.4)", fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
 metaVal: { color: "rgba(255,255,255,0.85)", fontSize: 13, fontWeight: "700" },
 
-openText: { color: "#f97316", fontWeight: "900", fontSize: 14 },
+cardActions: {
+flexDirection: "row",
+gap: 8,
+marginTop: 10,
+paddingTop: 10,
+borderTopWidth: 1,
+borderTopColor: "rgba(255,255,255,0.07)",
+},
+openBtn: {
+flex: 1,
+paddingVertical: 9,
+borderRadius: 10,
+alignItems: "center",
+backgroundColor: "rgba(255,255,255,0.06)",
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.10)",
+},
+openBtnText: { color: "rgba(255,255,255,0.8)", fontWeight: "800", fontSize: 13 },
+shareBtn: {
+flex: 1,
+paddingVertical: 9,
+borderRadius: 10,
+alignItems: "center",
+backgroundColor: "rgba(249,115,22,0.15)",
+borderWidth: 1,
+borderColor: "rgba(249,115,22,0.35)",
+},
+shareBtnText: { color: "#f97316", fontWeight: "900", fontSize: 13 },
 
 clearBtn: {
 borderRadius: 14,

@@ -67,6 +67,14 @@ return (
 <Text style={styles.buttonArrow}>→</Text>
 </Pressable>
 
+<Pressable style={styles.nearMissButton} onPress={() => router.push("/near-miss")}>
+<View>
+<Text style={styles.nearMissTitle}>Report Near Miss</Text>
+<Text style={styles.nearMissSubtitle}>Document pre-existing non-compliant work</Text>
+</View>
+<Text style={styles.buttonArrow}>→</Text>
+</Pressable>
+
 {/* Onboarding checklist — hidden once all done */}
 {!allDone && (
 <View style={styles.checklistCard}>
@@ -151,6 +159,19 @@ justifyContent: "space-between",
 },
 buttonText: { color: "white", fontSize: 18, fontWeight: "800" },
 buttonArrow: { color: "rgba(255,255,255,0.4)", fontSize: 22, fontWeight: "300" },
+
+nearMissButton: {
+backgroundColor: "rgba(239,68,68,0.08)",
+borderRadius: 16,
+padding: 18,
+borderWidth: 1,
+borderColor: "rgba(239,68,68,0.25)",
+flexDirection: "row",
+alignItems: "center",
+justifyContent: "space-between",
+},
+nearMissTitle: { color: "#f87171", fontSize: 17, fontWeight: "800" },
+nearMissSubtitle: { color: "rgba(248,113,113,0.65)", fontSize: 12, marginTop: 3 },
 
 checklistCard: {
 marginTop: 8,

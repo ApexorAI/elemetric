@@ -382,6 +382,36 @@ return;
 }
 const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
 setGpsCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+
+// Reverse geocode to pre-fill job address if not already set
+try {
+const [rev] = await Location.reverseGeocodeAsync({
+latitude: loc.coords.latitude,
+longitude: loc.coords.longitude,
+});
+if (rev) {
+const formatted = [
+rev.streetNumber,
+rev.street,
+rev.suburb ?? rev.city,
+rev.region,
+rev.postalCode,
+].filter(Boolean).join(" ");
+if (formatted) {
+setJobAddrState((prev) => (prev === "No address" || !prev) ? formatted : prev);
+try {
+const raw = await AsyncStorage.getItem("elemetric_current_job");
+if (raw) {
+const j = JSON.parse(raw);
+if (!j.jobAddr || j.jobAddr === "No address") {
+j.jobAddr = formatted;
+await AsyncStorage.setItem("elemetric_current_job", JSON.stringify(j));
+}
+}
+} catch {}
+}
+}
+} catch {}
 } catch (e: any) {
 Alert.alert("GPS Error", e?.message ?? "Could not get location.");
 } finally {

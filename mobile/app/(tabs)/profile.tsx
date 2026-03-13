@@ -9,7 +9,53 @@ ScrollView,
 ActivityIndicator,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
+import Svg, { Circle, Text as SvgText } from "react-native-svg";
 import { supabase } from "@/lib/supabase";
+
+const R = 38;
+const STROKE = 9;
+const SIZE = (R + STROKE) * 2 + 4;
+const CIRC = 2 * Math.PI * R;
+
+function scoreColor(score: number): string {
+if (score >= 80) return "#22c55e";
+if (score >= 50) return "#f97316";
+return "#ef4444";
+}
+
+function ComplianceCircle({ score }: { score: number | null }) {
+if (score === null) return null;
+const pct = Math.max(0, Math.min(100, Math.round(score)));
+const offset = CIRC * (1 - pct / 100);
+const color = scoreColor(pct);
+const cx = SIZE / 2;
+const cy = SIZE / 2;
+
+return (
+<Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+<Circle cx={cx} cy={cy} r={R} stroke="rgba(255,255,255,0.10)" strokeWidth={STROKE} fill="none" />
+<Circle
+cx={cx} cy={cy} r={R}
+stroke={color}
+strokeWidth={STROKE}
+fill="none"
+strokeDasharray={`${CIRC}`}
+strokeDashoffset={`${offset}`}
+strokeLinecap="round"
+transform={`rotate(-90, ${cx}, ${cy})`}
+/>
+<SvgText
+x={cx} y={cy + 8}
+textAnchor="middle"
+fontSize="22"
+fontWeight="900"
+fill={color}
+>
+{pct}
+</SvgText>
+</Svg>
+);
+}
 
 export default function Profile() {
 const router = useRouter();
@@ -21,6 +67,8 @@ const [fullName, setFullName] = useState("");
 const [licenceNumber, setLicenceNumber] = useState("");
 const [companyName, setCompanyName] = useState("");
 const [phone, setPhone] = useState("");
+const [complianceScore, setComplianceScore] = useState<number | null>(null);
+const [jobCount, setJobCount] = useState(0);
 
 useFocusEffect(
 useCallback(() => {
@@ -29,17 +77,47 @@ const load = async () => {
 try {
 const { data: { user } } = await supabase.auth.getUser();
 if (!user) return;
-const { data } = await supabase
+
+// Load profile fields
+const { data: profile } = await supabase
 .from("profiles")
 .select("full_name, licence_number, company_name, phone")
 .eq("user_id", user.id)
 .single();
-if (data && active) {
-setFullName(data.full_name || "");
-setLicenceNumber(data.licence_number || "");
-setCompanyName(data.company_name || "");
-setPhone(data.phone || "");
+if (profile && active) {
+setFullName(profile.full_name || "");
+setLicenceNumber(profile.licence_number || "");
+setCompanyName(profile.company_name || "");
+setPhone(profile.phone || "");
 }
+
+// Calculate compliance score from job history
+try {
+const { data: jobs } = await supabase
+.from("jobs")
+.select("confidence")
+.eq("user_id", user.id);
+
+if (jobs && jobs.length > 0 && active) {
+const avg = Math.round(
+jobs.reduce((sum, j) => sum + (j.confidence ?? 0), 0) / jobs.length
+);
+setComplianceScore(avg);
+setJobCount(jobs.length);
+
+// Best-effort: update compliance_score in Supabase
+// (requires compliance_score column to exist in profiles table)
+try {
+await supabase.from("profiles").upsert(
+{ user_id: user.id, compliance_score: avg },
+{ onConflict: "user_id" }
+);
+} catch {}
+} else if (active) {
+setComplianceScore(null);
+setJobCount(0);
+}
+} catch {}
 } catch {
 // keep defaults
 } finally {
@@ -83,6 +161,15 @@ return (
 );
 }
 
+const labelText =
+complianceScore === null
+? "No jobs yet"
+: complianceScore >= 80
+? "Excellent"
+: complianceScore >= 50
+? "Good"
+: "Needs Attention";
+
 return (
 <View style={styles.screen}>
 <View style={styles.header}>
@@ -97,12 +184,38 @@ return (
 </View>
 
 <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+
+{/* Compliance Score Card */}
+<View style={styles.scoreCard}>
+<View style={styles.scoreLeft}>
+<Text style={styles.scoreTitle}>Compliance Score</Text>
+<Text style={styles.scoreSubtitle}>
+{complianceScore === null
+? "Complete jobs to generate your score"
+: `Based on ${jobCount} job${jobCount === 1 ? "" : "s"}`}
+</Text>
+{complianceScore !== null && (
+<View style={[styles.scoreBadge, { borderColor: scoreColor(complianceScore) + "50", backgroundColor: scoreColor(complianceScore) + "18" }]}>
+<Text style={[styles.scoreBadgeText, { color: scoreColor(complianceScore) }]}>{labelText}</Text>
+</View>
+)}
+</View>
+<View style={styles.scoreRight}>
+{complianceScore !== null ? (
+<ComplianceCircle score={complianceScore} />
+) : (
+<View style={[styles.scorePlaceholder, { width: SIZE, height: SIZE }]}>
+<Text style={styles.scorePlaceholderText}>—</Text>
+</View>
+)}
+</View>
+</View>
+
 <Text style={styles.label}>Full Name</Text>
 <TextInput
 style={styles.input}
 value={fullName}
 onChangeText={setFullName}
-placeholder=""
 placeholderTextColor="#777"
 />
 
@@ -111,7 +224,6 @@ placeholderTextColor="#777"
 style={styles.input}
 value={licenceNumber}
 onChangeText={setLicenceNumber}
-placeholder=""
 placeholderTextColor="#777"
 autoCapitalize="characters"
 />
@@ -121,7 +233,6 @@ autoCapitalize="characters"
 style={styles.input}
 value={companyName}
 onChangeText={setCompanyName}
-placeholder=""
 placeholderTextColor="#777"
 />
 
@@ -130,7 +241,6 @@ placeholderTextColor="#777"
 style={styles.input}
 value={phone}
 onChangeText={setPhone}
-placeholder=""
 placeholderTextColor="#777"
 keyboardType="phone-pad"
 />
@@ -173,6 +283,40 @@ gearIcon: { color: "rgba(255,255,255,0.6)", fontSize: 22 },
 title: { marginTop: 6, color: "white", fontSize: 22, fontWeight: "900" },
 subtitle: { marginTop: 4, color: "rgba(255,255,255,0.7)", fontSize: 14 },
 body: { padding: 18, paddingBottom: 40 },
+
+scoreCard: {
+borderRadius: 18,
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.10)",
+backgroundColor: "rgba(255,255,255,0.04)",
+padding: 18,
+flexDirection: "row",
+alignItems: "center",
+justifyContent: "space-between",
+marginBottom: 8,
+},
+scoreLeft: { flex: 1, paddingRight: 16 },
+scoreTitle: { color: "white", fontWeight: "900", fontSize: 16 },
+scoreSubtitle: { color: "rgba(255,255,255,0.55)", fontSize: 13, marginTop: 4, lineHeight: 18 },
+scoreBadge: {
+marginTop: 10,
+borderRadius: 10,
+borderWidth: 1,
+paddingHorizontal: 10,
+paddingVertical: 4,
+alignSelf: "flex-start",
+},
+scoreBadgeText: { fontWeight: "900", fontSize: 12 },
+scoreRight: {},
+scorePlaceholder: {
+borderRadius: SIZE / 2,
+borderWidth: 3,
+borderColor: "rgba(255,255,255,0.10)",
+alignItems: "center",
+justifyContent: "center",
+},
+scorePlaceholderText: { color: "rgba(255,255,255,0.25)", fontSize: 20, fontWeight: "900" },
+
 label: { color: "rgba(255,255,255,0.7)", marginTop: 16, fontWeight: "700" },
 input: {
 backgroundColor: "rgba(255,255,255,0.05)",
