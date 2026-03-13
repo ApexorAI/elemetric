@@ -92,19 +92,41 @@ style={styles.tradeCard}
 </ImageBackground>
 </Pressable>
 
-<View style={styles.lockedCard}>
+<Pressable onPress={() => router.push({ pathname: "/plumbing/new-job", params: { type: "electrical" } })}>
 <ImageBackground
 source={require("../assets/trades/electrical.jpg")}
 imageStyle={styles.cardImage}
 style={styles.tradeCard}
 >
-<View style={styles.lockedOverlay} />
+<View style={styles.overlay} />
 <View style={styles.cardContent}>
 <Text style={styles.tradeTitle}>ELECTRICAL</Text>
-<Text style={styles.lockedText}>🔒 COMING SOON</Text>
+<Text style={styles.activeText}>● ACTIVE</Text>
+</View>
+
+<View style={styles.arrowCircle}>
+<Text style={styles.arrowText}>→</Text>
 </View>
 </ImageBackground>
+</Pressable>
+
+<Pressable onPress={() => router.push({ pathname: "/plumbing/new-job", params: { type: "hvac" } })}>
+<ImageBackground
+source={require("../assets/trades/hvac.jpg")}
+imageStyle={styles.cardImage}
+style={styles.tradeCard}
+>
+<View style={styles.overlay} />
+<View style={styles.cardContent}>
+<Text style={styles.tradeTitle}>HVAC</Text>
+<Text style={styles.activeText}>● ACTIVE</Text>
 </View>
+
+<View style={styles.arrowCircle}>
+<Text style={styles.arrowText}>→</Text>
+</View>
+</ImageBackground>
+</Pressable>
 
 <View style={styles.lockedCard}>
 <ImageBackground
@@ -115,20 +137,6 @@ style={styles.tradeCard}
 <View style={styles.lockedOverlay} />
 <View style={styles.cardContent}>
 <Text style={styles.tradeTitle}>CARPENTRY</Text>
-<Text style={styles.lockedText}>🔒 COMING SOON</Text>
-</View>
-</ImageBackground>
-</View>
-
-<View style={styles.lockedCard}>
-<ImageBackground
-source={require("../assets/trades/hvac.jpg")}
-imageStyle={styles.cardImage}
-style={styles.tradeCard}
->
-<View style={styles.lockedOverlay} />
-<View style={styles.cardContent}>
-<Text style={styles.tradeTitle}>HVAC</Text>
 <Text style={styles.lockedText}>🔒 COMING SOON</Text>
 </View>
 </ImageBackground>

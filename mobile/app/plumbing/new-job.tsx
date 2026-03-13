@@ -34,9 +34,11 @@ JSON.stringify(currentJob)
 );
 
 const dest =
-type === "gas"        ? "/plumbing/gas-checklist"      :
-type === "drainage"   ? "/plumbing/drainage-checklist"  :
-type === "newinstall" ? "/plumbing/newinstall-checklist" :
+type === "gas"         ? "/plumbing/gas-checklist"       :
+type === "drainage"    ? "/plumbing/drainage-checklist"   :
+type === "newinstall"  ? "/plumbing/newinstall-checklist" :
+type === "electrical"  ? "/plumbing/general-checklist"   :
+type === "hvac"        ? "/plumbing/general-checklist"   :
 "/plumbing/checklist";
 router.push(dest);
 } catch (e: any) {
@@ -50,9 +52,11 @@ return (
 <Text style={styles.brand}>ELEMETRIC</Text>
 <Text style={styles.title}>New Job</Text>
 <Text style={styles.subtitle}>
-{type === "gas" ? "Gas Rough-In" :
-type === "drainage" ? "Drainage" :
+{type === "gas"        ? "Gas Rough-In" :
+type === "drainage"   ? "Drainage" :
 type === "newinstall" ? "New Installation" :
+type === "electrical" ? "Electrical" :
+type === "hvac"       ? "HVAC" :
 "Hot Water System Install"}
 </Text>
 </View>

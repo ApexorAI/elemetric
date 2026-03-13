@@ -8,10 +8,11 @@ Pressable,
 ScrollView,
 ActivityIndicator,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 
 export default function Profile() {
+const router = useRouter();
 const [loading, setLoading] = useState(true);
 const [saving, setSaving] = useState(false);
 const [toast, setToast] = useState<string | null>(null);
@@ -85,7 +86,12 @@ return (
 return (
 <View style={styles.screen}>
 <View style={styles.header}>
+<View style={styles.headerRow}>
 <Text style={styles.brand}>ELEMETRIC</Text>
+<Pressable onPress={() => router.push("/settings")} hitSlop={8}>
+<Text style={styles.gearIcon}>⚙</Text>
+</Pressable>
+</View>
 <Text style={styles.title}>Profile</Text>
 <Text style={styles.subtitle}>Your details appear in compliance reports</Text>
 </View>
@@ -161,7 +167,9 @@ gap: 10,
 loadingText: { color: "rgba(255,255,255,0.7)" },
 screen: { flex: 1, backgroundColor: "#07152b" },
 header: { paddingTop: 18, paddingHorizontal: 18, paddingBottom: 4 },
+headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
 brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
+gearIcon: { color: "rgba(255,255,255,0.6)", fontSize: 22 },
 title: { marginTop: 6, color: "white", fontSize: 22, fontWeight: "900" },
 subtitle: { marginTop: 4, color: "rgba(255,255,255,0.7)", fontSize: 14 },
 body: { padding: 18, paddingBottom: 40 },

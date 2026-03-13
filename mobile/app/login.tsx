@@ -36,7 +36,7 @@ setLoading(true);
 try {
 const { error } = await supabase.auth.signUp({ email, password });
 if (error) throw error;
-Alert.alert("Account created", "Check your email to confirm your account, then sign in.");
+router.replace({ pathname: "/signup-confirm", params: { email } });
 } catch (e: any) {
 Alert.alert("Sign Up Failed", e?.message ?? "Could not create account.");
 } finally {
