@@ -15,6 +15,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
+import { hashBase64, captureTimestamp } from "@/lib/photoHash";
 
 const API_BASE = "https://elemetric-ai-production.up.railway.app";
 const CHECKLIST_KEY = "elemetric_current_checklist";
@@ -35,6 +36,13 @@ subtitle: string;
 type ChecklistState = {
 checked: Record<string, boolean>;
 photoMap: Record<string, string[]>;
+photoMeta: Record<string, PhotoMeta[]>;
+};
+
+type PhotoMeta = {
+uri: string;
+hash: string;
+capturedAt: string;
 };
 
 type ReviewPhoto = {
@@ -42,6 +50,8 @@ label: string;
 uri: string;
 base64: string;
 mime: string;
+hash?: string;
+capturedAt?: string;
 };
 
 const HOTWATER_ITEMS: ChecklistItem[] = [
@@ -83,6 +93,7 @@ jobAddr: "No address",
 });
 const [checked, setChecked] = useState<Record<string, boolean>>({});
 const [photoMap, setPhotoMap] = useState<Record<string, string[]>>({});
+const [photoMeta, setPhotoMeta] = useState<Record<string, PhotoMeta[]>>({});
 const [loading, setLoading] = useState(false);
 
 useFocusEffect(
@@ -106,6 +117,7 @@ if (rawChecklist && active) {
 const parsedChecklist: ChecklistState = JSON.parse(rawChecklist);
 setChecked(parsedChecklist.checked || {});
 setPhotoMap(parsedChecklist.photoMap || {});
+setPhotoMeta(parsedChecklist.photoMeta || {});
 } else if (active) {
 const blankPhotoMap: Record<string, string[]> = {};
 HOTWATER_ITEMS.forEach((item) => {
@@ -134,13 +146,15 @@ return Object.values(photoMap).reduce((sum, arr) => sum + (arr?.length || 0), 0)
 
 const saveChecklistState = async (
 nextChecked: Record<string, boolean>,
-nextPhotoMap: Record<string, string[]>
+nextPhotoMap: Record<string, string[]>,
+nextPhotoMeta: Record<string, PhotoMeta[]>
 ) => {
 await AsyncStorage.setItem(
 CHECKLIST_KEY,
 JSON.stringify({
 checked: nextChecked,
 photoMap: nextPhotoMap,
+photoMeta: nextPhotoMeta,
 })
 );
 };
@@ -166,20 +180,32 @@ Alert.alert("Photo error", "Could not read selected image.");
 return;
 }
 
+// Generate SHA-256 hash at capture time
+const ts = captureTimestamp();
+let hash = "";
+try {
+const b64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
+hash = await hashBase64(b64);
+} catch {}
+
 const nextPhotoMap = {
 ...photoMap,
 [itemId]: [...(photoMap[itemId] || []), asset.uri],
 };
-
+const nextPhotoMeta = {
+...photoMeta,
+[itemId]: [...(photoMeta[itemId] || []), { uri: asset.uri, hash, capturedAt: ts }],
+};
 const nextChecked = {
 ...checked,
 [itemId]: true,
 };
 
 setPhotoMap(nextPhotoMap);
+setPhotoMeta(nextPhotoMeta);
 setChecked(nextChecked);
 
-await saveChecklistState(nextChecked, nextPhotoMap);
+await saveChecklistState(nextChecked, nextPhotoMap, nextPhotoMeta);
 } catch (e: any) {
 Alert.alert("Photo error", e?.message ?? "Unknown error");
 }
@@ -187,22 +213,18 @@ Alert.alert("Photo error", e?.message ?? "Unknown error");
 
 const removePhotoForItem = async (itemId: string, uri: string) => {
 const nextArray = (photoMap[itemId] || []).filter((p) => p !== uri);
+const nextMetaArray = (photoMeta[itemId] || []).filter((m) => m.uri !== uri);
 
-const nextPhotoMap = {
-...photoMap,
-[itemId]: nextArray,
-};
-
-const nextChecked = {
-...checked,
-[itemId]: nextArray.length > 0,
-};
+const nextPhotoMap = { ...photoMap, [itemId]: nextArray };
+const nextPhotoMeta = { ...photoMeta, [itemId]: nextMetaArray };
+const nextChecked = { ...checked, [itemId]: nextArray.length > 0 };
 
 setPhotoMap(nextPhotoMap);
+setPhotoMeta(nextPhotoMeta);
 setChecked(nextChecked);
 
 try {
-await saveChecklistState(nextChecked, nextPhotoMap);
+await saveChecklistState(nextChecked, nextPhotoMap, nextPhotoMeta);
 } catch {}
 };
 
@@ -238,15 +260,19 @@ const images: { mime: string; data: string; label: string }[] = [];
 
 for (const item of HOTWATER_ITEMS) {
 const itemUris = photoMap[item.id] || [];
+const itemMeta = photoMeta[item.id] || [];
 
 for (const uri of itemUris) {
 const converted = await convertToJpeg(uri);
+const meta = itemMeta.find((m) => m.uri === uri);
 
 reviewPhotos.push({
 label: item.title,
 uri: converted.uri,
 base64: converted.base64,
 mime: converted.mime,
+hash: meta?.hash,
+capturedAt: meta?.capturedAt,
 });
 
 images.push({
@@ -370,9 +396,16 @@ disabled={loading}
 
 {itemPhotos.length > 0 && (
 <View style={styles.photoGrid}>
-{itemPhotos.map((uri, i) => (
+{itemPhotos.map((uri, i) => {
+const meta = (photoMeta[item.id] || []).find((m) => m.uri === uri);
+return (
 <View key={`${item.id}-${uri}-${i}`} style={styles.photoWrap}>
 <Image source={{ uri }} style={styles.photo} />
+{meta?.hash ? (
+<View style={styles.shield}>
+<Text style={styles.shieldText}>🛡</Text>
+</View>
+) : null}
 <Pressable
 style={styles.remove}
 onPress={() => removePhotoForItem(item.id, uri)}
@@ -381,7 +414,8 @@ disabled={loading}
 <Text style={styles.removeText}>×</Text>
 </Pressable>
 </View>
-))}
+);
+})}
 </View>
 )}
 </View>
@@ -503,6 +537,16 @@ width: 96,
 height: 96,
 borderRadius: 10,
 },
+shield: {
+position: "absolute",
+bottom: 4,
+left: 4,
+backgroundColor: "rgba(34,197,94,0.85)",
+borderRadius: 8,
+paddingHorizontal: 4,
+paddingVertical: 1,
+},
+shieldText: { fontSize: 11 },
 remove: {
 position: "absolute",
 top: 6,

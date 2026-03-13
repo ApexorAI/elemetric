@@ -11,6 +11,7 @@ Alert,
 ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as Haptics from "expo-haptics";
@@ -18,6 +19,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import QRCode from "qrcode";
+import { hashBase64, captureTimestamp } from "@/lib/photoHash";
 
 const SIGNATURE_KEY = "elemetric_signature_svg";
 
@@ -30,6 +32,7 @@ const SECTIONS = [
 ] as const;
 
 type Section = { photoUris: string[]; notes: string };
+type PhotoMeta = { uri: string; hash: string; capturedAt: string };
 
 function tradeLabel(type: string): string {
 if (type === "electrical") return "Electrical";
@@ -54,6 +57,7 @@ const [signatureSvg, setSignatureSvg] = useState("");
 const [sections, setSections] = useState<Record<string, Section>>(() =>
 Object.fromEntries(SECTIONS.map((s) => [s.id, { photoUris: [], notes: "" }]))
 );
+const [photoMeta, setPhotoMeta] = useState<Record<string, PhotoMeta[]>>({});
 const [generalNotes, setGeneralNotes] = useState("");
 const [pdfLoading, setPdfLoading] = useState(false);
 const [licenceNumber, setLicenceNumber] = useState("");
@@ -107,6 +111,13 @@ quality: 1,
 if (result.canceled) return;
 const uri = result.assets?.[0]?.uri;
 if (!uri) return;
+const ts = captureTimestamp();
+let hash = "";
+try {
+const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+hash = await hashBase64(b64);
+} catch {}
+setPhotoMeta((prev) => ({ ...prev, [sectionId]: [...(prev[sectionId] || []), { uri, hash, capturedAt: ts }] }));
 setSections((prev) => ({
 ...prev,
 [sectionId]: { ...prev[sectionId], photoUris: [...prev[sectionId].photoUris, uri] },
@@ -116,7 +127,8 @@ Alert.alert("Photo error", e?.message ?? "Unknown error");
 }
 };
 
-const removePhoto = (sectionId: string, uri: string) =>
+const removePhoto = (sectionId: string, uri: string) => {
+setPhotoMeta((prev) => ({ ...prev, [sectionId]: (prev[sectionId] || []).filter((m) => m.uri !== uri) }));
 setSections((prev) => ({
 ...prev,
 [sectionId]: {
@@ -124,6 +136,7 @@ setSections((prev) => ({
 photoUris: prev[sectionId].photoUris.filter((u) => u !== uri),
 },
 }));
+};
 
 const setNotes = (sectionId: string, notes: string) =>
 setSections((prev) => ({ ...prev, [sectionId]: { ...prev[sectionId], notes } }));
@@ -298,9 +311,12 @@ return (
 
 {entry.photoUris.length > 0 && (
 <View style={styles.photoGrid}>
-{entry.photoUris.map((uri, i) => (
+{entry.photoUris.map((uri, i) => {
+const meta = (photoMeta[sec.id] || []).find((m) => m.uri === uri);
+return (
 <View key={`${sec.id}-${i}`} style={styles.photoWrap}>
 <Image source={{ uri }} style={styles.photo} />
+{meta?.hash ? <View style={styles.shieldBadge}><Text style={styles.shieldBadgeText}>🛡</Text></View> : null}
 <Pressable
 style={styles.removePhotoBtn}
 onPress={() => removePhoto(sec.id, uri)}
@@ -308,7 +324,8 @@ onPress={() => removePhoto(sec.id, uri)}
 <Text style={styles.removePhotoText}>×</Text>
 </Pressable>
 </View>
-))}
+);
+})}
 </View>
 )}
 
@@ -422,6 +439,8 @@ addPhotoBtn: { backgroundColor: "#f97316", borderRadius: 10, paddingVertical: 10
 addPhotoBtnText: { color: "#0b1220", fontWeight: "900", fontSize: 13 },
 photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 photoWrap: { position: "relative" },
+shieldBadge: { position: "absolute", bottom: 4, left: 4, backgroundColor: "rgba(34,197,94,0.85)", borderRadius: 8, paddingHorizontal: 4, paddingVertical: 1 },
+shieldBadgeText: { fontSize: 11 },
 photo: { width: 80, height: 80, borderRadius: 8 },
 removePhotoBtn: {
 position: "absolute",

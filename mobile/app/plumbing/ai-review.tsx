@@ -43,6 +43,8 @@ label: string;
 uri: string;
 base64: string;
 mime: string;
+hash?: string;
+capturedAt?: string;
 };
 
 const REVIEW_PHOTOS_FILE = `${FileSystem.documentDirectory}review-photos.json`;
@@ -89,6 +91,7 @@ companyName: "",
 const [toast, setToast] = useState<string | null>(null);
 const [showShareModal, setShowShareModal] = useState(false);
 const [generatedPdfUri, setGeneratedPdfUri] = useState<string | null>(null);
+const [generatingCert, setGeneratingCert] = useState(false);
 
 useEffect(() => {
 if (!toast) return;
@@ -484,6 +487,17 @@ ${signatureHtml}
 </div>
 </div>
 
+<div style="margin-bottom:18px;page-break-inside:avoid;">
+<div style="font-size:19px;font-weight:bold;margin-bottom:6px;">Tamper-Evident Photo Record</div>
+<div style="font-size:11px;color:#6b7280;margin-bottom:10px;">Each photo hash can be used to verify this image has not been modified since capture.</div>
+<table style="width:100%;border-collapse:collapse;font-size:11px;">
+<thead><tr style="background:#f3f4f6;"><th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;">Photo Label</th><th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;">Captured At</th><th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;word-break:break-all;">SHA-256 Hash</th></tr></thead>
+<tbody>
+${reviewPhotos.map((p) => `<tr><td style="padding:6px 8px;border:1px solid #e5e7eb;font-weight:600;">${p.label}</td><td style="padding:6px 8px;border:1px solid #e5e7eb;white-space:nowrap;">${p.capturedAt ? new Date(p.capturedAt).toLocaleString("en-AU") : "—"}</td><td style="padding:6px 8px;border:1px solid #e5e7eb;font-family:monospace;word-break:break-all;font-size:9px;">${p.hash || "—"}</td></tr>`).join("")}
+</tbody>
+</table>
+</div>
+
 <div style="margin-top:24px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;color:#6b7280;line-height:1.6;"><strong style="color:#374151;">Compliance Disclaimer:</strong> This report is generated from the photos provided and an AI-assisted review. It is a documentation aid only. Final compliance responsibility remains with the installer and relevant licensed professional.</div>
 </div>
 </body>
@@ -512,6 +526,112 @@ setShowShareModal(true);
 Alert.alert("PDF Error", e?.message ?? "Could not generate report.");
 } finally {
 setGeneratingPdf(false);
+}
+};
+
+// ── Certificate of Compliance ──────────────────────────────────────────────
+
+const generateCertificate = async () => {
+setGeneratingCert(true);
+try {
+await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+const certDate = new Date().toLocaleDateString("en-AU", { day: "2-digit", month: "long", year: "numeric" });
+const certNumber = `ELM-${currentJob.jobAddr.replace(/\s+/g, "").slice(0, 6).toUpperCase()}-${Date.now().toString().slice(-6)}`;
+
+const signatureHtml = signatureSvg
+? `<img src="data:image/svg+xml;utf8,${encodeURIComponent(signatureSvg)}" style="width:180px;height:55px;object-fit:contain;display:block;"/>`
+: `<div style="width:180px;height:40px;border-bottom:2px solid #07152b;"></div>`;
+
+const certHtml = `
+<html><head><style>
+@page { margin: 20mm; }
+body { margin:0; padding:0; font-family: Georgia, serif; color: #07152b; background: #ffffff; }
+.outer { border: 3px solid #07152b; border-radius: 4px; padding: 40px; min-height: 90vh; display: flex; flex-direction: column; }
+.header { text-align: center; border-bottom: 2px solid #f97316; padding-bottom: 24px; margin-bottom: 28px; }
+.brand { font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #07152b; }
+.cert-title { font-size: 22px; margin-top: 10px; font-style: italic; color: #374151; }
+.cert-number { font-size: 12px; color: #6b7280; margin-top: 6px; letter-spacing: 1px; }
+.section { margin-bottom: 20px; }
+.label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.value { font-size: 15px; color: #07152b; font-weight: bold; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+.statement { margin: 28px 0; padding: 20px; border-left: 4px solid #f97316; background: #fffbf5; font-size: 14px; line-height: 1.7; font-style: italic; color: #07152b; }
+.sig-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 40px; }
+.sig-block { flex: 1; }
+.sig-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; }
+.footer { margin-top: auto; padding-top: 24px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 10px; color: #9ca3af; }
+.orange { color: #f97316; }
+</style></head>
+<body>
+<div class="outer">
+  <div class="header">
+    <div class="brand">ELEMETRIC</div>
+    <div class="cert-title">Certificate of Compliance</div>
+    <div class="cert-number">Certificate No: ${certNumber}</div>
+  </div>
+
+  <div class="section">
+    <div class="label">Property Address</div>
+    <div class="value">${currentJob.jobAddr}</div>
+  </div>
+
+  <div class="section">
+    <div class="label">Work Description</div>
+    <div class="value">${currentJob.jobName} — ${currentJob.type}</div>
+  </div>
+
+  <div class="section">
+    <div class="label">Licensed Tradesperson</div>
+    <div class="value">${installerName || "Not specified"}</div>
+  </div>
+
+  <div class="section">
+    <div class="label">Licence Number</div>
+    <div class="value">${profile.licenceNumber || "Not specified"}</div>
+  </div>
+
+  ${profile.companyName ? `<div class="section"><div class="label">Company</div><div class="value">${profile.companyName}</div></div>` : ""}
+
+  <div class="section">
+    <div class="label">Date of Completion</div>
+    <div class="value">${certDate}</div>
+  </div>
+
+  <div class="statement">
+    "I certify that the work described herein has been carried out in accordance with the relevant Australian Standards and Victorian plumbing regulations. All materials used are of the required standard and the installation has been inspected and found to be satisfactory."
+  </div>
+
+  <div class="sig-row">
+    <div class="sig-block">
+      ${signatureHtml}
+      <div class="sig-label">Signature of Licensed Tradesperson</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:13px;font-weight:bold;">${certDate}</div>
+      <div class="sig-label">Date</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    This certificate was generated by Elemetric · AI-powered compliance documentation for Australian tradespeople.<br/>
+    Certificate No: ${certNumber} · AI Confidence: ${confidence}%
+  </div>
+</div>
+</body>
+</html>
+`;
+
+const { uri: certUri } = await Print.printToFileAsync({ html: certHtml });
+const filename = `elemetric-cert-${Date.now()}.pdf`;
+const dest = FileSystem.cacheDirectory + filename;
+await FileSystem.copyAsync({ from: certUri, to: dest });
+const canShare = await Sharing.isAvailableAsync();
+if (canShare) {
+await Sharing.shareAsync(dest, { mimeType: "application/pdf", UTI: "com.adobe.pdf", dialogTitle: "Certificate of Compliance" });
+}
+} catch (e: any) {
+Alert.alert("Certificate Error", e?.message ?? "Could not generate certificate.");
+} finally {
+setGeneratingCert(false);
 }
 };
 
@@ -631,6 +751,16 @@ disabled={generatingPdf}
 >
 <Text style={styles.reportText}>
 {generatingPdf ? "Generating Report..." : "Generate Compliance Report"}
+</Text>
+</Pressable>
+
+<Pressable
+style={[styles.certBtn, generatingCert && { opacity: 0.6 }]}
+onPress={generateCertificate}
+disabled={generatingCert}
+>
+<Text style={styles.certText}>
+{generatingCert ? "Generating Certificate..." : "Generate Certificate of Compliance"}
 </Text>
 </Pressable>
 
@@ -906,6 +1036,15 @@ borderWidth: 1,
 borderColor: "rgba(34,197,94,0.40)",
 },
 reportText: { color: "white", fontWeight: "900", fontSize: 16 },
+certBtn: {
+borderRadius: 14,
+paddingVertical: 14,
+alignItems: "center",
+backgroundColor: "rgba(59,130,246,0.15)",
+borderWidth: 1,
+borderColor: "rgba(59,130,246,0.35)",
+},
+certText: { color: "#93c5fd", fontWeight: "900", fontSize: 15 },
 jobsBtn: {
 borderRadius: 14,
 paddingVertical: 14,

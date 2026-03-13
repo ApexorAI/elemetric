@@ -14,7 +14,9 @@ LayoutChangeEvent,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Location from "expo-location";
+import { hashBase64, captureTimestamp } from "@/lib/photoHash";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as Haptics from "expo-haptics";
@@ -67,6 +69,7 @@ status: CheckStatus;
 notes: string;
 photoUris: string[];
 };
+type PhotoMeta = { uri: string; hash: string; capturedAt: string };
 
 type ServiceEntry = {
 status: CheckStatus;
@@ -321,6 +324,7 @@ Object.fromEntries(
 SERVICING_CHECKS.map((c) => [c.id, { status: null, reading: "" }])
 )
 );
+const [photoMeta, setPhotoMeta] = useState<Record<string, PhotoMeta[]>>({});
 
 // Signatures
 const [gasFitterStrokes, setGasFitterStrokes]   = useState<Stroke[]>([]);
@@ -433,6 +437,13 @@ quality: 1,
 if (result.canceled) return;
 const uri = result.assets?.[0]?.uri;
 if (!uri) return;
+const ts = captureTimestamp();
+let hash = "";
+try {
+const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+hash = await hashBase64(b64);
+} catch {}
+setPhotoMeta((prev) => ({ ...prev, [checkId]: [...(prev[checkId] || []), { uri, hash, capturedAt: ts }] }));
 setInstallChecks((prev) => ({
 ...prev,
 [checkId]: { ...prev[checkId], photoUris: [...prev[checkId].photoUris, uri] },
@@ -443,6 +454,7 @@ Alert.alert("Photo error", e?.message ?? "Unknown error");
 };
 
 const removePhoto = (checkId: string, uri: string) => {
+setPhotoMeta((prev) => ({ ...prev, [checkId]: (prev[checkId] || []).filter((m) => m.uri !== uri) }));
 setInstallChecks((prev) => ({
 ...prev,
 [checkId]: {
@@ -767,14 +779,18 @@ multiline
 </Pressable>
 {entry.photoUris.length > 0 && (
 <View style={styles.photoGrid}>
-{entry.photoUris.map((uri, i) => (
+{entry.photoUris.map((uri, i) => {
+const meta = (photoMeta[check.id] || []).find((m) => m.uri === uri);
+return (
 <View key={`${check.id}-${i}`} style={styles.photoWrap}>
 <Image source={{ uri }} style={styles.photo} />
+{meta?.hash ? <View style={styles.shieldBadge}><Text style={styles.shieldBadgeText}>🛡</Text></View> : null}
 <Pressable style={styles.removePhotoBtn} onPress={() => removePhoto(check.id, uri)}>
 <Text style={styles.removePhotoText}>×</Text>
 </Pressable>
 </View>
-))}
+);
+})}
 </View>
 )}
 </View>
@@ -985,6 +1001,8 @@ addPhotoBtnText: { color: "#0b1220", fontWeight: "900", fontSize: 13 },
 
 photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 photoWrap: { position: "relative" },
+shieldBadge: { position: "absolute", bottom: 4, left: 4, backgroundColor: "rgba(34,197,94,0.85)", borderRadius: 8, paddingHorizontal: 4, paddingVertical: 1 },
+shieldBadgeText: { fontSize: 11 },
 photo:     { width: 80, height: 80, borderRadius: 8 },
 removePhotoBtn: {
 position: "absolute",

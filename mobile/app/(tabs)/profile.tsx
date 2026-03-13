@@ -69,6 +69,7 @@ export default function Profile() {
   // Licence verification
   const [licenceVerified, setLicenceVerified]     = useState(false);
   const [licenceVerifiedAt, setLicenceVerifiedAt] = useState<string | null>(null);
+  const [licenceExpiryDate, setLicenceExpiryDate] = useState("");
   const [showConfirm, setShowConfirm]             = useState(false);
   const [confirmChecked, setConfirmChecked]       = useState(false);
 
@@ -87,7 +88,7 @@ export default function Profile() {
 
           const { data: profile } = await supabase
             .from("profiles")
-            .select("full_name, licence_number, company_name, phone, licence_verified, licence_verified_at")
+            .select("full_name, licence_number, company_name, phone, licence_verified, licence_verified_at, licence_expiry_date")
             .eq("user_id", user.id)
             .single();
 
@@ -98,6 +99,7 @@ export default function Profile() {
             setPhone(profile.phone || "");
             setLicenceVerified(profile.licence_verified ?? false);
             setLicenceVerifiedAt(profile.licence_verified_at ?? null);
+            setLicenceExpiryDate(profile.licence_expiry_date || "");
           }
 
           try {
@@ -143,6 +145,7 @@ export default function Profile() {
         licence_number: licenceNumber.trim(),
         company_name: companyName.trim(),
         phone: phone.trim(),
+        licence_expiry_date: licenceExpiryDate.trim() || null,
       }, { onConflict: "user_id" });
       if (error) throw error;
       showToast("Profile saved.");
@@ -289,6 +292,17 @@ export default function Profile() {
         {licenceVerified && verifiedDate && (
           <Text style={styles.verifiedDate}>Verified on {verifiedDate}</Text>
         )}
+
+        {/* Licence Expiry Date */}
+        <Text style={styles.label}>Licence Expiry Date</Text>
+        <TextInput
+          style={styles.input}
+          value={licenceExpiryDate}
+          onChangeText={setLicenceExpiryDate}
+          placeholder="DD/MM/YYYY"
+          placeholderTextColor="#777"
+          keyboardType="numbers-and-punctuation"
+        />
 
         {/* VBA Verify button */}
         {!licenceVerified && (
