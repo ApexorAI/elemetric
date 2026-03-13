@@ -11,6 +11,7 @@ const [profileDone, setProfileDone]   = useState(false);
 const [jobDone,     setJobDone]       = useState(false);
 const [pdfDone,     setPdfDone]       = useState(false);
 const [isEmployer,  setIsEmployer]    = useState(false);
+const [assignedCount, setAssignedCount] = useState(0);
 
 useFocusEffect(
 useCallback(() => {
@@ -27,6 +28,16 @@ const { data } = await supabase
 .single();
 if (active && data?.full_name?.trim()) setProfileDone(true);
 if (active && data?.role === "employer") setIsEmployer(true);
+
+// Count jobs assigned to this user with status 'assigned'
+try {
+const { count } = await supabase
+.from("jobs")
+.select("id", { count: "exact", head: true })
+.eq("assigned_to", user.id)
+.eq("status", "assigned");
+if (active) setAssignedCount(count ?? 0);
+} catch {}
 }
 } catch {}
 
@@ -68,6 +79,21 @@ return (
 <Text style={styles.buttonText}>Past Jobs</Text>
 <Text style={styles.buttonArrow}>→</Text>
 </Pressable>
+
+{assignedCount > 0 && (
+<Pressable style={styles.assignedButton} onPress={() => router.push("/assigned-jobs")}>
+<View style={styles.assignedLeft}>
+<Text style={styles.assignedTitle}>Assigned Jobs</Text>
+<Text style={styles.assignedSub}>Jobs your employer has sent you</Text>
+</View>
+<View style={styles.assignedBadgeWrap}>
+<View style={styles.assignedBadge}>
+<Text style={styles.assignedBadgeText}>{assignedCount}</Text>
+</View>
+<Text style={styles.buttonArrow}>→</Text>
+</View>
+</Pressable>
+)}
 
 <Pressable style={styles.nearMissButton} onPress={() => router.push("/near-miss")}>
 <View>
@@ -171,6 +197,30 @@ justifyContent: "space-between",
 },
 buttonText: { color: "white", fontSize: 18, fontWeight: "800" },
 buttonArrow: { color: "rgba(255,255,255,0.4)", fontSize: 22, fontWeight: "300" },
+
+assignedButton: {
+backgroundColor: "rgba(59,130,246,0.08)",
+borderRadius: 16,
+padding: 18,
+borderWidth: 1,
+borderColor: "rgba(59,130,246,0.25)",
+flexDirection: "row",
+alignItems: "center",
+justifyContent: "space-between",
+},
+assignedLeft: { flex: 1 },
+assignedTitle: { color: "#60a5fa", fontSize: 17, fontWeight: "800" },
+assignedSub: { color: "rgba(96,165,250,0.65)", fontSize: 12, marginTop: 3 },
+assignedBadgeWrap: { flexDirection: "row", alignItems: "center", gap: 8 },
+assignedBadge: {
+backgroundColor: "#3b82f6",
+borderRadius: 12,
+minWidth: 24,
+paddingHorizontal: 7,
+paddingVertical: 2,
+alignItems: "center",
+},
+assignedBadgeText: { color: "white", fontWeight: "900", fontSize: 13 },
 
 employerBanner: {
 backgroundColor: "rgba(249,115,22,0.08)",

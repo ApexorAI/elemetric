@@ -288,7 +288,14 @@ export default function EmployerDashboard() {
           ))
         )}
 
-        {/* ── Invite button ── */}
+        {/* ── Action buttons ── */}
+        <Pressable
+          style={styles.assignBtn}
+          onPress={() => router.push("/employer/assign-job")}
+        >
+          <Text style={styles.assignBtnText}>+ Assign New Job</Text>
+        </Pressable>
+
         <Pressable
           style={styles.inviteBtn}
           onPress={() => router.push("/employer/invite")}
@@ -430,6 +437,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
+
+  assignBtn: {
+    backgroundColor: "rgba(249,115,22,0.12)",
+    borderRadius: 14,
+    paddingVertical: 15,
+    alignItems: "center",
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.35)",
+  },
+  assignBtnText: { color: "#f97316", fontWeight: "900", fontSize: 15 },
 
   inviteBtn: {
     backgroundColor: "#f97316",

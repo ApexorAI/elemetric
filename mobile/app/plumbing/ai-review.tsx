@@ -488,6 +488,19 @@ ${signatureHtml}
 const { uri } = await Print.printToFileAsync({ html });
 try { await AsyncStorage.setItem("elemetric_pdf_generated", "1"); } catch {}
 
+// Mark any in_progress job at this address as completed
+try {
+const { data: { user } } = await supabase.auth.getUser();
+if (user) {
+await supabase
+.from("jobs")
+.update({ status: "completed" })
+.eq("assigned_to", user.id)
+.eq("job_addr", currentJob.jobAddr)
+.eq("status", "in_progress");
+}
+} catch {}
+
 const canShare = await Sharing.isAvailableAsync();
 if (!canShare) {
 Alert.alert("PDF Created", `Report saved to: ${uri}`);

@@ -30,6 +30,7 @@ unclear: string[];
 missing: string[];
 action: string;
 createdAt: string;
+status?: string;
 };
 
 type FilterKey = "all" | "hotwater" | "gas" | "drainage" | "newinstall" | "electrical" | "hvac";
@@ -52,6 +53,33 @@ newinstall: "New Install",
 electrical: "Electrical",
 hvac:       "HVAC",
 };
+
+const STATUS_CONFIG: Record<string, { label: string; bg: string; border: string; text: string }> = {
+unassigned: { label: "UNASSIGNED", bg: "rgba(156,163,175,0.12)", border: "rgba(156,163,175,0.25)", text: "#9ca3af" },
+assigned:   { label: "ASSIGNED",   bg: "rgba(59,130,246,0.12)",  border: "rgba(59,130,246,0.30)",  text: "#60a5fa" },
+in_progress:{ label: "IN PROGRESS",bg: "rgba(249,115,22,0.12)",  border: "rgba(249,115,22,0.30)",  text: "#f97316" },
+completed:  { label: "COMPLETED",  bg: "rgba(34,197,94,0.12)",   border: "rgba(34,197,94,0.30)",   text: "#22c55e" },
+};
+
+function StatusBadge({ status }: { status?: string }) {
+const cfg = STATUS_CONFIG[status ?? "unassigned"] ?? STATUS_CONFIG.unassigned;
+return (
+<View style={[statusBadgeStyles.badge, { backgroundColor: cfg.bg, borderColor: cfg.border }]}>
+<Text style={[statusBadgeStyles.text, { color: cfg.text }]}>{cfg.label}</Text>
+</View>
+);
+}
+
+const statusBadgeStyles = StyleSheet.create({
+badge: {
+alignSelf: "flex-start",
+borderRadius: 8,
+paddingHorizontal: 8,
+paddingVertical: 3,
+borderWidth: 1,
+},
+text: { fontSize: 10, fontWeight: "900", letterSpacing: 0.3 },
+});
 
 export default function JobsScreen() {
 const router = useRouter();
@@ -84,6 +112,7 @@ unclear: row.unclear ?? [],
 missing: row.missing ?? [],
 action: row.action ?? "",
 createdAt: row.created_at,
+status: row.status ?? "unassigned",
 }));
 setJobs(remoteJobs);
 return;
@@ -335,6 +364,7 @@ day: "2-digit", month: "short", year: "numeric",
 })}
 </Text>
 </View>
+<StatusBadge status={job.status} />
 </View>
 </Pressable>
 
