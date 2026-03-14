@@ -172,7 +172,7 @@ setAiLoading(true);
 try {
 const images: { mime: string; data: string; label: string }[] = [];
 for (const p of allPhotos) {
-const r = await ImageManipulator.manipulateAsync(p.uri, [], {
+const r = await ImageManipulator.manipulateAsync(p.uri, [{ resize: { width: 1200 } }], {
 compress: 0.8,
 format: ImageManipulator.SaveFormat.JPEG,
 base64: true,
@@ -181,7 +181,8 @@ if (r.base64) images.push({ mime: "image/jpeg", data: r.base64, label: p.label }
 }
 const res = await fetch(`${API_BASE}/review`, {
 method: "POST",
-headers: { "Content-Type": "application/json" },
+headers: { "Content-Type": "application/json",
+        "X-Elemetric-Key": process.env.EXPO_PUBLIC_ELEMETRIC_API_KEY ?? "", },
 body: JSON.stringify({ type: jobType, images }),
 });
 const json = await res.json();
@@ -209,7 +210,7 @@ try {
 let dateStr = new Date().toLocaleString("en-AU");
 let dateShort = new Date().toLocaleDateString("en-AU");
 try {
-const tsRes = await fetch(`${API_BASE}/timestamp`);
+const tsRes = await fetch(`${API_BASE}/timestamp`, { headers: { "X-Elemetric-Key": process.env.EXPO_PUBLIC_ELEMETRIC_API_KEY ?? "" } });
 const tsJson = await tsRes.json();
 if (tsJson?.formatted) dateStr = tsJson.formatted;
 if (tsJson?.timestamp) dateShort = new Date(tsJson.timestamp).toLocaleDateString("en-AU");

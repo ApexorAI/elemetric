@@ -229,7 +229,7 @@ await saveChecklistState(nextChecked, nextPhotoMap, nextPhotoMeta);
 };
 
 const convertToJpeg = async (uri: string) => {
-const result = await ImageManipulator.manipulateAsync(uri, [], {
+const result = await ImageManipulator.manipulateAsync(uri, [{ resize: { width: 1200 } }], {
 compress: 0.8,
 format: ImageManipulator.SaveFormat.JPEG,
 base64: true,
@@ -310,6 +310,7 @@ const res = await fetch(`${API_BASE}/review`, {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
+        "X-Elemetric-Key": process.env.EXPO_PUBLIC_ELEMETRIC_API_KEY ?? "",,
 },
 body: JSON.stringify({
 type: currentJob.type,

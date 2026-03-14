@@ -15,9 +15,10 @@ import * as WebBrowser from "expo-web-browser";
 // Replace these with your real Stripe Payment Link URLs from the Stripe Dashboard.
 // Create Payment Links at: https://dashboard.stripe.com/payment-links
 const STRIPE_URLS = {
-  individual:     "https://buy.stripe.com/your_individual_link",
-  employerSmall:  "https://buy.stripe.com/your_employer_small_link",
-  employerLarge:  "https://buy.stripe.com/your_employer_large_link",
+  core:          "https://buy.stripe.com/your_core_link",
+  pro:           "https://buy.stripe.com/your_pro_link",
+  employer:      "https://buy.stripe.com/your_employer_link",
+  employerPlus:  "https://buy.stripe.com/your_employer_plus_link",
 };
 
 // ── Plan definitions ──────────────────────────────────────────────────────────
@@ -34,32 +35,49 @@ type Plan = {
 
 const PLANS: Plan[] = [
   {
-    id: "individual",
-    name: "Individual",
+    id: "core",
+    name: "Core",
     price: "$24.99",
     period: "/month",
-    tagline: "For solo licensed tradespeople",
+    tagline: "Compliance documentation for solo tradespeople",
     highlight: false,
     features: [
-      "Unlimited AI compliance reports",
-      "AS/NZS standard analysis",
+      "Compliance documentation for all trade types",
+      "AS/NZS standard checklist templates",
       "PDF report generation & sharing",
-      "7-year liability timeline",
-      "Near miss documentation",
-      "Cloud job storage",
+      "SHA-256 tamper-evident photo record",
+      "7-year liability job timeline",
+      "Near miss incident documentation",
+      "Cloud job storage & history",
       "Signature & photo capture",
     ],
   },
   {
-    id: "employerSmall",
-    name: "Employer — Small",
+    id: "pro",
+    name: "Pro",
+    price: "$39.99",
+    period: "/month",
+    tagline: "Everything in Core plus AI-powered analysis",
+    highlight: false,
+    features: [
+      "Everything in Core",
+      "AI photo compliance analysis",
+      "AI Visualiser beta access",
+      "Certificate of Compliance generator",
+      "AI confidence scoring & gating",
+      "Priority report processing",
+    ],
+  },
+  {
+    id: "employer",
+    name: "Employer",
     price: "$99",
     period: "/month",
-    tagline: "Up to 5 licensed plumbers",
+    tagline: "Up to 5 licensed tradespeople",
     highlight: true,
     features: [
-      "Everything in Individual",
-      "Employer portal & dashboard",
+      "Everything in Pro",
+      "Team management portal",
       "Up to 5 team members",
       "Job assignment & scheduling",
       "Weekly job planner",
@@ -70,18 +88,19 @@ const PLANS: Plan[] = [
     ],
   },
   {
-    id: "employerLarge",
-    name: "Employer — Large",
+    id: "employerPlus",
+    name: "Employer Plus",
     price: "$149",
     period: "/month",
-    tagline: "Up to 15 licensed plumbers",
+    tagline: "Up to 15 licensed tradespeople",
     highlight: false,
     features: [
-      "Everything in Employer Small",
+      "Everything in Employer",
       "Up to 15 team members",
-      "Priority support",
-      "PDF team reports",
       "Bulk job assignment",
+      "PDF team compliance reports",
+      "Priority support",
+      "Early access to new features",
     ],
   },
 ];
