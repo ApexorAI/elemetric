@@ -310,7 +310,7 @@ const res = await fetch(`${API_BASE}/review`, {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
-        "X-Elemetric-Key": process.env.EXPO_PUBLIC_ELEMETRIC_API_KEY ?? "",,
+        "X-Elemetric-Key": process.env.EXPO_PUBLIC_ELEMETRIC_API_KEY ?? "",
 },
 body: JSON.stringify({
 type: currentJob.type,

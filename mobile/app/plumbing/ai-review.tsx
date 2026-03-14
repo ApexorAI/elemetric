@@ -52,6 +52,16 @@ const CHECKLIST_KEY = "elemetric_current_checklist";
 const SIGNATURE_KEY = "elemetric_signature_svg";
 const INSTALLER_NAME_KEY = "elemetric_installer_name";
 
+const JOB_TYPE_META: Record<string, { label: string; standard: string }> = {
+  hotwater:   { label: "Hot Water System Compliance Report",  standard: "AS/NZS 3500" },
+  gas:        { label: "Gas Installation Compliance Report",  standard: "AS/NZS 5601" },
+  drainage:   { label: "Drainage Compliance Report",          standard: "AS/NZS 3500.2" },
+  newinstall: { label: "New Installation Compliance Report",  standard: "AS/NZS 3500" },
+  electrical: { label: "Electrical Compliance Report",        standard: "AS/NZS 3000" },
+  hvac:       { label: "HVAC Compliance Report",              standard: "AS/NZS 1668" },
+  carpentry:  { label: "Carpentry Documentation Report",      standard: "AS 1684" },
+};
+
 export default function AIReview() {
 const router = useRouter();
 const params = useLocalSearchParams();
@@ -379,7 +389,7 @@ body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: 
 ${qrHtml}
 </div>
 <div style="background:#f97316;color:white;padding:10px 24px;display:flex;justify-content:space-between;align-items:center;">
-<div style="font-size:14px;font-weight:bold;">Hot Water System Compliance Report · AS/NZS 3500</div>
+<div style="font-size:14px;font-weight:bold;">${(JOB_TYPE_META[currentJob.type] ?? JOB_TYPE_META.hotwater).label} · ${(JOB_TYPE_META[currentJob.type] ?? JOB_TYPE_META.hotwater).standard}</div>
 <div style="font-size:12px;">${reportDateShort}</div>
 </div>
 
