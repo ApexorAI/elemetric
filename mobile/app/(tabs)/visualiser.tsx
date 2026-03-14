@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -14,18 +14,13 @@ import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 
 const API_BASE = "https://elemetric-ai-production.up.railway.app";
-const POLL_INTERVAL_MS = 3000;
-const POLL_TIMEOUT_MS  = 120_000; // 2 minutes
 
 export default function VisualiserScreen() {
   const [wallUri, setWallUri] = useState<string | null>(null);
   const [modelNumber, setModelNumber] = useState("");
   const [loading, setLoading] = useState(false);
-  const [loadingStage, setLoadingStage] = useState("");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [resultBase64, setResultBase64] = useState<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pickWallPhoto = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -58,47 +53,6 @@ export default function VisualiserScreen() {
     }
   };
 
-  const stopPolling = () => {
-    if (pollRef.current)    { clearInterval(pollRef.current);  pollRef.current    = null; }
-    if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
-  };
-
-  const pollForResult = (taskId: string) => {
-    const headers = {
-      "Content-Type": "application/json",
-      "X-Elemetric-Key": process.env.EXPO_PUBLIC_ELEMETRIC_API_KEY ?? "",
-    };
-
-    setLoadingStage("Compositing product into your space…");
-
-    // Hard timeout
-    timeoutRef.current = setTimeout(() => {
-      stopPolling();
-      setLoading(false);
-      Alert.alert("Timed out", "Visualisation took too long. Please try again.");
-    }, POLL_TIMEOUT_MS);
-
-    pollRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`${API_BASE}/visualise-status/${taskId}`, { headers });
-        const json = await res.json();
-
-        if (json.status === "done" && json.imageUrl) {
-          stopPolling();
-          setResultUrl(json.imageUrl);
-          setLoading(false);
-        } else if (json.status === "failed") {
-          stopPolling();
-          setLoading(false);
-          Alert.alert("Generation failed", json.error ?? "Please try again.");
-        }
-        // status === "pending" → keep polling
-      } catch {
-        // Network blip — keep polling
-      }
-    }, POLL_INTERVAL_MS);
-  };
-
   const generate = async () => {
     if (!wallUri) {
       Alert.alert("No photo", "Please take or select a wall photo first.");
@@ -109,9 +63,7 @@ export default function VisualiserScreen() {
       return;
     }
 
-    stopPolling();
     setLoading(true);
-    setLoadingStage("Analysing your space…");
     setResultUrl(null);
     setResultBase64(null);
 
@@ -122,8 +74,6 @@ export default function VisualiserScreen() {
         { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
       if (!r.base64) throw new Error("Could not read photo.");
-
-      setLoadingStage("Submitting to AI…");
 
       const res = await fetch(`${API_BASE}/visualise`, {
         method: "POST",
@@ -137,26 +87,21 @@ export default function VisualiserScreen() {
           modelNumber: modelNumber.trim(),
         }),
       });
+
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? "Visualisation failed.");
 
-      if (json.taskId) {
-        // Async path — Nano Banana: poll for result
-        pollForResult(json.taskId);
-      } else if (json.imageBase64) {
-        // Legacy sync path fallback
-        setResultBase64(json.imageBase64);
-        setLoading(false);
-      } else if (json.imageUrl) {
+      if (json.imageUrl) {
         setResultUrl(json.imageUrl);
-        setLoading(false);
+      } else if (json.imageBase64) {
+        setResultBase64(json.imageBase64);
       } else {
-        throw new Error("No image or task ID returned from server.");
+        throw new Error("No image returned from server.");
       }
     } catch (e: any) {
-      stopPolling();
-      setLoading(false);
       Alert.alert("Error", e?.message ?? "Unknown error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -235,7 +180,7 @@ export default function VisualiserScreen() {
 
         {loading && (
           <Text style={styles.loadingNote}>
-            {loadingStage || "Generating your visualisation…"}{"\n"}This can take 30–60 seconds.
+            Compositing product into your space — this can take 30–60 seconds…
           </Text>
         )}
 
