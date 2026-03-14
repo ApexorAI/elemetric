@@ -1,18 +1,7 @@
 [build]
-  base = "mobile/docs"
   publish = "mobile/docs"
 
-[build.environment]
-  GIT_SUBMODULE_STRATEGY = "none"
-
 [[redirects]]
-  from = "/"
-  to   = "/landing-page.html"
+  from = "/*"
+  to = "/landing-page.html"
   status = 200
-
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
