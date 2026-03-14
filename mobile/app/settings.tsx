@@ -247,6 +247,11 @@ Linking.openURL(`mailto:cayde@elemetric.com.au?subject=${subject}`).catch(() => 
 <Text style={styles.rowAction}>Contact Support</Text>
 <Text style={styles.rowChevron}>›</Text>
 </Pressable>
+<View style={styles.divider} />
+<Pressable style={styles.row} onPress={() => router.push("/about")}>
+<Text style={styles.rowAction}>About Elemetric</Text>
+<Text style={styles.rowChevron}>›</Text>
+</Pressable>
 </View>
 
 {/* Legal */}
