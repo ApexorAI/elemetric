@@ -148,7 +148,7 @@ export default function AssignJob() {
       // Insert in-app notification for the assignee (best-effort)
       if (selectedUserId) {
         try {
-          const dateStr = scheduledDate.trim() || "date TBC";
+          const dateStr = scheduledDate.trim() || "date not yet set";
           await supabase.from("notifications").insert({
             user_id: selectedUserId,
             title: "New job assigned",
@@ -168,7 +168,7 @@ export default function AssignJob() {
             .eq("user_id", selectedUserId)
             .single();
           if (assigneeProfile?.push_token) {
-            const dateStr = scheduledDate.trim() || "date TBC";
+            const dateStr = scheduledDate.trim() || "date not yet set";
             await sendExpoPushNotification(
               assigneeProfile.push_token,
               "New job assigned",

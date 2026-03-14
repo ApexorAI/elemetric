@@ -9,6 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
+import Constants from "expo-constants";
 
 // ── FAQ data ──────────────────────────────────────────────────────────────────
 
@@ -138,7 +139,7 @@ export default function Help() {
     const email = "cayde@elemetric.com.au";
     const subject = encodeURIComponent("Elemetric App Support Request");
     const body = encodeURIComponent(
-      "Hi Elemetric Support,\n\nI need help with:\n\n[Describe your issue here]\n\nApp version: 1.0.0\nDevice: [Your device]\n"
+      `Hi Elemetric Support,\n\nI need help with:\n\n[Describe your issue here]\n\nApp version: ${Constants.expoConfig?.version ?? "1.0.0"}\nDevice: [Your device]\n`
     );
     Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`).catch(() =>
       Alert.alert("Cannot open email", "Please email cayde@elemetric.com.au directly.")
