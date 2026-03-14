@@ -350,7 +350,27 @@ ${sigHtml}
 
 const { uri: printUri } = await Print.printToFileAsync({ html });
 try { await AsyncStorage.setItem("elemetric_pdf_generated", "1"); } catch {}
-const filename = `elemetric-report-${Date.now()}.pdf`;
+
+      // Save job to Supabase for free tier tracking and timeline
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from("jobs").insert({
+            user_id: user.id,
+            job_type: jobType,
+            job_name: jobName,
+            job_addr: jobAddr,
+            confidence: aiResult?.confidence ?? 0,
+            relevant: true,
+            detected: aiResult?.detected ?? [],
+            unclear: aiResult?.unclear ?? [],
+            missing: aiResult?.missing ?? [],
+            action: aiResult?.action ?? "",
+          });
+        }
+      } catch {}
+
+      const filename = `elemetric-report-${Date.now()}.pdf`;
 const dest = `${FileSystem.cacheDirectory}${filename}`;
 await FileSystem.copyAsync({ from: printUri, to: dest });
 const canShare = await Sharing.isAvailableAsync();

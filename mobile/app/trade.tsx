@@ -58,7 +58,7 @@ const TRADES: Trade[] = [
       {
         label: "Electrical Documentation",
         description: "AS/NZS 3000 wiring rules",
-        pathname: "/plumbing/electrical-checklist",
+        params: { type: "electrical" },
       },
     ],
   },
@@ -82,7 +82,7 @@ const TRADES: Trade[] = [
       {
         label: "Carpentry Documentation",
         description: "AS 1684 residential timber framing",
-        pathname: "/plumbing/carpentry-checklist",
+        params: { type: "carpentry" },
       },
     ],
   },

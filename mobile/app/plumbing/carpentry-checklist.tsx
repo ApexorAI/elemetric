@@ -656,6 +656,27 @@ ${allPhotoMeta.length > 0 ? `
       const { uri: printUri } = await Print.printToFileAsync({ html });
       try { await AsyncStorage.setItem("elemetric_pdf_generated", "1"); } catch {}
 
+      // Save job to Supabase for free tier tracking and timeline
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const passCount = CHECKS.filter((c) => checks[c.id]?.status === "pass").length;
+          const confidence = CHECKS.length > 0 ? Math.round((passCount / CHECKS.length) * 100) : 0;
+          await supabase.from("jobs").insert({
+            user_id: user.id,
+            job_type: "carpentry",
+            job_name: jobName,
+            job_addr: jobAddr,
+            confidence: aiResult?.confidence ?? confidence,
+            relevant: true,
+            detected: aiResult?.detected ?? [],
+            unclear: aiResult?.unclear ?? [],
+            missing: aiResult?.missing ?? [],
+            action: aiResult?.action ?? "",
+          });
+        }
+      } catch {}
+
       const filename = `elemetric-carpentry-${Date.now()}.pdf`;
       const dest = `${FileSystem.cacheDirectory}${filename}`;
       await FileSystem.copyAsync({ from: printUri, to: dest });
