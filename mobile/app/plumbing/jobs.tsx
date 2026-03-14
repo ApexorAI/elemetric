@@ -52,6 +52,17 @@ drainage:   "Drainage",
 newinstall: "New Install",
 electrical: "Electrical",
 hvac:       "HVAC",
+carpentry:  "Carpentry",
+};
+
+const JOB_TYPE_ICONS: Record<string, string> = {
+hotwater:   "🔧",
+gas:        "🔥",
+drainage:   "🚿",
+newinstall: "🏗️",
+electrical: "⚡",
+hvac:       "❄️",
+carpentry:  "🪚",
 };
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; border: string; text: string }> = {
@@ -342,6 +353,9 @@ filtered.map((job) => (
 <View key={job.id} style={styles.card}>
 <Pressable onPress={() => openJob(job)}>
 <View style={styles.cardTop}>
+<View style={styles.tradeIconWrap}>
+<Text style={styles.tradeIcon}>{JOB_TYPE_ICONS[job.jobType] ?? "📋"}</Text>
+</View>
 <View style={styles.cardTitles}>
 <Text style={styles.jobTitle} numberOfLines={1}>{job.jobName}</Text>
 <Text style={styles.jobAddr} numberOfLines={1}>{job.jobAddr}</Text>
@@ -493,8 +507,8 @@ emptyBtnText: { color: "#0b1220", fontWeight: "900", fontSize: 15 },
 card: {
 borderRadius: 16,
 borderWidth: 1,
-borderColor: "rgba(255,255,255,0.10)",
-backgroundColor: "rgba(255,255,255,0.04)",
+borderColor: "#1e3a5f",
+backgroundColor: "#0d1f3c",
 padding: 16,
 gap: 10,
 },
@@ -504,6 +518,18 @@ alignItems: "flex-start",
 justifyContent: "space-between",
 gap: 10,
 },
+tradeIconWrap: {
+width: 40,
+height: 40,
+borderRadius: 12,
+backgroundColor: "rgba(249,115,22,0.12)",
+borderWidth: 1,
+borderColor: "rgba(249,115,22,0.25)",
+alignItems: "center",
+justifyContent: "center",
+flexShrink: 0,
+},
+tradeIcon: { fontSize: 20 },
 cardTitles: { flex: 1 },
 jobTitle: { color: "white", fontWeight: "900", fontSize: 17 },
 jobAddr: { color: "rgba(255,255,255,0.6)", fontSize: 13, marginTop: 2 },

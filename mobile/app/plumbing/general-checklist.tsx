@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import PDFSuccessModal from "@/components/PDFSuccessModal";
 import {
 View,
 Text,
@@ -72,6 +73,9 @@ Object.fromEntries(SECTIONS.map((s) => [s.id, { photoUris: [], notes: "" }]))
 const [photoMeta, setPhotoMeta] = useState<Record<string, PhotoMeta[]>>({});
 const [generalNotes, setGeneralNotes] = useState("");
 const [pdfLoading, setPdfLoading] = useState(false);
+const [showSuccess, setShowSuccess] = useState(false);
+const [pdfUri,      setPdfUri]      = useState<string | null>(null);
+const [pdfSharing,  setPdfSharing]  = useState(false);
 const [licenceNumber, setLicenceNumber] = useState("");
 const [companyName, setCompanyName] = useState("");
 const [aiLoading, setAiLoading] = useState(false);
@@ -373,16 +377,33 @@ try { await AsyncStorage.setItem("elemetric_pdf_generated", "1"); } catch {}
       const filename = `elemetric-report-${Date.now()}.pdf`;
 const dest = `${FileSystem.cacheDirectory}${filename}`;
 await FileSystem.copyAsync({ from: printUri, to: dest });
-const canShare = await Sharing.isAvailableAsync();
-if (canShare) {
-await Sharing.shareAsync(dest, { mimeType: "application/pdf", dialogTitle: "Share Report", UTI: "com.adobe.pdf" });
-} else {
-Alert.alert("PDF Created", `Saved to: ${dest}`);
-}
+setPdfUri(dest);
+setShowSuccess(true);
 } catch (e: any) {
 Alert.alert("PDF Error", e?.message ?? "Could not generate report.");
 } finally {
 setPdfLoading(false);
+}
+};
+
+const sharePdf = async () => {
+if (!pdfUri) return;
+setPdfSharing(true);
+try {
+const canShare = await Sharing.isAvailableAsync();
+if (canShare) {
+await Sharing.shareAsync(pdfUri, {
+mimeType: "application/pdf",
+dialogTitle: "Share Compliance Report",
+UTI: "com.adobe.pdf",
+});
+} else {
+Alert.alert("PDF Created", `Saved to: ${pdfUri}`);
+}
+} catch (e: any) {
+Alert.alert("Share Error", e?.message ?? "Could not share report.");
+} finally {
+setPdfSharing(false);
 }
 };
 
@@ -545,6 +566,13 @@ disabled={pdfLoading}
 <Text style={styles.backText}>← Back</Text>
 </Pressable>
 </ScrollView>
+<PDFSuccessModal
+visible={showSuccess}
+jobName={jobName}
+onShare={sharePdf}
+onDone={() => { setShowSuccess(false); router.push("/plumbing/jobs"); }}
+sharing={pdfSharing}
+/>
 </View>
 );
 }

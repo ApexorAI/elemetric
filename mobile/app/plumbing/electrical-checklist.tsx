@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useMemo } from "react";
+import PDFSuccessModal from "@/components/PDFSuccessModal";
 import {
   View,
   Text,
@@ -326,9 +327,12 @@ export default function ElectricalChecklist() {
   const [contractorStrokes,  setContractorStrokes]  = useState<Stroke[]>([]);
 
   // State
-  const [aiLoading,  setAiLoading]  = useState(false);
-  const [aiResult,   setAiResult]   = useState<AIResult | null>(null);
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const [aiLoading,   setAiLoading]   = useState(false);
+  const [aiResult,    setAiResult]    = useState<AIResult | null>(null);
+  const [pdfLoading,  setPdfLoading]  = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [pdfUri,      setPdfUri]      = useState<string | null>(null);
+  const [pdfSharing,  setPdfSharing]  = useState(false);
 
   // ── Load ─────────────────────────────────────────────────────────────────────
 
@@ -705,20 +709,33 @@ ${allPhotoMeta.length > 0 ? `
       const filename = `elemetric-electrical-${Date.now()}.pdf`;
       const dest = `${FileSystem.cacheDirectory}${filename}`;
       await FileSystem.copyAsync({ from: printUri, to: dest });
+      setPdfUri(dest);
+      setShowSuccess(true);
+    } catch (e: any) {
+      Alert.alert("PDF Error", e?.message ?? "Could not generate report.");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const sharePdf = async () => {
+    if (!pdfUri) return;
+    setPdfSharing(true);
+    try {
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
-        await Sharing.shareAsync(dest, {
+        await Sharing.shareAsync(pdfUri, {
           mimeType: "application/pdf",
           dialogTitle: "Share Electrical Compliance Report",
           UTI: "com.adobe.pdf",
         });
       } else {
-        Alert.alert("PDF Created", `Saved to: ${dest}`);
+        Alert.alert("PDF Created", `Saved to: ${pdfUri}`);
       }
     } catch (e: any) {
-      Alert.alert("PDF Error", e?.message ?? "Could not generate report.");
+      Alert.alert("Share Error", e?.message ?? "Could not share report.");
     } finally {
-      setPdfLoading(false);
+      setPdfSharing(false);
     }
   };
 
@@ -935,6 +952,14 @@ ${allPhotoMeta.length > 0 ? `
         </Pressable>
 
       </ScrollView>
+
+      <PDFSuccessModal
+        visible={showSuccess}
+        jobName={jobName}
+        onShare={sharePdf}
+        onDone={() => { setShowSuccess(false); router.push("/plumbing/jobs"); }}
+        sharing={pdfSharing}
+      />
     </View>
   );
 }
