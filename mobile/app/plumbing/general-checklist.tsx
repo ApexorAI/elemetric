@@ -11,6 +11,7 @@ Alert,
 ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -21,6 +22,7 @@ import { supabase } from "@/lib/supabase";
 import QRCode from "qrcode";
 import { hashBase64, captureTimestamp } from "@/lib/photoHash";
 
+const API_BASE = "https://elemetric-ai-production.up.railway.app";
 const SIGNATURE_KEY = "elemetric_signature_svg";
 
 const SECTIONS = [
@@ -33,6 +35,16 @@ const SECTIONS = [
 
 type Section = { photoUris: string[]; notes: string };
 type PhotoMeta = { uri: string; hash: string; capturedAt: string };
+
+type AIResult = {
+  relevant?: boolean;
+  confidence?: number;
+  detected?: string[];
+  unclear?: string[];
+  missing?: string[];
+  action?: string;
+  analysis?: string;
+};
 
 function tradeLabel(type: string): string {
 if (type === "electrical") return "Electrical";
@@ -62,6 +74,8 @@ const [generalNotes, setGeneralNotes] = useState("");
 const [pdfLoading, setPdfLoading] = useState(false);
 const [licenceNumber, setLicenceNumber] = useState("");
 const [companyName, setCompanyName] = useState("");
+const [aiLoading, setAiLoading] = useState(false);
+const [aiResult, setAiResult] = useState<AIResult | null>(null);
 
 useFocusEffect(
 useCallback(() => {
@@ -141,15 +155,70 @@ photoUris: prev[sectionId].photoUris.filter((u) => u !== uri),
 const setNotes = (sectionId: string, notes: string) =>
 setSections((prev) => ({ ...prev, [sectionId]: { ...prev[sectionId], notes } }));
 
+// ── AI analysis ───────────────────────────────────────────────────────────────
+
+const runAI = async () => {
+const allPhotos: { label: string; uri: string }[] = [];
+for (const sec of SECTIONS) {
+for (const uri of sections[sec.id]?.photoUris ?? []) {
+allPhotos.push({ label: sec.label, uri });
+}
+}
+if (allPhotos.length < 2) {
+Alert.alert("More photos needed", "Please add at least 2 photos before running AI analysis.");
+return;
+}
+setAiLoading(true);
+try {
+const images: { mime: string; data: string; label: string }[] = [];
+for (const p of allPhotos) {
+const r = await ImageManipulator.manipulateAsync(p.uri, [], {
+compress: 0.8,
+format: ImageManipulator.SaveFormat.JPEG,
+base64: true,
+});
+if (r.base64) images.push({ mime: "image/jpeg", data: r.base64, label: p.label });
+}
+const res = await fetch(`${API_BASE}/review`, {
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify({ type: jobType, images }),
+});
+const json = await res.json();
+if (!res.ok) throw new Error(json?.error ?? "AI request failed");
+setAiResult(json);
+if ((json.confidence ?? 0) < 35) {
+Alert.alert(
+"Low Confidence Score",
+"Low confidence score. We recommend retaking photos with better lighting and angles before generating your report."
+);
+}
+} catch (e: any) {
+Alert.alert("AI Error", e?.message ?? "Unknown error");
+} finally {
+setAiLoading(false);
+}
+};
+
+// ── PDF ───────────────────────────────────────────────────────────────────────
+
 const generateReport = async () => {
 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 setPdfLoading(true);
 try {
-const now = new Date();
-const dateStr = now.toLocaleString();
-const dateShort = now.toLocaleDateString();
+let dateStr = new Date().toLocaleString("en-AU");
+let dateShort = new Date().toLocaleDateString("en-AU");
+try {
+const tsRes = await fetch(`${API_BASE}/timestamp`);
+const tsJson = await tsRes.json();
+if (tsJson?.formatted) dateStr = tsJson.formatted;
+if (tsJson?.timestamp) dateShort = new Date(tsJson.timestamp).toLocaleDateString("en-AU");
+} catch {}
+
 const label = tradeLabel(jobType);
 const standard = tradeStandard(jobType);
+const td = `border:1px solid #d1d5db;padding:8px;`;
+const th = `${td}background:#f3f4f6;text-align:left;font-weight:bold;font-family:Helvetica,Arial,sans-serif;`;
 
 // QR code
 let qrHtml = "";
@@ -177,80 +246,117 @@ const photoImgs = photos.map((uri) => `
 
 return `
 <div style="margin-bottom:16px;">
-<div style="font-size:15px;font-weight:bold;margin-bottom:8px;color:#111827;">${sec.label}</div>
+<div style="font-size:15px;font-weight:bold;margin-bottom:8px;color:#111827;font-family:Helvetica,Arial,sans-serif;">${sec.label}</div>
 ${photoImgs ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">${photoImgs}</div>` : ""}
-${notes ? `<div style="font-size:13px;color:#374151;line-height:1.5;">${notes}</div>` : ""}
+${notes ? `<div style="font-size:13px;color:#374151;line-height:1.5;font-family:Helvetica,Arial,sans-serif;">${notes}</div>` : ""}
 </div>`;
-}).filter(Boolean).join("");
+}).filter(Boolean).join(`<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>`);
 
 const sigHtml = signatureSvg
 ? `<img src="data:image/svg+xml;utf8,${encodeURIComponent(signatureSvg)}" style="width:200px;height:60px;object-fit:contain;display:block;"/>`
 : `<div style="width:200px;height:40px;border-bottom:1px solid #111827;"></div>`;
 
-const html = `<html><head><style>@page{margin:15mm;@bottom-right{content:"Page " counter(page);font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}@bottom-left{content:"ELEMETRIC · Confidential";font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}}body{margin:0;padding:0;font-family:Arial,sans-serif;color:#111827;background:#fff;}</style></head>
+// AI section
+const aiSection = aiResult ? `
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+<div style="margin-bottom:16px;border:1px solid #e5e7eb;padding:16px;background:#f9fafb;">
+<div style="font-size:17px;font-weight:bold;margin-bottom:8px;font-family:Helvetica,Arial,sans-serif;">AI Documentation Analysis</div>
+<div style="font-size:30px;font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${aiResult.confidence ?? 0}%</div>
+<div style="margin-top:6px;font-family:Helvetica,Arial,sans-serif;"><strong>Action:</strong> ${aiResult.action || "—"}</div>
+<div style="margin-top:4px;font-family:Helvetica,Arial,sans-serif;">${aiResult.analysis || ""}</div>
+</div>` : "";
+
+const html = `<html><head><style>
+@page { margin: 15mm; @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 9pt; color: #6b7280; font-family: Helvetica, Arial, sans-serif; } @bottom-left { content: "ELEMETRIC · Confidential"; font-size: 9pt; color: #6b7280; font-family: Helvetica, Arial, sans-serif; } }
+body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: #111827; background: #fff; }
+.watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-45deg); font-size: 80pt; font-family: Helvetica,Arial,sans-serif; font-weight: bold; color: rgba(7,21,43,0.04); white-space: nowrap; pointer-events: none; z-index: -1; letter-spacing: 8px; }
+</style></head>
 <body>
+<div class="watermark">ELEMETRIC</div>
+
 <div style="background:#07152b;color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
-<div style="font-size:28px;font-weight:900;letter-spacing:3px;">ELEMETRIC</div>
+<div>
+<div style="font-size:28px;font-weight:900;letter-spacing:3px;font-family:Helvetica,Arial,sans-serif;">ELEMETRIC</div>
+<div style="font-size:13px;opacity:0.7;margin-top:4px;font-family:Helvetica,Arial,sans-serif;">${label} Documentation</div>
+</div>
 ${qrHtml}
 </div>
 <div style="background:#f97316;color:white;padding:10px 24px;display:flex;justify-content:space-between;align-items:center;">
-<div style="font-size:14px;font-weight:bold;">${label} Documentation Report${standard ? " · " + standard : ""}</div>
-<div style="font-size:12px;">${dateShort}</div>
+<div style="font-size:14px;font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${label} Documentation Report${standard ? " · " + standard : ""}</div>
+<div style="font-size:12px;font-family:Helvetica,Arial,sans-serif;">${dateShort}</div>
 </div>
 
 <div style="padding:22px;">
 
+<!-- Executive Summary -->
+<div style="background:#f8fafc;border-left:4px solid #f97316;padding:16px;margin-bottom:20px;border-radius:0 6px 6px 0;">
+  <div style="font-family:Helvetica,Arial,sans-serif;font-size:11px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Executive Summary</div>
+  <table style="width:100%;border-collapse:collapse;">
+    <tr><td style="padding:4px 0;width:180px;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Job Type</td><td style="font-family:Helvetica,Arial,sans-serif;">${label}${standard ? " · " + standard : ""}</td></tr>
+    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Date</td><td style="font-family:Helvetica,Arial,sans-serif;">${dateStr}</td></tr>
+    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Address</td><td style="font-family:Helvetica,Arial,sans-serif;">${jobAddr}</td></tr>
+    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Licence Number</td><td style="font-family:Helvetica,Arial,sans-serif;">${licenceNumber || "Not entered"}</td></tr>
+    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">AI Confidence</td><td style="font-family:Helvetica,Arial,sans-serif;">${aiResult ? `${aiResult.confidence ?? 0}%` : "Not analysed"}</td></tr>
+  </table>
+</div>
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
+<!-- Job Details -->
 <div style="margin-bottom:16px;">
-<div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Job Details</div>
+<div style="font-size:19px;font-weight:bold;margin-bottom:10px;font-family:Helvetica,Arial,sans-serif;">Job Details</div>
 <table style="width:100%;border-collapse:collapse;">
-<tr><td style="padding:5px 0;width:160px;"><strong>Job Name</strong></td><td>${jobName}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Address</strong></td><td>${jobAddr}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Trade</strong></td><td>${label}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Tradesperson</strong></td><td>${tradesperson || "Not entered"}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Licence Number</strong></td><td>${licenceNumber || "Not entered"}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Company</strong></td><td>${companyName || "Not entered"}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Report Date</strong></td><td>${dateStr}</td></tr>
+<tr><td style="padding:5px 0;width:160px;font-family:Helvetica,Arial,sans-serif;"><strong>Job Name</strong></td><td style="font-family:Helvetica,Arial,sans-serif;">${jobName}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;"><strong>Address</strong></td><td style="font-family:Helvetica,Arial,sans-serif;">${jobAddr}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;"><strong>Trade</strong></td><td style="font-family:Helvetica,Arial,sans-serif;">${label}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;"><strong>Tradesperson</strong></td><td style="font-family:Helvetica,Arial,sans-serif;">${tradesperson || "Not entered"}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;"><strong>Licence Number</strong></td><td style="font-family:Helvetica,Arial,sans-serif;">${licenceNumber || "Not entered"}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;"><strong>Company</strong></td><td style="font-family:Helvetica,Arial,sans-serif;">${companyName || "Not entered"}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;"><strong>Report Date</strong></td><td style="font-family:Helvetica,Arial,sans-serif;">${dateStr}</td></tr>
 </table>
 </div>
 
+${aiSection}
+
 ${sectionHtml ? `
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
 <div style="margin-bottom:16px;">
-<div style="font-size:19px;font-weight:bold;margin-bottom:12px;">Documentation Photos</div>
+<div style="font-size:19px;font-weight:bold;margin-bottom:12px;font-family:Helvetica,Arial,sans-serif;">Documentation Photos</div>
 ${sectionHtml}
 </div>` : ""}
 
 ${generalNotes ? `
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
 <div style="margin-bottom:16px;">
-<div style="font-size:19px;font-weight:bold;margin-bottom:8px;">General Notes</div>
-<div style="font-size:14px;line-height:1.6;color:#374151;">${generalNotes}</div>
+<div style="font-size:19px;font-weight:bold;margin-bottom:8px;font-family:Helvetica,Arial,sans-serif;">General Notes</div>
+<div style="font-size:14px;line-height:1.6;color:#374151;font-family:Helvetica,Arial,sans-serif;">${generalNotes}</div>
 </div>` : ""}
 
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
 <div style="margin-top:18px;border-top:1px solid #d1d5db;padding-top:18px;">
-<div style="font-size:18px;font-weight:bold;margin-bottom:12px;">Sign-Off</div>
-<div style="margin-bottom:8px;"><strong>Tradesperson:</strong> ${tradesperson || "Not entered"}</div>
+<div style="font-size:18px;font-weight:bold;margin-bottom:12px;font-family:Helvetica,Arial,sans-serif;">Sign-Off</div>
+<div style="margin-bottom:8px;font-family:Helvetica,Arial,sans-serif;"><strong>Tradesperson:</strong> ${tradesperson || "Not entered"}</div>
 ${sigHtml}
-<div style="margin-top:6px;font-size:13px;"><strong>Date:</strong> ${dateShort}</div>
+<div style="margin-top:6px;font-size:13px;font-family:Helvetica,Arial,sans-serif;"><strong>Date:</strong> ${dateShort}</div>
 </div>
 
-<div style="margin-top:24px;font-size:11px;color:#6b7280;line-height:1.6;background:#fef3c7;padding:12px;border-radius:6px;border:1px solid #fcd34d;">
-<strong style="color:#92400e;">IMPORTANT:</strong> This report is a general documentation record only. AI compliance validation is not available for this trade type. Always consult the relevant Australian standard.
-</div>
+<!-- Disclaimer -->
+<div style="margin-top:24px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;color:#6b7280;line-height:1.6;font-family:Helvetica,Arial,sans-serif;"><strong style="color:#374151;">Compliance Disclaimer:</strong> Generated by Elemetric on ${dateStr}. This report is a documentation aid only. Elemetric Pty Ltd accepts no liability for the accuracy of work described herein. Compliance responsibility rests solely with the licensed tradesperson.</div>
 
 </div>
 </body>
 </html>`;
 
-const { uri } = await Print.printToFileAsync({ html });
+const { uri: printUri } = await Print.printToFileAsync({ html });
 try { await AsyncStorage.setItem("elemetric_pdf_generated", "1"); } catch {}
+const filename = `elemetric-report-${Date.now()}.pdf`;
+const dest = `${FileSystem.cacheDirectory}${filename}`;
+await FileSystem.copyAsync({ from: printUri, to: dest });
 const canShare = await Sharing.isAvailableAsync();
 if (canShare) {
-await Sharing.shareAsync(uri, {
-mimeType: "application/pdf",
-dialogTitle: `Share ${label} Documentation Report`,
-UTI: "com.adobe.pdf",
-});
+await Sharing.shareAsync(dest, { mimeType: "application/pdf", dialogTitle: "Share Report", UTI: "com.adobe.pdf" });
 } else {
-Alert.alert("PDF Created", `Saved to: ${uri}`);
+Alert.alert("PDF Created", `Saved to: ${dest}`);
 }
 } catch (e: any) {
 Alert.alert("PDF Error", e?.message ?? "Could not generate report.");
@@ -361,6 +467,48 @@ onPress={() => router.push("/plumbing/declaration")}
 {signatureSvg ? "Edit Signature" : "Add Signature"}
 </Text>
 </Pressable>
+
+{/* ── AI Analysis ── */}
+<Pressable
+style={[styles.aiBtn, aiLoading && { opacity: 0.6 }]}
+onPress={runAI}
+disabled={aiLoading}
+>
+{aiLoading ? (
+<View style={styles.loadingRow}>
+<ActivityIndicator />
+<Text style={styles.aiBtnText}> Analysing photos…</Text>
+</View>
+) : (
+<Text style={styles.aiBtnText}>Run AI Analysis →</Text>
+)}
+</Pressable>
+
+{aiResult && (
+<View style={styles.aiCard}>
+<Text style={styles.aiCardLabel}>AI Analysis</Text>
+<Text style={styles.aiScore}>{aiResult.confidence ?? 0}%</Text>
+{!!aiResult.action && <Text style={styles.aiAction}>{aiResult.action}</Text>}
+{!!aiResult.detected?.length && (
+<>
+<Text style={styles.aiListTitle}>Verified</Text>
+{aiResult.detected.map((x, i) => <Text key={i} style={styles.aiItem}>• {x}</Text>)}
+</>
+)}
+{!!aiResult.unclear?.length && (
+<>
+<Text style={styles.aiListTitleAmber}>Unclear</Text>
+{aiResult.unclear.map((x, i) => <Text key={i} style={styles.aiItem}>• {x}</Text>)}
+</>
+)}
+{!!aiResult.missing?.length && (
+<>
+<Text style={styles.aiListTitleRed}>Missing / Failed</Text>
+{aiResult.missing.map((x, i) => <Text key={i} style={styles.aiItem}>• {x}</Text>)}
+</>
+)}
+</View>
+)}
 
 <Pressable
 style={[styles.reportBtn, pdfLoading && { opacity: 0.6 }]}
@@ -474,6 +622,31 @@ borderWidth: 1,
 borderColor: "rgba(255,255,255,0.12)",
 },
 signatureBtnText: { color: "white", fontWeight: "900", fontSize: 16 },
+aiBtn: {
+borderRadius: 14,
+paddingVertical: 14,
+alignItems: "center",
+backgroundColor: "rgba(249,115,22,0.15)",
+borderWidth: 1,
+borderColor: "rgba(249,115,22,0.35)",
+},
+aiBtnText: { color: "white", fontWeight: "900" },
+loadingRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+aiCard: {
+borderRadius: 14,
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.08)",
+backgroundColor: "rgba(255,255,255,0.04)",
+padding: 16,
+gap: 6,
+},
+aiCardLabel: { color: "rgba(255,255,255,0.55)", fontSize: 12, fontWeight: "800", letterSpacing: 1 },
+aiScore: { color: "white", fontSize: 34, fontWeight: "900" },
+aiAction: { color: "#f97316", fontSize: 13, fontWeight: "700", marginTop: 4 },
+aiListTitle: { color: "#22c55e", fontWeight: "900", fontSize: 13, marginTop: 8 },
+aiListTitleAmber: { color: "#f97316", fontWeight: "900", fontSize: 13, marginTop: 8 },
+aiListTitleRed: { color: "#ef4444", fontWeight: "900", fontSize: 13, marginTop: 8 },
+aiItem: { color: "rgba(255,255,255,0.75)", fontSize: 13 },
 reportBtn: {
 borderRadius: 14,
 paddingVertical: 14,

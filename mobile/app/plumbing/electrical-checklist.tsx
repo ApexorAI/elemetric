@@ -102,6 +102,18 @@ const strokesToSvg = (strokes: Stroke[], w: number, h: number): string => {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="100%" height="100%" fill="white"/>${paths}</svg>`;
 };
 
+function countStrokePixels(strokes: Stroke[]): number {
+  let total = 0;
+  for (const stroke of strokes) {
+    for (let i = 1; i < stroke.length; i++) {
+      const dx = stroke[i].x - stroke[i - 1].x;
+      const dy = stroke[i].y - stroke[i - 1].y;
+      total += Math.sqrt(dx * dx + dy * dy);
+    }
+  }
+  return total;
+}
+
 // ── SignaturePad ───────────────────────────────────────────────────────────────
 
 function SignaturePad({
@@ -395,8 +407,8 @@ export default function ElectricalChecklist() {
         allPhotos.push({ label: c.label, uri });
       }
     }
-    if (!allPhotos.length) {
-      Alert.alert("No photos", "Add at least one photo to run AI analysis.");
+    if (allPhotos.length < 2) {
+      Alert.alert("More photos needed", "Please add at least 2 photos before running AI analysis.");
       return;
     }
     setAiLoading(true);
@@ -418,6 +430,12 @@ export default function ElectricalChecklist() {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? "AI request failed");
       setAiResult(json);
+      if ((json.confidence ?? 0) < 35) {
+        Alert.alert(
+          "Low Confidence Score",
+          "Low confidence score. We recommend retaking photos with better lighting and angles before generating your report."
+        );
+      }
     } catch (e: any) {
       Alert.alert("AI Error", e?.message ?? "Unknown error");
     } finally {
@@ -429,13 +447,25 @@ export default function ElectricalChecklist() {
 
   const generateReport = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+
+    if (electricianStrokes.length > 0 && countStrokePixels(electricianStrokes) < 100) {
+      Alert.alert("Incomplete Signature", "Please provide a complete electrician signature.");
+      return;
+    }
+
     setPdfLoading(true);
     try {
-      const now       = new Date();
-      const dateStr   = now.toLocaleString();
-      const dateShort = now.toLocaleDateString();
+      let dateStr = new Date().toLocaleString("en-AU");
+      let dateShort = new Date().toLocaleDateString("en-AU");
+      try {
+        const tsRes = await fetch(`${API_BASE}/timestamp`);
+        const tsJson = await tsRes.json();
+        if (tsJson?.formatted) dateStr = tsJson.formatted;
+        if (tsJson?.timestamp) dateShort = new Date(tsJson.timestamp).toLocaleDateString("en-AU");
+      } catch {}
+
       const td = `border:1px solid #d1d5db;padding:8px;`;
-      const th = `${td}background:#f3f4f6;text-align:left;font-weight:bold;`;
+      const th = `${td}background:#f3f4f6;text-align:left;font-weight:bold;font-family:Helvetica,Arial,sans-serif;`;
 
       // QR code
       let qrHtml = "";
@@ -458,25 +488,31 @@ export default function ElectricalChecklist() {
         ? `<img src="data:image/svg+xml;utf8,${encodeURIComponent(strokesToSvg(contractorStrokes, sigW, 160))}" style="width:200px;height:60px;object-fit:contain;display:block;"/>`
         : `<div style="width:200px;height:40px;border-bottom:1px solid #111827;"></div>`;
 
-      // Checklist rows
+      // Checklist rows with color-coded backgrounds
       const checkRows = CHECKS.map((c) => {
         const e   = checks[c.id];
         const lbl = statusLabel(e?.status ?? null);
         const col = statusHtmlColor(e?.status ?? null);
-        return `<tr>
-<td style="${td}">${c.label}</td>
-<td style="${td}font-weight:bold;color:${col};">${lbl}</td>
-<td style="${td}">${e?.notes || ""}</td>
+        const rowBg =
+          e?.status === "pass" ? "background:#dcfce7;" :
+          e?.status === "fail" ? "background:#fee2e2;" :
+          e?.status === "na"   ? "background:#f3f4f6;" :
+          "";
+        return `<tr style="${rowBg}">
+<td style="${td}font-family:Helvetica,Arial,sans-serif;">${c.label}</td>
+<td style="${td}font-weight:bold;color:${col};font-family:Helvetica,Arial,sans-serif;">${lbl}</td>
+<td style="${td}font-family:Helvetica,Arial,sans-serif;">${e?.notes || ""}</td>
 </tr>`;
       }).join("");
 
       // AI section
       const aiSection = aiResult ? `
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
 <div style="margin-bottom:16px;border:1px solid #e5e7eb;padding:16px;background:#f9fafb;">
-<div style="font-size:17px;font-weight:bold;margin-bottom:8px;">AI Documentation Analysis</div>
-<div style="font-size:30px;font-weight:bold;">${aiResult.confidence ?? 0}%</div>
-<div style="margin-top:6px;"><strong>Action:</strong> ${aiResult.action || "—"}</div>
-<div style="margin-top:4px;">${aiResult.analysis || ""}</div>
+<div style="font-size:17px;font-weight:bold;margin-bottom:8px;font-family:Helvetica,Arial,sans-serif;">AI Documentation Analysis</div>
+<div style="font-size:30px;font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${aiResult.confidence ?? 0}%</div>
+<div style="margin-top:6px;font-family:Helvetica,Arial,sans-serif;"><strong>Action:</strong> ${aiResult.action || "—"}</div>
+<div style="margin-top:4px;font-family:Helvetica,Arial,sans-serif;">${aiResult.analysis || ""}</div>
 </div>` : "";
 
       // Build all photo records for tamper-evident table
@@ -489,58 +525,77 @@ export default function ElectricalChecklist() {
       }
       const tamperRows = allPhotoMeta.map((p) =>
         `<tr>
-<td style="${td}font-weight:600;">${p.label}</td>
-<td style="${td}white-space:nowrap;">${p.capturedAt ? new Date(p.capturedAt).toLocaleString("en-AU") : "—"}</td>
+<td style="${td}font-weight:600;font-family:Helvetica,Arial,sans-serif;">${p.label}</td>
+<td style="${td}white-space:nowrap;font-family:Helvetica,Arial,sans-serif;">${p.capturedAt ? new Date(p.capturedAt).toLocaleString("en-AU") : "—"}</td>
 <td style="${td}font-family:monospace;word-break:break-all;font-size:9px;">${p.hash}</td>
 </tr>`
       ).join("");
 
       const html = `<html><head><style>
-@page{margin:15mm;@bottom-right{content:"Page " counter(page);font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}@bottom-left{content:"ELEMETRIC · Confidential";font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}}
-body{margin:0;padding:0;font-family:Arial,sans-serif;color:#111827;background:#fff;}
+@page { margin: 15mm; @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 9pt; color: #6b7280; font-family: Helvetica, Arial, sans-serif; } @bottom-left { content: "ELEMETRIC · Confidential"; font-size: 9pt; color: #6b7280; font-family: Helvetica, Arial, sans-serif; } }
+body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: #111827; background: #fff; }
+.watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-45deg); font-size: 80pt; font-family: Helvetica,Arial,sans-serif; font-weight: bold; color: rgba(7,21,43,0.04); white-space: nowrap; pointer-events: none; z-index: -1; letter-spacing: 8px; }
 </style></head>
 <body>
+<div class="watermark">ELEMETRIC</div>
 
 <!-- Header -->
 <div style="background:#07152b;color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
 <div>
-<div style="font-size:28px;font-weight:900;letter-spacing:3px;">ELEMETRIC</div>
-<div style="font-size:13px;opacity:0.7;margin-top:4px;">Electrical Compliance Documentation</div>
+<div style="font-size:28px;font-weight:900;letter-spacing:3px;font-family:Helvetica,Arial,sans-serif;">ELEMETRIC</div>
+<div style="font-size:13px;opacity:0.7;margin-top:4px;font-family:Helvetica,Arial,sans-serif;">Electrical Compliance Documentation</div>
 </div>
 ${qrHtml}
 </div>
 <div style="background:#f97316;color:white;padding:10px 24px;display:flex;justify-content:space-between;align-items:center;">
-<div style="font-size:14px;font-weight:bold;">Electrical Compliance Report · AS/NZS 3000 Wiring Rules</div>
-<div style="font-size:12px;">${dateShort}</div>
+<div style="font-size:14px;font-weight:bold;font-family:Helvetica,Arial,sans-serif;">Electrical Compliance Report · AS/NZS 3000 Wiring Rules</div>
+<div style="font-size:12px;font-family:Helvetica,Arial,sans-serif;">${dateShort}</div>
 </div>
 
 <div style="padding:22px;">
 
+<!-- Executive Summary -->
+<div style="background:#f8fafc;border-left:4px solid #f97316;padding:16px;margin-bottom:20px;border-radius:0 6px 6px 0;">
+  <div style="font-family:Helvetica,Arial,sans-serif;font-size:11px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Executive Summary</div>
+  <table style="width:100%;border-collapse:collapse;">
+    <tr><td style="padding:4px 0;width:180px;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Job Type</td><td style="font-family:Helvetica,Arial,sans-serif;">Electrical · AS/NZS 3000 Wiring Rules</td></tr>
+    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Date</td><td style="font-family:Helvetica,Arial,sans-serif;">${dateStr}</td></tr>
+    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Address</td><td style="font-family:Helvetica,Arial,sans-serif;">${jobAddr}</td></tr>
+    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Electrician Licence</td><td style="font-family:Helvetica,Arial,sans-serif;">${electricianLicence || "Not entered"}</td></tr>
+    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">AI Confidence</td><td style="font-family:Helvetica,Arial,sans-serif;">${aiResult ? `${aiResult.confidence ?? 0}%` : "Not analysed"}</td></tr>
+  </table>
+</div>
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
 <!-- Job Details -->
 <div style="margin-bottom:16px;">
-<div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Job Details</div>
+<div style="font-size:19px;font-weight:bold;margin-bottom:10px;font-family:Helvetica,Arial,sans-serif;">Job Details</div>
 <table style="width:100%;border-collapse:collapse;">
-<tr><td style="padding:5px 0;width:200px;"><strong>Job Name</strong></td><td>${jobName}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Address</strong></td><td>${jobAddr}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Report Date</strong></td><td>${dateStr}</td></tr>
+<tr><td style="padding:5px 0;width:200px;font-family:Helvetica,Arial,sans-serif;"><strong>Job Name</strong></td><td style="font-family:Helvetica,Arial,sans-serif;">${jobName}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;"><strong>Address</strong></td><td style="font-family:Helvetica,Arial,sans-serif;">${jobAddr}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;"><strong>Report Date</strong></td><td style="font-family:Helvetica,Arial,sans-serif;">${dateStr}</td></tr>
 </table>
 </div>
+
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
 
 <!-- Electrician Details -->
 <div style="margin-bottom:16px;">
-<div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Electrician Details</div>
+<div style="font-size:19px;font-weight:bold;margin-bottom:10px;font-family:Helvetica,Arial,sans-serif;">Electrician Details</div>
 <table style="width:100%;border-collapse:collapse;">
-<tr><td style="padding:5px 0;width:200px;"><strong>Electrician Licence No.</strong></td><td>${electricianLicence || "Not entered"}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Electrical Contractor Licence</strong></td><td>${contractorLicence || "Not entered"}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Contractor Name</strong></td><td>${contractorName || "Not entered"}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Company</strong></td><td>${profileCompany || "Not entered"}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Test Instrument Serial No.</strong></td><td>${testInstrumentSerial || "Not entered"}</td></tr>
+<tr><td style="padding:5px 0;width:200px;font-family:Helvetica,Arial,sans-serif;"><strong>Electrician Licence No.</strong></td><td style="font-family:Helvetica,Arial,sans-serif;">${electricianLicence || "Not entered"}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;"><strong>Electrical Contractor Licence</strong></td><td style="font-family:Helvetica,Arial,sans-serif;">${contractorLicence || "Not entered"}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;"><strong>Contractor Name</strong></td><td style="font-family:Helvetica,Arial,sans-serif;">${contractorName || "Not entered"}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;"><strong>Company</strong></td><td style="font-family:Helvetica,Arial,sans-serif;">${profileCompany || "Not entered"}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;"><strong>Test Instrument Serial No.</strong></td><td style="font-family:Helvetica,Arial,sans-serif;">${testInstrumentSerial || "Not entered"}</td></tr>
 </table>
 </div>
 
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
 <!-- Test Readings -->
 <div style="margin-bottom:16px;">
-<div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Test Results</div>
+<div style="font-size:19px;font-weight:bold;margin-bottom:10px;font-family:Helvetica,Arial,sans-serif;">Test Results</div>
 <table style="width:100%;border-collapse:collapse;">
 <thead>
 <tr>
@@ -549,19 +604,21 @@ ${qrHtml}
 </tr>
 </thead>
 <tbody>
-<tr><td style="${td}">Circuit Voltage</td><td style="${td}font-weight:bold;">${circuitVoltage || "—"} V</td></tr>
-<tr><td style="${td}">Circuit Current</td><td style="${td}font-weight:bold;">${circuitCurrent || "—"} A</td></tr>
-<tr><td style="${td}">Insulation Resistance</td><td style="${td}font-weight:bold;">${insulationResistance || "—"} MΩ</td></tr>
-<tr><td style="${td}">RCD Trip Time</td><td style="${td}font-weight:bold;">${rcdTripTime || "—"} ms</td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Circuit Voltage</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${circuitVoltage || "—"} V</td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Circuit Current</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${circuitCurrent || "—"} A</td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Insulation Resistance</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${insulationResistance || "—"} MΩ</td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">RCD Trip Time</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${rcdTripTime || "—"} ms</td></tr>
 </tbody>
 </table>
 </div>
 
 ${aiSection}
 
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
 <!-- Checklist -->
 <div style="margin-bottom:16px;">
-<div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Installation Checklist — AS/NZS 3000:2018</div>
+<div style="font-size:19px;font-weight:bold;margin-bottom:10px;font-family:Helvetica,Arial,sans-serif;">Installation Checklist — AS/NZS 3000:2018</div>
 <table style="width:100%;border-collapse:collapse;">
 <thead>
 <tr>
@@ -576,55 +633,56 @@ ${checkRows}
 </table>
 </div>
 
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
 <!-- Signatures -->
 <div style="margin-top:18px;border-top:1px solid #d1d5db;padding-top:18px;page-break-inside:avoid;">
-<div style="font-size:18px;font-weight:bold;margin-bottom:16px;">Signatures</div>
+<div style="font-size:18px;font-weight:bold;margin-bottom:16px;font-family:Helvetica,Arial,sans-serif;">Signatures</div>
 <div style="display:flex;gap:48px;flex-wrap:wrap;">
 <div>
-<div style="margin-bottom:8px;"><strong>Licensed Electrician</strong></div>
+<div style="margin-bottom:8px;font-family:Helvetica,Arial,sans-serif;"><strong>Licensed Electrician</strong></div>
 ${elecSvg}
-<div style="margin-top:6px;font-size:12px;color:#6b7280;">Licence: ${electricianLicence || "Not entered"}</div>
-<div style="margin-top:4px;font-size:13px;"><strong>Date:</strong> ${dateShort}</div>
+<div style="margin-top:6px;font-size:12px;color:#6b7280;font-family:Helvetica,Arial,sans-serif;">Licence: ${electricianLicence || "Not entered"}</div>
+<div style="margin-top:4px;font-size:13px;font-family:Helvetica,Arial,sans-serif;"><strong>Date:</strong> ${dateShort}</div>
 </div>
 <div>
-<div style="margin-bottom:8px;"><strong>Electrical Contractor</strong></div>
+<div style="margin-bottom:8px;font-family:Helvetica,Arial,sans-serif;"><strong>Electrical Contractor</strong></div>
 ${contrSvg}
-<div style="margin-top:6px;font-size:12px;color:#6b7280;">Licence: ${contractorLicence || "Not entered"} · ${contractorName || ""}</div>
-<div style="margin-top:4px;font-size:13px;"><strong>Date:</strong> ${dateShort}</div>
+<div style="margin-top:6px;font-size:12px;color:#6b7280;font-family:Helvetica,Arial,sans-serif;">Licence: ${contractorLicence || "Not entered"} · ${contractorName || ""}</div>
+<div style="margin-top:4px;font-size:13px;font-family:Helvetica,Arial,sans-serif;"><strong>Date:</strong> ${dateShort}</div>
 </div>
 </div>
 </div>
 
 ${allPhotoMeta.length > 0 ? `
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
 <!-- Tamper-Evident Photo Record -->
 <div style="margin-top:24px;page-break-inside:avoid;">
-<div style="font-size:17px;font-weight:bold;margin-bottom:6px;">Tamper-Evident Photo Record</div>
-<div style="font-size:11px;color:#6b7280;margin-bottom:10px;">Each photo hash can be used to verify this image has not been modified since capture.</div>
+<div style="font-size:17px;font-weight:bold;margin-bottom:6px;font-family:Helvetica,Arial,sans-serif;">Tamper-Evident Photo Record</div>
+<div style="font-size:11px;color:#6b7280;margin-bottom:10px;font-family:Helvetica,Arial,sans-serif;">Each photo hash can be used to verify this image has not been modified since capture.</div>
 <table style="width:100%;border-collapse:collapse;font-size:11px;">
 <thead><tr style="background:#f3f4f6;">
-<th style="${td}text-align:left;">Photo Label</th>
-<th style="${td}text-align:left;">Captured At</th>
-<th style="${td}text-align:left;word-break:break-all;">SHA-256 Hash</th>
+<th style="${td}text-align:left;font-family:Helvetica,Arial,sans-serif;">Photo Label</th>
+<th style="${td}text-align:left;font-family:Helvetica,Arial,sans-serif;">Captured At</th>
+<th style="${td}text-align:left;word-break:break-all;font-family:Helvetica,Arial,sans-serif;">SHA-256 Hash</th>
 </tr></thead>
 <tbody>${tamperRows}</tbody>
 </table>
 </div>` : ""}
 
 <!-- Disclaimer -->
-<div style="margin-top:24px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;color:#6b7280;line-height:1.6;">
-<strong style="color:#374151;">Compliance Disclaimer:</strong> This report is a documentation aid only. The licensed electrician is responsible for ensuring all work complies with AS/NZS 3000 Wiring Rules, AS/NZS 3008, and all applicable Victorian electrical regulations. A Certificate of Electrical Safety must be issued separately where required by law. Elemetric AI analysis does not replace statutory inspection obligations.
-</div>
+<div style="margin-top:24px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;color:#6b7280;line-height:1.6;font-family:Helvetica,Arial,sans-serif;"><strong style="color:#374151;">Compliance Disclaimer:</strong> Generated by Elemetric on ${dateStr}. This report is a documentation aid only. Elemetric Pty Ltd accepts no liability for the accuracy of work described herein. Compliance responsibility rests solely with the licensed tradesperson.</div>
 
 </div>
 </body>
 </html>`;
 
-      const { uri } = await Print.printToFileAsync({ html });
+      const { uri: printUri } = await Print.printToFileAsync({ html });
       try { await AsyncStorage.setItem("elemetric_pdf_generated", "1"); } catch {}
 
       const filename = `elemetric-electrical-${Date.now()}.pdf`;
-      const dest = FileSystem.cacheDirectory + filename;
-      await FileSystem.copyAsync({ from: uri, to: dest });
+      const dest = `${FileSystem.cacheDirectory}${filename}`;
+      await FileSystem.copyAsync({ from: printUri, to: dest });
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
         await Sharing.shareAsync(dest, {

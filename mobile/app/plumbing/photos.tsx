@@ -247,8 +247,8 @@ mime: "image/jpeg",
 };
 
 const runAI = async () => {
-if (totalRequiredPhotosAdded === 0) {
-Alert.alert("No photos", "Add at least 1 required photo first.");
+if (totalRequiredPhotosAdded < 2) {
+Alert.alert("More photos needed", "Please add at least 2 photos before running AI analysis.");
 return;
 }
 
@@ -423,9 +423,9 @@ disabled={loading}
 })}
 
 <Pressable
-style={[styles.aiBtn, (loading || totalRequiredPhotosAdded === 0) && { opacity: 0.6 }]}
+style={[styles.aiBtn, (loading || totalRequiredPhotosAdded < 2) && { opacity: 0.6 }]}
 onPress={runAI}
-disabled={loading || totalRequiredPhotosAdded === 0}
+disabled={loading || totalRequiredPhotosAdded < 2}
 >
 {loading ? (
 <View style={styles.loadingRow}>

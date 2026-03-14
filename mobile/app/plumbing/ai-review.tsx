@@ -280,26 +280,18 @@ const checklistToHtml = () => {
 return `
 <table style="width:100%; border-collapse: collapse; margin-top: 8px;">
 <tr>
-<th style="text-align:left; border:1px solid #d1d5db; padding:8px; background:#f3f4f6;">Checklist Item</th>
-<th style="text-align:left; border:1px solid #d1d5db; padding:8px; background:#f3f4f6;">Status</th>
+<th style="text-align:left; border:1px solid #d1d5db; padding:8px; background:#f3f4f6; font-family:Helvetica,Arial,sans-serif;">Checklist Item</th>
+<th style="text-align:left; border:1px solid #d1d5db; padding:8px; background:#f3f4f6; font-family:Helvetica,Arial,sans-serif;">Status</th>
 </tr>
 ${checklistItems
-.map(
-(item) => `
-<tr>
-<td style="border:1px solid #d1d5db; padding:8px;">${item.label}</td>
-<td style="border:1px solid #d1d5db; padding:8px;">${
-detected.includes(item.label)
-? "Complete"
-: missing.includes(item.label)
-? "Incomplete \u2014 Retake Required"
-: unclear.includes(item.label)
-? "Unclear \u2014 Review Needed"
-: "Not assessed"
-}</td>
-</tr>
-`
-)
+.map((item) => {
+const isDetected = detected.includes(item.label);
+const isMissing = missing.includes(item.label);
+const isUnclear = unclear.includes(item.label);
+const bg = isDetected ? "background:#dcfce7;" : isMissing ? "background:#fee2e2;" : isUnclear ? "background:#fef9c3;" : "";
+const statusText = isDetected ? "Complete" : isMissing ? "Incomplete — Retake Required" : isUnclear ? "Unclear — Review Needed" : "Not assessed";
+return `<tr style="${bg}"><td style="border:1px solid #d1d5db; padding:8px; font-family:Helvetica,Arial,sans-serif;">${item.label}</td><td style="border:1px solid #d1d5db; padding:8px; font-family:Helvetica,Arial,sans-serif;">${statusText}</td></tr>`;
+})
 .join("")}
 </table>
 `;
@@ -376,8 +368,12 @@ qrHtml = `<div style="text-align:center;">
 }
 
 const html = `
-<html><head><style>@page{margin:15mm;@bottom-right{content:"Page " counter(page);font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}@bottom-left{content:"ELEMETRIC · Confidential";font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}}body{margin:0;padding:0;font-family:Arial,sans-serif;color:#111827;background:#fff;}</style></head>
+<html><head><style>@page { margin: 15mm; @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 9pt; color: #6b7280; font-family: Helvetica, Arial, sans-serif; } @bottom-left { content: "ELEMETRIC · Confidential"; font-size: 9pt; color: #6b7280; font-family: Helvetica, Arial, sans-serif; } }
+body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: #111827; background: #fff; }
+.watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-45deg); font-size: 80pt; font-family: Helvetica,Arial,sans-serif; font-weight: bold; color: rgba(7,21,43,0.04); white-space: nowrap; pointer-events: none; z-index: -1; letter-spacing: 8px; }
+</style></head>
 <body>
+<div class="watermark">ELEMETRIC</div>
 <div style="background:#07152b;color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
 <div style="font-size:28px;font-weight:900;letter-spacing:3px;">ELEMETRIC</div>
 ${qrHtml}
@@ -388,8 +384,22 @@ ${qrHtml}
 </div>
 
 <div style="padding: 22px;">
+
+<div style="background:#f8fafc;border-left:4px solid #f97316;padding:16px;margin-bottom:20px;border-radius:0 6px 6px 0;">
+  <div style="font-family:Helvetica,Arial,sans-serif;font-size:11px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Executive Summary</div>
+  <table style="width:100%;border-collapse:collapse;">
+    <tr><td style="padding:4px 0;width:180px;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Job Type</td><td style="font-family:Helvetica,Arial,sans-serif;">${currentJob.type}</td></tr>
+    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Date</td><td style="font-family:Helvetica,Arial,sans-serif;">${reportDate}</td></tr>
+    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Address</td><td style="font-family:Helvetica,Arial,sans-serif;">${currentJob.jobAddr}</td></tr>
+    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Plumber</td><td style="font-family:Helvetica,Arial,sans-serif;">${installerName || "Not entered"}</td></tr>
+    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">AI Confidence</td><td style="font-family:Helvetica,Arial,sans-serif;">${confidence}%</td></tr>
+    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Overall Status</td><td style="font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:${relevant ? "#16a34a" : "#d97706"};">${relevant ? "RELEVANT PHOTO SET" : "REVIEW REQUIRED"}</td></tr>
+  </table>
+</div>
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
 <div style="margin-bottom: 18px;">
-<div style="font-size: 19px; font-weight: bold; margin-bottom: 10px;">Job Summary</div>
+<div style="font-family:Helvetica,Arial,sans-serif;font-size: 19px; font-weight: bold; margin-bottom: 10px;">Job Summary</div>
 <table style="width:100%; border-collapse: collapse;">
 <tr>
 <td style="padding: 6px 0; width: 150px;"><strong>Job Name</strong></td>
@@ -422,8 +432,10 @@ ${qrHtml}
 </table>
 </div>
 
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
 <div style="margin-bottom: 18px; border: 1px solid #e5e7eb; padding: 16px; background: #f9fafb;">
-<div style="font-size: 19px; font-weight: bold; margin-bottom: 10px;">AI Review Summary</div>
+<div style="font-family:Helvetica,Arial,sans-serif;font-size: 19px; font-weight: bold; margin-bottom: 10px;">AI Review Summary</div>
 <div style="font-size: 34px; font-weight: bold; color: #111827;">${confidence}%</div>
 <div style="margin-top: 8px;"><strong>Status:</strong> ${statusText}</div>
 <div style="margin-top: 8px;"><strong>Recommended Action:</strong> ${
@@ -431,39 +443,50 @@ action || "No action provided."
 }</div>
 </div>
 
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
 <div style="margin-bottom: 18px;">
-<div style="font-size: 19px; font-weight: bold; margin-bottom: 10px;">Checklist Status</div>
+<div style="font-family:Helvetica,Arial,sans-serif;font-size: 19px; font-weight: bold; margin-bottom: 10px;">Checklist Status</div>
 ${checklistToHtml()}
 </div>
 
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
 <div style="margin-bottom: 18px;">
-<div style="font-size: 19px; font-weight: bold; margin-bottom: 10px;">Visible Items</div>
+<div style="font-family:Helvetica,Arial,sans-serif;font-size: 19px; font-weight: bold; margin-bottom: 10px;">Visible Items</div>
 ${listToHtml(detected)}
 </div>
 
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
 <div style="margin-bottom: 18px;">
-<div style="font-size: 19px; font-weight: bold; margin-bottom: 10px;">Unclear Items</div>
+<div style="font-family:Helvetica,Arial,sans-serif;font-size: 19px; font-weight: bold; margin-bottom: 10px;">Unclear Items</div>
 ${listToHtml(unclear)}
 </div>
 
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
 <div style="margin-bottom: 18px;">
-<div style="font-size: 19px; font-weight: bold; margin-bottom: 10px;">Missing Items</div>
+<div style="font-family:Helvetica,Arial,sans-serif;font-size: 19px; font-weight: bold; margin-bottom: 10px;">Missing Items</div>
 ${listToHtml(missing)}
 </div>
 
 ${
 decoded.analysis
 ? `
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
 <div style="margin-bottom: 18px;">
-<div style="font-size: 19px; font-weight: bold; margin-bottom: 10px;">AI Notes</div>
+<div style="font-family:Helvetica,Arial,sans-serif;font-size: 19px; font-weight: bold; margin-bottom: 10px;">AI Notes</div>
 <div style="line-height: 1.45;">${decoded.analysis}</div>
 </div>
 `
 : ""
 }
 
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
 <div style="margin-bottom: 18px; page-break-inside: avoid;">
-<div style="font-size: 19px; font-weight: bold; margin-bottom: 10px;">Attached Photos</div>
+<div style="font-family:Helvetica,Arial,sans-serif;font-size: 19px; font-weight: bold; margin-bottom: 10px;">Attached Photos</div>
 ${photoHtml}
 </div>
 
@@ -498,7 +521,7 @@ ${reviewPhotos.map((p) => `<tr><td style="padding:6px 8px;border:1px solid #e5e7
 </table>
 </div>
 
-<div style="margin-top:24px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;color:#6b7280;line-height:1.6;"><strong style="color:#374151;">Compliance Disclaimer:</strong> This report is generated from the photos provided and an AI-assisted review. It is a documentation aid only. Final compliance responsibility remains with the installer and relevant licensed professional.</div>
+<div style="margin-top:24px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;color:#6b7280;line-height:1.6;font-family:Helvetica,Arial,sans-serif;"><strong style="color:#374151;">Compliance Disclaimer:</strong> Generated by Elemetric on ${reportDate}. This report is a documentation aid only. Elemetric Pty Ltd accepts no liability for the accuracy of work described herein. Compliance responsibility rests solely with the licensed tradesperson.</div>
 </div>
 </body>
 </html>
@@ -546,7 +569,7 @@ const certHtml = `
 <html><head><style>
 @page { margin: 20mm; }
 body { margin:0; padding:0; font-family: Georgia, serif; color: #07152b; background: #ffffff; }
-.outer { border: 3px solid #07152b; border-radius: 4px; padding: 40px; min-height: 90vh; display: flex; flex-direction: column; }
+.outer { border: 6px solid #07152b; border-radius: 4px; padding: 40px; min-height: 90vh; display: flex; flex-direction: column; }
 .header { text-align: center; border-bottom: 2px solid #f97316; padding-bottom: 24px; margin-bottom: 28px; }
 .brand { font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #07152b; }
 .cert-title { font-size: 22px; margin-top: 10px; font-style: italic; color: #374151; }
@@ -612,7 +635,7 @@ body { margin:0; padding:0; font-family: Georgia, serif; color: #07152b; backgro
   </div>
 
   <div class="footer">
-    This certificate was generated by Elemetric · AI-powered compliance documentation for Australian tradespeople.<br/>
+    Generated by Elemetric. This certificate is a documentation aid only. Elemetric Pty Ltd accepts no liability for the accuracy of work described herein. Compliance responsibility rests solely with the licensed tradesperson.<br/>
     Certificate No: ${certNumber} · AI Confidence: ${confidence}%
   </div>
 </div>
@@ -667,6 +690,14 @@ return (
 <View style={styles.card}>
 <Text style={styles.h}>Documentation Confidence</Text>
 <Text style={[styles.score, !relevant && styles.scoreLow]}>{confidence}%</Text>
+
+{confidence < 35 && decoded && (
+  <View style={styles.lowConfidenceWarning}>
+    <Text style={styles.lowConfidenceText}>
+      ⚠️ Low confidence score. We recommend retaking photos with better lighting and angles before generating your report.
+    </Text>
+  </View>
+)}
 
 <View style={[styles.badge, relevant ? styles.badgeOk : styles.badgeNo]}>
 <Text style={styles.badgeText}>
@@ -965,6 +996,19 @@ gap: 8,
 h: { color: "rgba(255,255,255,0.75)", fontWeight: "800", fontSize: 14 },
 score: { color: "#22c55e", fontSize: 48, fontWeight: "900" },
 scoreLow: { color: "rgba(255,255,255,0.55)" },
+lowConfidenceWarning: {
+backgroundColor: "rgba(220,38,38,0.12)",
+borderRadius: 10,
+borderWidth: 1,
+borderColor: "rgba(220,38,38,0.30)",
+padding: 12,
+},
+lowConfidenceText: {
+color: "#fca5a5",
+fontWeight: "700",
+fontSize: 13,
+lineHeight: 18,
+},
 badge: {
 alignSelf: "flex-start",
 marginTop: 4,

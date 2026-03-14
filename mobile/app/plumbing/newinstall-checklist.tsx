@@ -15,6 +15,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
+import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -114,6 +115,8 @@ const [aiResult, setAiResult] = useState<AIResult | null>(null);
 const [pdfLoading, setPdfLoading] = useState(false);
 const [licenceNumber, setLicenceNumber] = useState("");
 const [companyName, setCompanyName] = useState("");
+const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
+const [gpsLoading, setGpsLoading] = useState(false);
 
 useFocusEffect(
 useCallback(() => {
@@ -148,6 +151,30 @@ if (active) setLoaded(true);
 return () => { active = false; };
 }, [])
 );
+
+const captureGPS = async () => {
+setGpsLoading(true);
+try {
+const { status } = await Location.requestForegroundPermissionsAsync();
+if (status !== "granted") {
+Alert.alert("Permission denied", "Location access is required to record GPS coordinates.");
+return;
+}
+const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+setGpsCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+try {
+const [rev] = await Location.reverseGeocodeAsync({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+if (rev) {
+const formatted = [rev.streetNumber, rev.street, rev.suburb ?? rev.city, rev.region, rev.postalCode].filter(Boolean).join(" ");
+if (formatted) setJobAddr((prev) => (prev === "No address" || !prev) ? formatted : prev);
+}
+} catch {}
+} catch (e: any) {
+Alert.alert("GPS Error", e?.message ?? "Could not get location.");
+} finally {
+setGpsLoading(false);
+}
+};
 
 const setStatus = (id: string, s: CheckStatus) => {
 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -190,7 +217,10 @@ for (const uri of checks[c.id]?.photoUris ?? []) {
 photos.push({ label: c.label, uri });
 }
 }
-if (!photos.length) { Alert.alert("No photos", "Add at least one photo to run AI analysis."); return; }
+if (photos.length < 2) {
+Alert.alert("More photos needed", "Please add at least 2 photos before running AI analysis.");
+return;
+}
 setAiLoading(true);
 try {
 const images: { mime: string; data: string; label: string }[] = [];
@@ -206,6 +236,12 @@ body: JSON.stringify({ type: "newinstall", images }),
 const json = await res.json();
 if (!res.ok) throw new Error(json?.error ?? "AI request failed");
 setAiResult(json);
+if ((json.confidence ?? 0) < 35) {
+Alert.alert(
+"Low Confidence Score",
+"Low confidence score. We recommend retaking photos with better lighting and angles before generating your report."
+);
+}
 } catch (e: any) {
 Alert.alert("AI Error", e?.message ?? "Unknown error");
 } finally {
@@ -217,11 +253,14 @@ const generateReport = async () => {
 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 setPdfLoading(true);
 try {
-const now = new Date();
-const dateStr = now.toLocaleString();
-const dateShort = now.toLocaleDateString();
-const td = "border:1px solid #d1d5db;padding:8px;";
-const th = `${td}background:#f3f4f6;text-align:left;`;
+let dateStr = new Date().toLocaleString("en-AU");
+let dateShort = new Date().toLocaleDateString("en-AU");
+try {
+const tsRes = await fetch(`${API_BASE}/timestamp`);
+const tsJson = await tsRes.json();
+if (tsJson?.formatted) dateStr = tsJson.formatted;
+if (tsJson?.timestamp) dateShort = new Date(tsJson.timestamp).toLocaleDateString("en-AU");
+} catch {}
 
 // QR code — encodes report identity for verification
 let qrHtml = "";
@@ -235,11 +274,30 @@ qrHtml = `<div style="text-align:center;">
 </div>`;
 } catch {}
 
+const sigHtml = signatureSvg
+? `<img src="data:image/svg+xml;utf8,${encodeURIComponent(signatureSvg)}" style="width:200px;height:60px;object-fit:contain;display:block;"/>`
+: `<div style="width:200px;height:40px;border-bottom:1px solid #111827;"></div>`;
+
+const td = "border:1px solid #d1d5db;padding:8px;font-family:Helvetica,Arial,sans-serif;";
+const th = `${td}background:#f3f4f6;font-family:Helvetica,Arial,sans-serif;font-weight:bold;text-align:left;`;
+
+const rowBg = (s: CheckStatus) => {
+if (s === "pass") return "background:#dcfce7;";
+if (s === "fail") return "background:#fee2e2;";
+if (s === "na") return "background:#f3f4f6;";
+return "";
+};
+
+const passCount = Object.values(checks).filter(e => e.status === "pass").length;
+const failCount = Object.values(checks).filter(e => e.status === "fail").length;
+const overallResult = failCount === 0 && passCount > 0 ? "PASS" : failCount > 0 ? "FAIL" : "INCOMPLETE";
+const resultColor = overallResult === "PASS" ? "#16a34a" : overallResult === "FAIL" ? "#dc2626" : "#d97706";
+
 const checkRows = CHECKS.map((c) => {
 const e = checks[c.id];
 const lbl = statusLabel(e?.status ?? null);
 const col = statusColor(e?.status ?? null);
-return `<tr>
+return `<tr style="${rowBg(e?.status ?? null)}">
 <td style="${td}">${c.label}</td>
 <td style="${td}font-weight:bold;color:${col};">${lbl}</td>
 <td style="${td}">${e?.notes || ""}</td>
@@ -247,42 +305,97 @@ return `<tr>
 }).join("");
 
 const aiSection = aiResult ? `
-<div style="margin-bottom:16px;border:1px solid #e5e7eb;padding:16px;background:#f9fafb;">
-<div style="font-size:17px;font-weight:bold;margin-bottom:8px;">AI Analysis</div>
-<div style="font-size:30px;font-weight:bold;">${aiResult.confidence ?? 0}%</div>
-<div style="margin-top:6px;"><strong>Action:</strong> ${aiResult.action || "—"}</div>
-<div style="margin-top:4px;">${aiResult.analysis || ""}</div>
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+<div style="margin-bottom:16px;border:1px solid #e5e7eb;padding:16px;background:#f9fafb;border-radius:6px;">
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:17px;font-weight:bold;margin-bottom:8px;">AI Analysis</div>
+<div style="font-size:30px;font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${aiResult.confidence ?? 0}%</div>
+<div style="margin-top:6px;font-family:Helvetica,Arial,sans-serif;"><strong>Action:</strong> ${aiResult.action || "—"}</div>
+<div style="margin-top:4px;font-family:Helvetica,Arial,sans-serif;">${aiResult.analysis || ""}</div>
 </div>` : "";
 
-const sigHtml = signatureSvg
-? `<img src="data:image/svg+xml;utf8,${encodeURIComponent(signatureSvg)}" style="width:200px;height:60px;object-fit:contain;display:block;"/>`
-: `<div style="width:200px;height:40px;border-bottom:1px solid #111827;"></div>`;
+const photoHashes = Object.values(photoMeta).flat();
+const tamperSection = photoHashes.length ? `
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+<div style="margin-bottom:16px;">
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:17px;font-weight:bold;margin-bottom:6px;">🛡 Tamper-Evident Photo Record</div>
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:11px;color:#6b7280;margin-bottom:10px;">Each SHA-256 hash verifies the photo has not been modified since capture.</div>
+<table style="width:100%;border-collapse:collapse;font-size:11px;">
+<thead><tr style="background:#f3f4f6;">
+<th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">Photo Label</th>
+<th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">Captured At</th>
+<th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;word-break:break-all;">SHA-256 Hash</th>
+</tr></thead>
+<tbody>
+${photoHashes.map(m => `<tr>
+<td style="padding:6px 8px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">${m.uri.split("/").pop()?.slice(0, 20) || "photo"}</td>
+<td style="padding:6px 8px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;white-space:nowrap;">${m.capturedAt ? new Date(m.capturedAt).toLocaleString("en-AU") : "—"}</td>
+<td style="padding:6px 8px;border:1px solid #e5e7eb;font-family:monospace;word-break:break-all;font-size:9px;">${m.hash || "—"}</td>
+</tr>`).join("")}
+</tbody>
+</table>
+</div>` : "";
 
-const html = `<html><head><style>@page{margin:15mm;@bottom-right{content:"Page " counter(page);font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}@bottom-left{content:"ELEMETRIC · Confidential";font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}}body{margin:0;padding:0;font-family:Arial,sans-serif;color:#111827;background:#fff;}</style></head>
+const gpsLine = gpsCoords
+? `${gpsCoords.lat.toFixed(6)}° N, ${gpsCoords.lng.toFixed(6)}° E`
+: "Not recorded";
+
+const html = `<html><head><style>
+@page {
+margin: 15mm;
+@bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 9pt; color: #6b7280; font-family: Helvetica, Arial, sans-serif; }
+@bottom-left { content: "ELEMETRIC · Confidential"; font-size: 9pt; color: #6b7280; font-family: Helvetica, Arial, sans-serif; }
+}
+body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: #111827; background: #fff; }
+.watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-45deg); font-size: 80pt; font-family: Helvetica,Arial,sans-serif; font-weight: bold; color: rgba(7,21,43,0.04); white-space: nowrap; pointer-events: none; z-index: -1; letter-spacing: 8px; }
+</style></head>
 <body>
+<div class="watermark">ELEMETRIC</div>
 <div style="background:#07152b;color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
-<div style="font-size:28px;font-weight:900;letter-spacing:3px;">ELEMETRIC</div>
+<div>
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:28px;font-weight:900;letter-spacing:3px;">ELEMETRIC</div>
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:11px;opacity:0.6;margin-top:2px;">AI-Powered Compliance Documentation</div>
+</div>
 ${qrHtml}
 </div>
 <div style="background:#f97316;color:white;padding:10px 24px;display:flex;justify-content:space-between;align-items:center;">
-<div style="font-size:14px;font-weight:bold;">New Installation Compliance Report · AS/NZS 3500</div>
-<div style="font-size:12px;">${dateShort}</div>
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:14px;font-weight:bold;">New Installation Compliance Report · AS/NZS 3500</div>
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:12px;">${dateShort}</div>
 </div>
 <div style="padding:22px;">
-<div style="margin-bottom:16px;">
-<div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Job Details</div>
+
+<div style="background:#f8fafc;border-left:4px solid #f97316;padding:16px;margin-bottom:20px;border-radius:0 6px 6px 0;">
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:11px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Executive Summary</div>
 <table style="width:100%;border-collapse:collapse;">
-<tr><td style="padding:5px 0;width:160px;"><strong>Job Name</strong></td><td>${jobName}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Address</strong></td><td>${jobAddr}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Plumber</strong></td><td>${plumberName || "Not entered"}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Licence Number</strong></td><td>${licenceNumber || "Not entered"}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Company</strong></td><td>${companyName || "Not entered"}</td></tr>
-<tr><td style="padding:5px 0;"><strong>Report Date</strong></td><td>${dateStr}</td></tr>
+<tr><td style="padding:4px 0;width:180px;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Job Type</td><td style="font-family:Helvetica,Arial,sans-serif;">New Installation · AS/NZS 3500</td></tr>
+<tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Date</td><td style="font-family:Helvetica,Arial,sans-serif;">${dateStr}</td></tr>
+<tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Address</td><td style="font-family:Helvetica,Arial,sans-serif;">${jobAddr}</td></tr>
+<tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">GPS</td><td style="font-family:Helvetica,Arial,sans-serif;">${gpsLine}</td></tr>
+<tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Plumber</td><td style="font-family:Helvetica,Arial,sans-serif;">${plumberName || "Not entered"}</td></tr>
+<tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">AI Confidence</td><td style="font-family:Helvetica,Arial,sans-serif;">${aiResult ? `${aiResult.confidence ?? 0}%` : "Not analysed"}</td></tr>
+<tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Overall Result</td><td style="font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:${resultColor};">${overallResult}</td></tr>
 </table>
 </div>
-${aiSection}
+
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
 <div style="margin-bottom:16px;">
-<div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Installation Checks</div>
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:19px;font-weight:bold;margin-bottom:10px;">Job Details</div>
+<table style="width:100%;border-collapse:collapse;">
+<tr><td style="padding:5px 0;width:160px;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Job Name</td><td style="font-family:Helvetica,Arial,sans-serif;">${jobName}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Address</td><td style="font-family:Helvetica,Arial,sans-serif;">${jobAddr}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Plumber</td><td style="font-family:Helvetica,Arial,sans-serif;">${plumberName || "Not entered"}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Licence Number</td><td style="font-family:Helvetica,Arial,sans-serif;">${licenceNumber || "Not entered"}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Company</td><td style="font-family:Helvetica,Arial,sans-serif;">${companyName || "Not entered"}</td></tr>
+<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Report Date</td><td style="font-family:Helvetica,Arial,sans-serif;">${dateStr}</td></tr>
+</table>
+</div>
+
+${aiSection}
+
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
+<div style="margin-bottom:16px;">
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:19px;font-weight:bold;margin-bottom:10px;">Installation Checks</div>
 <table style="width:100%;border-collapse:collapse;">
 <tr>
 <th style="${th}width:60%;">Check Item</th>
@@ -292,24 +405,33 @@ ${aiSection}
 ${checkRows}
 </table>
 </div>
-<div style="margin-top:18px;border-top:1px solid #d1d5db;padding-top:18px;">
-<div style="font-size:18px;font-weight:bold;margin-bottom:12px;">Sign-Off</div>
-<div style="margin-bottom:8px;"><strong>Plumber:</strong> ${plumberName || "Not entered"}</div>
-${sigHtml}
-<div style="margin-top:6px;font-size:13px;"><strong>Date:</strong> ${dateShort}</div>
-</div>
-<div style="margin-top:24px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;color:#6b7280;line-height:1.6;"><strong style="color:#374151;">Compliance Disclaimer:</strong> This report is a documentation aid only. Final compliance responsibility rests with the licensed plumber. Elemetric AI analysis does not replace statutory obligations under AS/NZS 3500.</div>
-</div>
-</body>
-</html>`;
 
-const { uri } = await Print.printToFileAsync({ html });
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
+<div style="margin-top:18px;border-top:1px solid #d1d5db;padding-top:18px;">
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:18px;font-weight:bold;margin-bottom:12px;">Sign-Off</div>
+<div style="font-family:Helvetica,Arial,sans-serif;margin-bottom:8px;"><strong>Plumber:</strong> ${plumberName || "Not entered"}</div>
+${sigHtml}
+<div style="margin-top:6px;font-size:13px;font-family:Helvetica,Arial,sans-serif;"><strong>Date:</strong> ${dateShort}</div>
+</div>
+
+${tamperSection}
+
+<div style="margin-top:24px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;color:#6b7280;line-height:1.6;font-family:Helvetica,Arial,sans-serif;">
+<strong style="color:#374151;">Compliance Disclaimer:</strong> Generated by Elemetric on ${dateStr}. This report is a documentation aid only. Elemetric Pty Ltd accepts no liability for the accuracy of work described herein. Compliance responsibility rests solely with the licensed tradesperson.
+</div>
+</div></body></html>`;
+
+const { uri: printUri } = await Print.printToFileAsync({ html });
 try { await AsyncStorage.setItem("elemetric_pdf_generated", "1"); } catch {}
+const filename = `elemetric-report-${Date.now()}.pdf`;
+const dest = `${FileSystem.cacheDirectory}${filename}`;
+await FileSystem.copyAsync({ from: printUri, to: dest });
 const canShare = await Sharing.isAvailableAsync();
 if (canShare) {
-await Sharing.shareAsync(uri, { mimeType: "application/pdf", dialogTitle: "Share Installation Report", UTI: "com.adobe.pdf" });
+await Sharing.shareAsync(dest, { mimeType: "application/pdf", dialogTitle: "Share Report", UTI: "com.adobe.pdf" });
 } else {
-Alert.alert("PDF Created", `Saved to: ${uri}`);
+Alert.alert("PDF Created", `Saved to: ${dest}`);
 }
 } catch (e: any) {
 Alert.alert("PDF Error", e?.message ?? "Could not generate report.");
@@ -347,6 +469,22 @@ value={plumberName}
 onChangeText={setPlumberName}
 placeholderTextColor="#555"
 />
+</View>
+
+{/* ── GPS ── */}
+<View style={styles.section}>
+<Text style={styles.sectionTitle}>GPS Location (Optional)</Text>
+<Pressable style={styles.gpsBtn} onPress={captureGPS} disabled={gpsLoading}>
+{gpsLoading
+? <ActivityIndicator color="white" />
+: <Text style={styles.gpsBtnText}>Capture GPS Location</Text>
+}
+</Pressable>
+{gpsCoords && (
+<Text style={styles.gpsResult}>
+{gpsCoords.lat.toFixed(6)}°, {gpsCoords.lng.toFixed(6)}°
+</Text>
+)}
 </View>
 
 {CHECKS.map((check) => {
@@ -478,6 +616,16 @@ borderWidth: 1,
 borderColor: "rgba(255,255,255,0.10)",
 fontSize: 14,
 },
+gpsBtn: {
+backgroundColor: "rgba(249,115,22,0.18)",
+borderWidth: 1,
+borderColor: "rgba(249,115,22,0.35)",
+borderRadius: 12,
+paddingVertical: 14,
+alignItems: "center",
+},
+gpsBtnText: { color: "white", fontWeight: "900" },
+gpsResult: { color: "#22c55e", fontSize: 13, fontWeight: "700" },
 checkCard: {
 borderRadius: 12,
 borderWidth: 1,
