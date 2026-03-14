@@ -393,9 +393,6 @@ disabled={sharingJobId === job.id}
 </Pressable>
 )}
 
-<Pressable onPress={() => router.back()} style={styles.back}>
-<Text style={styles.backText}>← Back</Text>
-</Pressable>
 </ScrollView>
 </View>
 );
@@ -405,7 +402,7 @@ const styles = StyleSheet.create({
 screen: { flex: 1, backgroundColor: "#07152b" },
 header: { paddingTop: 18, paddingHorizontal: 18, paddingBottom: 10 },
 brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
-title: { marginTop: 4, color: "white", fontSize: 22, fontWeight: "900" },
+title: { marginTop: 4, color: "white", fontSize: 28, fontWeight: "900" },
 
 searchWrap: {
 paddingHorizontal: 18,

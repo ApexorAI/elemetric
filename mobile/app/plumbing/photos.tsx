@@ -458,7 +458,7 @@ loadingText: { color: "rgba(255,255,255,0.7)" },
 screen: { flex: 1, backgroundColor: "#07152b" },
 header: { paddingTop: 18, paddingHorizontal: 18 },
 brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
-title: { marginTop: 6, color: "white", fontSize: 22, fontWeight: "900" },
+title: { marginTop: 6, color: "white", fontSize: 28, fontWeight: "900" },
 subtitle: { marginTop: 4, color: "rgba(255,255,255,0.75)" },
 metaCard: {
 marginTop: 12,

@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   },
   brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 6 },
-  title: { color: "white", fontSize: 26, fontWeight: "900" },
+  title: { color: "white", fontSize: 28, fontWeight: "900" },
   betaBadge: {
     backgroundColor: "rgba(249,115,22,0.20)",
     borderWidth: 1,
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   betaText: { color: "#f97316", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
-  subtitle: { marginTop: 6, color: "rgba(255,255,255,0.55)", fontSize: 14 },
+  subtitle: { marginTop: 6, color: "rgba(255,255,255,0.45)", fontSize: 13 },
 
   body: { padding: 18, gap: 12, paddingBottom: 60 },
 

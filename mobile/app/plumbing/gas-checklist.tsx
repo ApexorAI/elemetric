@@ -1053,7 +1053,7 @@ paddingHorizontal: 18,
 paddingBottom: 8,
 },
 brand:    { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
-title:    { marginTop: 6, color: "white", fontSize: 22, fontWeight: "900" },
+title:    { marginTop: 6, color: "white", fontSize: 28, fontWeight: "900" },
 meta:     { marginTop: 4, color: "rgba(255,255,255,0.7)", fontSize: 13 },
 standard: { marginTop: 2, color: "rgba(255,255,255,0.45)", fontSize: 12 },
 

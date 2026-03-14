@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
-  title: { marginTop: 6, color: "white", fontSize: 26, fontWeight: "900" },
+  title: { marginTop: 6, color: "white", fontSize: 28, fontWeight: "900" },
   subtitle: { marginTop: 6, color: "rgba(255,255,255,0.55)", fontSize: 14 },
 
   body: { padding: 18, gap: 16, paddingBottom: 60 },

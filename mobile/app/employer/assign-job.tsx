@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#07152b" },
   header: { paddingTop: 18, paddingHorizontal: 18, paddingBottom: 8 },
   brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
-  title: { marginTop: 6, color: "white", fontSize: 22, fontWeight: "900" },
+  title: { marginTop: 6, color: "white", fontSize: 28, fontWeight: "900" },
   body: { padding: 18, gap: 10, paddingBottom: 60 },
 
   label: {

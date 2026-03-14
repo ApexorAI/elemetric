@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(git -C C:/Users/cayde/Projects/elemetric/server push)",
+      "Bash(cd C:/Users/cayde/Projects/elemetric/mobile && npx expo install expo-location 2>&1 | tail -5)",
+      "Bash(cd \"C:\\\\Users\\\\cayde\\\\Projects\\\\elemetric\\\\mobile\" && node generate-icon.js)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(ls -la \"C:\\\\Users\\\\cayde\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-cayde-Projects-elemetric-mobile\\\\2ebc302b-738b-4d4c-94bf-ff28c1081029\\\\tasks\\\\\" 2>/dev/null || echo \"dir not found\")",
+      "Bash(for f:*)",
+      "Bash(cd \"C:\\\\Users\\\\cayde\\\\Projects\\\\elemetric\\\\mobile\" && npx expo install expo-notifications 2>&1 | tail -5)",
+      "Bash(cd \"C:\\\\Users\\\\cayde\\\\Projects\\\\elemetric\\\\mobile\" && npx expo install expo-device 2>&1 | tail -3)"
+    ]
+  }
+}

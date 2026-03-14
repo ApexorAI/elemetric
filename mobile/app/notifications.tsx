@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   header: { paddingTop: 18, paddingHorizontal: 18, paddingBottom: 8 },
   headerRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
   brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
-  title: { marginTop: 6, color: "white", fontSize: 22, fontWeight: "900" },
+  title: { marginTop: 6, color: "white", fontSize: 28, fontWeight: "900" },
   unreadBadge: {
     backgroundColor: "#f97316",
     borderRadius: 12,
