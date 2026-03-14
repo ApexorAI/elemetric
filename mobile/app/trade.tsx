@@ -84,7 +84,7 @@ const TRADES: Trade[] = [
       {
         label: "General Carpentry Documentation",
         description: "Structural & finishing documentation",
-        params: { type: "carpentry" },
+        pathname: "/plumbing/carpentry-checklist",
       },
     ],
   },
