@@ -15,10 +15,10 @@ import * as WebBrowser from "expo-web-browser";
 // Replace these with your real Stripe Payment Link URLs from the Stripe Dashboard.
 // Create Payment Links at: https://dashboard.stripe.com/payment-links
 const STRIPE_URLS = {
-  core:          "https://buy.stripe.com/your_core_link",
-  pro:           "https://buy.stripe.com/your_pro_link",
-  employer:      "https://buy.stripe.com/your_employer_link",
-  employerPlus:  "https://buy.stripe.com/your_employer_plus_link",
+  core:          "https://buy.stripe.com/3cI00j9mofdb0oG6Ih9Zm00",
+  pro:           "https://buy.stripe.com/5kQeVd6acghf2wO3w59Zm01",
+  employer:      "https://buy.stripe.com/eVqaEXgOQaWV9Zg2s19Zm02",
+  employerPlus:  "https://buy.stripe.com/dRm28rfKMd533AS7Ml9Zm03",
 };
 
 // ── Plan definitions ──────────────────────────────────────────────────────────
