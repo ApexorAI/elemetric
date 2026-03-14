@@ -1,0 +1,3 @@
+# Server is a standalone git repo deployed separately to Railway.
+# It is intentionally excluded from the parent repo to avoid submodule conflicts.
+server/

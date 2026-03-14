@@ -1,13 +1,12 @@
 [build]
+  base = "mobile/docs"
   publish = "mobile/docs"
+
+[build.environment]
+  GIT_SUBMODULE_STRATEGY = "none"
 
 [[redirects]]
   from = "/"
-  to   = "/landing-page.html"
-  status = 200
-
-[[redirects]]
-  from = "/privacy"
   to   = "/landing-page.html"
   status = 200
 
