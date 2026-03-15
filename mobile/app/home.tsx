@@ -273,6 +273,22 @@ export default function Home() {
             <Text style={s.betaText}>BETA</Text>
           </View>
         </Pressable>
+        <Pressable
+          style={s.secondaryBtn}
+          onPress={() => router.push("/invoice")}
+          accessibilityRole="button"
+          accessibilityLabel="Invoice Generator"
+        >
+          <Text style={s.secondaryBtnText}>Invoice</Text>
+        </Pressable>
+        <Pressable
+          style={s.secondaryBtn}
+          onPress={() => router.push("/data-export")}
+          accessibilityRole="button"
+          accessibilityLabel="Data Export"
+        >
+          <Text style={s.secondaryBtnText}>Data Export</Text>
+        </Pressable>
       </View>
 
       {/* Assigned jobs banner */}
