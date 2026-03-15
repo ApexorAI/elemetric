@@ -10,9 +10,13 @@ import {
   Alert,
   Share,
   Image,
+  Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
 import QRCode from "qrcode";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system/legacy";
 
 const API_BASE = "https://elemetric-ai-production.up.railway.app";
 
@@ -81,6 +85,7 @@ export default function PropertyPassportScreen() {
   const [loading, setLoading] = useState(false);
   const [passport, setPassport] = useState<PassportData | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const search = async () => {
     const q = address.trim();
@@ -115,6 +120,141 @@ export default function PropertyPassportScreen() {
       Alert.alert("Error", e?.message ?? "Could not load property passport.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openMapLink = () => {
+    const q = encodeURIComponent(passport?.address || address);
+    Linking.openURL(`https://maps.google.com/?q=${q}`).catch(() => {});
+  };
+
+  const generatePdf = async () => {
+    if (!passport) return;
+    setPdfLoading(true);
+    try {
+      const dateStr = new Date().toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" });
+      const scoreColor = complianceColor(passport.overallCompliance);
+      const label = complianceLabel(passport.overallCompliance);
+
+      // Extract unique tradies
+      const tradiesMap: Record<string, { name: string; types: Set<string>; count: number }> = {};
+      for (const j of passport.jobs) {
+        if (j.installerName) {
+          if (!tradiesMap[j.installerName]) tradiesMap[j.installerName] = { name: j.installerName, types: new Set(), count: 0 };
+          tradiesMap[j.installerName].types.add(JOB_TYPE_LABELS[j.jobType] ?? j.jobType);
+          tradiesMap[j.installerName].count++;
+        }
+      }
+      const tradies = Object.values(tradiesMap);
+
+      const trendRows = passport.trend.map((t) => `
+        <tr>
+          <td style="padding:6px 10px;border:1px solid #e5e7eb;">${t.month}</td>
+          <td style="padding:6px 10px;border:1px solid #e5e7eb;text-align:center;font-weight:bold;color:${complianceColor(t.avgConfidence)};">${t.avgConfidence}%</td>
+          <td style="padding:6px 10px;border:1px solid #e5e7eb;text-align:center;">${t.jobCount}</td>
+        </tr>`).join("");
+
+      const jobRows = passport.jobs.map((j) => `
+        <tr>
+          <td style="padding:6px 10px;border:1px solid #e5e7eb;">${JOB_TYPE_ICONS[j.jobType] ?? "📋"} ${JOB_TYPE_LABELS[j.jobType] ?? j.jobType}</td>
+          <td style="padding:6px 10px;border:1px solid #e5e7eb;">${j.jobName}</td>
+          <td style="padding:6px 10px;border:1px solid #e5e7eb;">${new Date(j.createdAt).toLocaleDateString("en-AU")}</td>
+          <td style="padding:6px 10px;border:1px solid #e5e7eb;">${j.installerName || "—"}</td>
+          <td style="padding:6px 10px;border:1px solid #e5e7eb;text-align:center;font-weight:bold;color:${complianceColor(j.confidence)};">${j.confidence}%</td>
+        </tr>`).join("");
+
+      const tradieRows = tradies.map((t) => `
+        <tr>
+          <td style="padding:6px 10px;border:1px solid #e5e7eb;font-weight:600;">${t.name}</td>
+          <td style="padding:6px 10px;border:1px solid #e5e7eb;">${Array.from(t.types).join(", ")}</td>
+          <td style="padding:6px 10px;border:1px solid #e5e7eb;text-align:center;">${t.count}</td>
+        </tr>`).join("");
+
+      const html = `<html><head><style>
+@page { margin: 15mm; @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 9pt; color: #6b7280; font-family: Helvetica, Arial, sans-serif; } }
+body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: #111827; }
+</style></head><body>
+<div style="background:#07152b;color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
+  <div>
+    <div style="font-size:28px;font-weight:900;letter-spacing:3px;">ELEMETRIC</div>
+    <div style="font-size:11px;opacity:0.6;margin-top:2px;">Property Compliance Passport</div>
+  </div>
+</div>
+<div style="background:#f97316;color:white;padding:10px 24px;display:flex;justify-content:space-between;align-items:center;">
+  <div style="font-size:14px;font-weight:bold;">Property Passport — ${passport.address}</div>
+  <div style="font-size:12px;">${dateStr}</div>
+</div>
+<div style="padding:22px;">
+
+<div style="background:#f8fafc;border-left:4px solid #f97316;padding:16px;margin-bottom:20px;border-radius:0 6px 6px 0;">
+  <div style="font-size:11px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Overall Compliance Summary</div>
+  <div style="font-size:48px;font-weight:900;color:${scoreColor};">${passport.overallCompliance !== null ? passport.overallCompliance + "%" : "—"}</div>
+  <div style="font-size:14px;font-weight:bold;color:${scoreColor};margin-top:4px;">${label}</div>
+  <div style="margin-top:8px;font-size:13px;">${passport.jobCount} compliance job${passport.jobCount !== 1 ? "s" : ""} on record</div>
+</div>
+
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
+${passport.trend.length > 0 ? `
+<div style="margin-bottom:20px;">
+  <div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Compliance Trend</div>
+  <table style="width:100%;border-collapse:collapse;">
+    <thead><tr style="background:#f3f4f6;">
+      <th style="padding:6px 10px;text-align:left;border:1px solid #e5e7eb;">Month</th>
+      <th style="padding:6px 10px;text-align:center;border:1px solid #e5e7eb;">Avg. Score</th>
+      <th style="padding:6px 10px;text-align:center;border:1px solid #e5e7eb;">Jobs</th>
+    </tr></thead>
+    <tbody>${trendRows}</tbody>
+  </table>
+</div>
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>` : ""}
+
+${tradies.length > 0 ? `
+<div style="margin-bottom:20px;">
+  <div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Tradies on Record</div>
+  <table style="width:100%;border-collapse:collapse;">
+    <thead><tr style="background:#f3f4f6;">
+      <th style="padding:6px 10px;text-align:left;border:1px solid #e5e7eb;">Name</th>
+      <th style="padding:6px 10px;text-align:left;border:1px solid #e5e7eb;">Trades</th>
+      <th style="padding:6px 10px;text-align:center;border:1px solid #e5e7eb;">Jobs</th>
+    </tr></thead>
+    <tbody>${tradieRows}</tbody>
+  </table>
+</div>
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>` : ""}
+
+<div style="margin-bottom:20px;">
+  <div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Full Job History</div>
+  <table style="width:100%;border-collapse:collapse;">
+    <thead><tr style="background:#f3f4f6;">
+      <th style="padding:6px 10px;text-align:left;border:1px solid #e5e7eb;">Trade</th>
+      <th style="padding:6px 10px;text-align:left;border:1px solid #e5e7eb;">Job Name</th>
+      <th style="padding:6px 10px;text-align:left;border:1px solid #e5e7eb;">Date</th>
+      <th style="padding:6px 10px;text-align:left;border:1px solid #e5e7eb;">Tradesperson</th>
+      <th style="padding:6px 10px;text-align:center;border:1px solid #e5e7eb;">Score</th>
+    </tr></thead>
+    <tbody>${jobRows}</tbody>
+  </table>
+</div>
+
+<div style="margin-top:24px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;color:#6b7280;line-height:1.6;">
+  <strong style="color:#374151;">Disclaimer:</strong> Generated by Elemetric on ${dateStr}. This document is a summary of recorded compliance jobs and does not constitute a formal compliance certificate.
+</div>
+</div></body></html>`;
+
+      const { uri } = await Print.printToFileAsync({ html });
+      const dest = `${FileSystem.cacheDirectory}elemetric-passport-${Date.now()}.pdf`;
+      await FileSystem.copyAsync({ from: uri, to: dest });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(dest, { mimeType: "application/pdf", dialogTitle: "Share Property Passport", UTI: "com.adobe.pdf" });
+      } else {
+        Alert.alert("PDF Created", `Saved to: ${dest}`);
+      }
+    } catch (e: any) {
+      Alert.alert("PDF Error", e?.message ?? "Could not generate PDF.");
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -210,6 +350,19 @@ export default function PropertyPassportScreen() {
               </View>
             )}
 
+            {/* ── Map link + actions ─────────────────────────────────────── */}
+            <View style={styles.actionsRow}>
+              <Pressable style={styles.actionBtn} onPress={openMapLink}>
+                <Text style={styles.actionBtnText}>📍 View on Map</Text>
+              </Pressable>
+              <Pressable style={[styles.actionBtn, styles.actionBtnOrange, pdfLoading && { opacity: 0.5 }]} onPress={generatePdf} disabled={pdfLoading}>
+                {pdfLoading
+                  ? <ActivityIndicator size="small" color="#0b1220" />
+                  : <Text style={[styles.actionBtnText, { color: "#0b1220" }]}>📄 Export PDF</Text>
+                }
+              </Pressable>
+            </View>
+
             {/* ── QR code + share ───────────────────────────────────────── */}
             {qrDataUrl && (
               <View style={styles.card}>
@@ -227,6 +380,36 @@ export default function PropertyPassportScreen() {
                 </Pressable>
               </View>
             )}
+
+            {/* ── Tradies on record ─────────────────────────────────────── */}
+            {(() => {
+              const tradiesMap: Record<string, { name: string; types: string[]; count: number }> = {};
+              for (const j of passport.jobs) {
+                if (j.installerName) {
+                  if (!tradiesMap[j.installerName]) tradiesMap[j.installerName] = { name: j.installerName, types: [], count: 0 };
+                  const tLabel = JOB_TYPE_LABELS[j.jobType] ?? j.jobType;
+                  if (!tradiesMap[j.installerName].types.includes(tLabel)) tradiesMap[j.installerName].types.push(tLabel);
+                  tradiesMap[j.installerName].count++;
+                }
+              }
+              const tradies = Object.values(tradiesMap);
+              if (tradies.length === 0) return null;
+              return (
+                <View style={styles.card}>
+                  <Text style={styles.sectionTitle}>Tradies on Record</Text>
+                  <Text style={styles.sectionSub}>{tradies.length} tradie{tradies.length !== 1 ? "s" : ""} have worked at this property</Text>
+                  {tradies.map((t) => (
+                    <View key={t.name} style={styles.tradieRow}>
+                      <View style={styles.tradieIcon}><Text style={styles.tradieIconText}>👷</Text></View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.tradieName}>{t.name}</Text>
+                        <Text style={styles.tradieMeta}>{t.types.join(" · ")} · {t.count} job{t.count !== 1 ? "s" : ""}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              );
+            })()}
 
             {/* ── Job history ───────────────────────────────────────────── */}
             {passport.jobs.length > 0 ? (
@@ -337,6 +520,25 @@ const styles = StyleSheet.create({
   searchBtnText: { color: "#0b1220", fontWeight: "900", fontSize: 14 },
 
   body: { padding: 18, gap: 14, paddingBottom: 48 },
+
+  actionsRow: { flexDirection: "row", gap: 10 },
+  actionBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  actionBtnOrange: { backgroundColor: "#f97316", borderColor: "#f97316" },
+  actionBtnText: { color: "white", fontWeight: "800", fontSize: 14 },
+
+  tradieRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" },
+  tradieIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.07)", alignItems: "center", justifyContent: "center" },
+  tradieIconText: { fontSize: 18 },
+  tradieName: { color: "white", fontWeight: "700", fontSize: 14 },
+  tradieMeta: { color: "rgba(255,255,255,0.5)", fontSize: 12, marginTop: 1 },
 
   card: {
     borderRadius: 18,
