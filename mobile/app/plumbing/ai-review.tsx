@@ -45,6 +45,8 @@ base64: string;
 mime: string;
 hash?: string;
 capturedAt?: string;
+role?: "before" | "after";
+gps?: { lat: number; lng: number };
 };
 
 const REVIEW_PHOTOS_FILE = `${FileSystem.documentDirectory}review-photos.json`;
@@ -328,27 +330,51 @@ typeof photo.mime === "string" &&
 photo.mime.startsWith("image/")
 );
 
-const photoHtml = safePhotos.length
-? `
-<div style="display:flex; flex-wrap:wrap; gap:12px; margin-top:12px;">
-${safePhotos
-.map(
-(photo) => `
-<div style="width:48%; box-sizing:border-box; margin-bottom:12px; page-break-inside: avoid;">
-<div style="font-weight:bold; font-size:12px; margin-bottom:6px; color:#111827;">
-${photo.label}
-</div>
-<img
-src="data:${photo.mime};base64,${photo.base64}"
-style="width:100%; height:160px; object-fit:cover; border:1px solid #d1d5db; border-radius:6px;"
-/>
-</div>
-`
-)
-.join("")}
-</div>
-`
-: `<div style="color:#6b7280;">No photos available for report.</div>`;
+const beforePhotos = safePhotos.filter((p) => p.role === "before");
+const afterPhotos  = safePhotos.filter((p) => p.role === "after");
+const otherPhotos  = safePhotos.filter((p) => !p.role);
+
+const photoCard = (photo: ReviewPhoto, borderColor = "#d1d5db") =>
+  `<div style="box-sizing:border-box;margin-bottom:12px;page-break-inside:avoid;">
+    <div style="font-weight:bold;font-size:11px;margin-bottom:5px;color:#374151;">${photo.label}</div>
+    <img src="data:${photo.mime};base64,${photo.base64}" style="width:100%;height:150px;object-fit:cover;border:2px solid ${borderColor};border-radius:6px;"/>
+  </div>`;
+
+let photoHtml = "";
+
+if (beforePhotos.length > 0 || afterPhotos.length > 0) {
+  photoHtml += `
+<div style="margin-bottom:16px;page-break-inside:avoid;">
+  <div style="font-size:16px;font-weight:bold;margin-bottom:12px;color:#111827;border-bottom:2px solid #f97316;padding-bottom:6px;">Before &amp; After Comparison</div>
+  <table style="width:100%;border-collapse:collapse;">
+    <tr>
+      <td style="width:50%;padding-right:8px;vertical-align:top;">
+        <div style="font-size:12px;font-weight:bold;color:#d97706;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Before</div>
+        ${beforePhotos.length > 0 ? beforePhotos.map((p) => photoCard(p, "#d97706")).join("") : '<div style="color:#9ca3af;font-size:12px;">No before photos marked</div>'}
+      </td>
+      <td style="width:50%;padding-left:8px;vertical-align:top;">
+        <div style="font-size:12px;font-weight:bold;color:#16a34a;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">After</div>
+        ${afterPhotos.length > 0 ? afterPhotos.map((p) => photoCard(p, "#22c55e")).join("") : '<div style="color:#9ca3af;font-size:12px;">No after photos marked</div>'}
+      </td>
+    </tr>
+  </table>
+</div>`;
+}
+
+if (otherPhotos.length > 0) {
+  photoHtml += `
+<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;">
+${otherPhotos.map((photo) => `
+  <div style="width:48%;box-sizing:border-box;margin-bottom:12px;page-break-inside:avoid;">
+    <div style="font-weight:bold;font-size:12px;margin-bottom:6px;color:#111827;">${photo.label}</div>
+    <img src="data:${photo.mime};base64,${photo.base64}" style="width:100%;height:160px;object-fit:cover;border:1px solid #d1d5db;border-radius:6px;"/>
+  </div>`).join("")}
+</div>`;
+}
+
+if (!photoHtml) {
+  photoHtml = `<div style="color:#6b7280;">No photos available for report.</div>`;
+}
 
 const signatureHtml = signatureSvg
 ? `

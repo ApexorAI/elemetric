@@ -12,6 +12,7 @@ ActivityIndicator,
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImageManipulator from "expo-image-manipulator";
+import * as Location from "expo-location";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
@@ -43,6 +44,8 @@ type PhotoMeta = {
 uri: string;
 hash: string;
 capturedAt: string;
+role?: "before" | "after";
+gps?: { lat: number; lng: number };
 };
 
 type ReviewPhoto = {
@@ -52,6 +55,8 @@ base64: string;
 mime: string;
 hash?: string;
 capturedAt?: string;
+role?: "before" | "after";
+gps?: { lat: number; lng: number };
 };
 
 const HOTWATER_ITEMS: ChecklistItem[] = [
@@ -180,21 +185,66 @@ Alert.alert("Photo error", "Could not read selected image.");
 return;
 }
 
-// Generate SHA-256 hash at capture time
 const ts = captureTimestamp();
+
+// Get GPS coordinates (best-effort)
+let gps: { lat: number; lng: number } | undefined;
+try {
+const locPerm = await Location.requestForegroundPermissionsAsync();
+if (locPerm.granted) {
+const loc = await Location.getCurrentPositionAsync({
+accuracy: Location.Accuracy.Balanced,
+});
+gps = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+}
+} catch {}
+
+// Read original base64
+let b64 = "";
+try {
+b64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
+} catch {}
+
+// Call server to burn GPS + timestamp onto the image (weatherproof stamp)
+let finalUri = asset.uri;
+let finalB64 = b64;
+try {
+const stampRes = await fetch(`${API_BASE}/stamp-photo`, {
+method: "POST",
+headers: {
+"Content-Type": "application/json",
+"X-Elemetric-Key": process.env.EXPO_PUBLIC_ELEMETRIC_API_KEY ?? "",
+},
+body: JSON.stringify({ image: b64, mime: "image/jpeg", gps, capturedAt: ts }),
+});
+if (stampRes.ok) {
+const stampJson = await stampRes.json();
+if (stampJson.image) {
+finalB64 = stampJson.image;
+const stampedPath = `${FileSystem.documentDirectory}stamped-${Date.now()}.jpg`;
+await FileSystem.writeAsStringAsync(stampedPath, finalB64, {
+encoding: FileSystem.EncodingType.Base64,
+});
+finalUri = stampedPath;
+}
+}
+} catch {
+// Stamp failed — use original photo, continue without stamp
+}
+
+// Hash the final (stamped) image
 let hash = "";
 try {
-const b64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
-hash = await hashBase64(b64);
+hash = await hashBase64(finalB64);
 } catch {}
 
 const nextPhotoMap = {
 ...photoMap,
-[itemId]: [...(photoMap[itemId] || []), asset.uri],
+[itemId]: [...(photoMap[itemId] || []), finalUri],
 };
 const nextPhotoMeta = {
 ...photoMeta,
-[itemId]: [...(photoMeta[itemId] || []), { uri: asset.uri, hash, capturedAt: ts }],
+[itemId]: [...(photoMeta[itemId] || []), { uri: finalUri, hash, capturedAt: ts, gps }],
 };
 const nextChecked = {
 ...checked,
@@ -209,6 +259,22 @@ await saveChecklistState(nextChecked, nextPhotoMap, nextPhotoMeta);
 } catch (e: any) {
 Alert.alert("Photo error", e?.message ?? "Unknown error");
 }
+};
+
+const setPhotoRole = async (
+itemId: string,
+uri: string,
+role: "before" | "after"
+) => {
+const currentMeta = photoMeta[itemId] || [];
+const nextMeta = currentMeta.map((m) =>
+m.uri === uri ? { ...m, role: m.role === role ? undefined : role } : m
+);
+const nextPhotoMeta = { ...photoMeta, [itemId]: nextMeta };
+setPhotoMeta(nextPhotoMeta);
+try {
+await saveChecklistState(checked, photoMap, nextPhotoMeta);
+} catch {}
 };
 
 const removePhotoForItem = async (itemId: string, uri: string) => {
@@ -273,6 +339,8 @@ base64: converted.base64,
 mime: converted.mime,
 hash: meta?.hash,
 capturedAt: meta?.capturedAt,
+role: meta?.role,
+gps: meta?.gps,
 });
 
 images.push({
@@ -414,6 +482,23 @@ disabled={loading}
 >
 <Text style={styles.removeText}>×</Text>
 </Pressable>
+{/* Before / After role toggle */}
+<View style={styles.roleRow}>
+<Pressable
+style={[styles.roleBtn, meta?.role === "before" && styles.roleBtnBefore]}
+onPress={() => setPhotoRole(item.id, uri, "before")}
+disabled={loading}
+>
+<Text style={[styles.roleBtnText, meta?.role === "before" && styles.roleBtnTextActive]}>B</Text>
+</Pressable>
+<Pressable
+style={[styles.roleBtn, meta?.role === "after" && styles.roleBtnAfter]}
+onPress={() => setPhotoRole(item.id, uri, "after")}
+disabled={loading}
+>
+<Text style={[styles.roleBtnText, meta?.role === "after" && styles.roleBtnTextActive]}>A</Text>
+</Pressable>
+</View>
 </View>
 );
 })}
@@ -566,6 +651,37 @@ color: "white",
 fontSize: 16,
 fontWeight: "900",
 marginTop: -1,
+},
+roleRow: {
+flexDirection: "row",
+gap: 4,
+marginTop: 5,
+justifyContent: "center",
+},
+roleBtn: {
+flex: 1,
+paddingVertical: 3,
+borderRadius: 6,
+alignItems: "center",
+backgroundColor: "rgba(255,255,255,0.08)",
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.12)",
+},
+roleBtnBefore: {
+backgroundColor: "rgba(217,119,6,0.35)",
+borderColor: "#d97706",
+},
+roleBtnAfter: {
+backgroundColor: "rgba(34,197,94,0.30)",
+borderColor: "#22c55e",
+},
+roleBtnText: {
+color: "rgba(255,255,255,0.55)",
+fontSize: 11,
+fontWeight: "900",
+},
+roleBtnTextActive: {
+color: "white",
 },
 aiBtn: {
 marginTop: 8,
