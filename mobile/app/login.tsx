@@ -103,6 +103,10 @@ disabled={loading}
 <Text style={styles.signUpText}>Create Account</Text>
 </Pressable>
 
+<Pressable style={styles.forgotBtn} onPress={() => router.push("/forgot-password")}>
+<Text style={styles.forgotText}>Forgot Password?</Text>
+</Pressable>
+
 {__DEV__ && (
 <Pressable
 style={styles.resetBtn}
@@ -177,6 +181,17 @@ signUpText:{
 fontSize:16,
 fontWeight:"800",
 color:"white",
+},
+
+forgotBtn:{
+marginTop:18,
+alignItems:"center",
+},
+
+forgotText:{
+fontSize:14,
+color:"rgba(255,255,255,0.45)",
+fontWeight:"600",
 },
 
 resetBtn:{

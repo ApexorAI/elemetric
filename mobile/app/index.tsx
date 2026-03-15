@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "@/lib/supabase";
 
 const ONBOARDING_KEY = "elemetric_onboarding_seen";
 
@@ -24,7 +25,32 @@ export default function Entry() {
     const timer = setTimeout(async () => {
       Animated.timing(opacity, { toValue: 0, duration: 280, useNativeDriver: true }).start(async () => {
         const seen = await AsyncStorage.getItem(ONBOARDING_KEY);
-        router.replace(seen ? "/login" : "/welcome");
+        if (!seen) {
+          router.replace("/welcome");
+          return;
+        }
+
+        // Check for a persisted, valid Supabase session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          // Session exists — check onboarding completion
+          try {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("onboarding_complete")
+              .eq("user_id", session.user.id)
+              .single();
+            if (!profile?.onboarding_complete) {
+              router.replace("/onboarding");
+              return;
+            }
+          } catch {
+            // Profile fetch failed — still go home, login guard will catch real auth issues
+          }
+          router.replace("/home");
+        } else {
+          router.replace("/login");
+        }
       });
     }, 1500);
 

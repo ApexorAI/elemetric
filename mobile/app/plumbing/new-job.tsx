@@ -101,15 +101,16 @@ export default function NewJob() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return true; // not signed in — let them proceed (login will catch it)
 
-      // Check role — paid users are never blocked
+      // Check role and beta status — paid users and beta testers are never blocked
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, free_jobs_used")
+        .select("role, free_jobs_used, beta_tester")
         .eq("user_id", user.id)
         .single();
 
       const role = profile?.role ?? "free";
       if (role && role !== "free") return true; // paid subscriber
+      if (profile?.beta_tester === true) return true; // beta tester bypass
 
       // Count total jobs saved
       const { count } = await supabase

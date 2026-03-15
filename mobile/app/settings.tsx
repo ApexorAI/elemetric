@@ -9,6 +9,7 @@ ActivityIndicator,
 Linking,
 Alert,
 Switch,
+TextInput,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -26,6 +27,9 @@ const [toast, setToast] = useState<string | null>(null);
 const [signingOut, setSigningOut] = useState(false);
 const [role, setRole] = useState<"individual" | "employer">("individual");
 const [switchingRole, setSwitchingRole] = useState(false);
+const [secretInput, setSecretInput] = useState("");
+const [betaUnlocked, setBetaUnlocked] = useState(false);
+const [activatingBeta, setActivatingBeta] = useState(false);
 
 useFocusEffect(
 useCallback(() => {
@@ -123,6 +127,31 @@ showToast(newRole === "employer" ? "Switched to Employer account." : "Switched t
 Alert.alert("Error", e?.message ?? "Could not switch role.");
 } finally {
 setSwitchingRole(false);
+}
+};
+
+const onSecretChange = (text: string) => {
+setSecretInput(text);
+if (text === "ELEMETRIC BETA") setBetaUnlocked(true);
+};
+
+const activateBeta = async () => {
+setActivatingBeta(true);
+try {
+const { data: { user } } = await supabase.auth.getUser();
+if (!user) throw new Error("Not signed in.");
+const { error } = await supabase
+.from("profiles")
+.update({ beta_tester: true })
+.eq("user_id", user.id);
+if (error) throw error;
+setSecretInput("");
+setBetaUnlocked(false);
+showToast("Beta access activated! Job limit removed.");
+} catch (e: any) {
+Alert.alert("Error", e?.message ?? "Could not activate beta access.");
+} finally {
+setActivatingBeta(false);
 }
 };
 
@@ -284,6 +313,29 @@ disabled={signingOut}
 <Text style={styles.backText}>← Back</Text>
 </Pressable>
 
+<TextInput
+style={styles.secretField}
+value={secretInput}
+onChangeText={onSecretChange}
+placeholder="v"
+placeholderTextColor="rgba(255,255,255,0.10)"
+autoCapitalize="characters"
+autoCorrect={false}
+/>
+
+{betaUnlocked && (
+<Pressable
+style={[styles.betaBtn, activatingBeta && { opacity: 0.6 }]}
+onPress={activateBeta}
+disabled={activatingBeta}
+>
+{activatingBeta
+? <ActivityIndicator color="#f97316" size="small" />
+: <Text style={styles.betaBtnText}>Activate Beta Access</Text>
+}
+</Pressable>
+)}
+
 <Text style={styles.versionText}>Elemetric v{version}</Text>
 </ScrollView>
 
@@ -394,8 +446,31 @@ fontSize: 16,
 },
 back: { marginTop: 20, alignItems: "center" },
 backText: { color: "rgba(255,255,255,0.55)", fontWeight: "700" },
+secretField: {
+marginTop: 24,
+color: "rgba(255,255,255,0.10)",
+fontSize: 11,
+textAlign: "center",
+backgroundColor: "transparent",
+paddingVertical: 6,
+},
+betaBtn: {
+marginTop: 8,
+marginHorizontal: 40,
+borderRadius: 12,
+paddingVertical: 12,
+alignItems: "center",
+backgroundColor: "rgba(249,115,22,0.15)",
+borderWidth: 1,
+borderColor: "rgba(249,115,22,0.35)",
+},
+betaBtnText: {
+color: "#f97316",
+fontWeight: "900",
+fontSize: 14,
+},
 versionText: {
-marginTop: 32,
+marginTop: 16,
 textAlign: "center",
 color: "rgba(255,255,255,0.25)",
 fontSize: 12,
