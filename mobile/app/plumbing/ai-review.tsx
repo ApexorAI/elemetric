@@ -122,6 +122,16 @@ const [feedbackComment, setFeedbackComment] = useState("");
 const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
 const [feedbackDone, setFeedbackDone] = useState(false);
 
+// Plumbing technical data (hotwater/newinstall)
+const [waterPressureMeter,   setWaterPressureMeter]   = useState("");
+const [waterPressureFixture, setWaterPressureFixture] = useState("");
+const [hotWaterTemp,         setHotWaterTemp]         = useState("");
+const [coldWaterTemp,        setColdWaterTemp]        = useState("");
+const [flowRate,             setFlowRate]             = useState("");
+const [pipeMaterial,         setPipeMaterial]         = useState("");
+const [pipeSize,             setPipeSize]             = useState("");
+const [installationStandard, setInstallationStandard] = useState("AS/NZS 3500");
+
 useEffect(() => {
 if (!toast) return;
 const t = setTimeout(() => setToast(null), 3500);
@@ -657,6 +667,36 @@ ${qrHtml}
 </table>
 </div>
 
+${(currentJob.type === "hotwater" || currentJob.type === "newinstall") && (waterPressureMeter || waterPressureFixture || hotWaterTemp || coldWaterTemp || flowRate || pipeMaterial || pipeSize) ? `
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+<!-- Plumbing Technical Data -->
+<div style="margin-bottom:16px;">
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:19px;font-weight:bold;margin-bottom:6px;">Plumbing Technical Data</div>
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:11px;color:#6b7280;margin-bottom:12px;">${installationStandard || "AS/NZS 3500"} — Recorded site measurements</div>
+<table style="width:100%;border-collapse:collapse;margin-bottom:14px;">
+<thead>
+<tr style="background:#f8fafc;">
+<th style="padding:7px 10px;text-align:left;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#374151;">Parameter</th>
+<th style="padding:7px 10px;text-align:left;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#374151;">Recorded Value</th>
+<th style="padding:7px 10px;text-align:left;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#374151;">Reference (AS/NZS 3500)</th>
+</tr>
+</thead>
+<tbody>
+${waterPressureMeter ? `<tr><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Water Pressure at Meter</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${waterPressureMeter} kPa</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">Max 500 kPa (cl. 3.3.1)</td></tr>` : ""}
+${waterPressureFixture ? `<tr style="background:#fafafa;"><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Water Pressure at Fixture</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${waterPressureFixture} kPa</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">Min 50 kPa (cl. 3.3.3)</td></tr>` : ""}
+${hotWaterTemp ? `<tr><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Hot Water Temperature</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${hotWaterTemp} °C</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">≥ 60°C at storage, ≤ 50°C delivery</td></tr>` : ""}
+${coldWaterTemp ? `<tr style="background:#fafafa;"><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Cold Water Temperature</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${coldWaterTemp} °C</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">Ambient supply temperature</td></tr>` : ""}
+${flowRate ? `<tr><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Flow Rate</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${flowRate} L/min</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">Per fixture rating requirements</td></tr>` : ""}
+${pipeMaterial ? `<tr style="background:#fafafa;"><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Pipe Material</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${pipeMaterial}</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">AS/NZS 3500.1 compliant</td></tr>` : ""}
+${pipeSize ? `<tr><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Pipe Size / Diameter</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${pipeSize} mm</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">Sized per Appendix A flow tables</td></tr>` : ""}
+</tbody>
+</table>
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px 14px;font-family:Helvetica,Arial,sans-serif;font-size:11px;color:#166534;line-height:1.5;">
+  <strong>Measurement Note:</strong> All pressures measured with calibrated gauge at specified test points. Temperatures measured with calibrated thermometer after system stabilised. Flow rates measured at rated outlet conditions per AS/NZS 3500.1.
+</div>
+</div>
+` : ""}
+
 <hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
 
 <div style="margin-bottom: 18px; border: 1px solid #e5e7eb; padding: 16px; background: #f9fafb;">
@@ -1108,6 +1148,44 @@ return (
     </>
   )}
 </View>
+
+{/* ── Plumbing Technical Data (hotwater / newinstall only) ── */}
+{(currentJob.type === "hotwater" || currentJob.type === "newinstall") && (
+<View style={styles.card}>
+  <Text style={styles.fieldLabel}>Plumbing Technical Data</Text>
+  <Text style={styles.fieldSub}>AS/NZS 3500 — Record site measurements for the report</Text>
+  <View style={styles.techGrid}>
+    <View style={styles.techCell}>
+      <Text style={styles.techLabel}>Pressure at Meter (kPa)</Text>
+      <TextInput style={styles.input} value={waterPressureMeter} onChangeText={setWaterPressureMeter} keyboardType="decimal-pad" placeholder="e.g. 350" placeholderTextColor="rgba(255,255,255,0.30)" />
+    </View>
+    <View style={styles.techCell}>
+      <Text style={styles.techLabel}>Pressure at Fixture (kPa)</Text>
+      <TextInput style={styles.input} value={waterPressureFixture} onChangeText={setWaterPressureFixture} keyboardType="decimal-pad" placeholder="e.g. 200" placeholderTextColor="rgba(255,255,255,0.30)" />
+    </View>
+    <View style={styles.techCell}>
+      <Text style={styles.techLabel}>Hot Water Temp (°C)</Text>
+      <TextInput style={styles.input} value={hotWaterTemp} onChangeText={setHotWaterTemp} keyboardType="decimal-pad" placeholder="e.g. 65" placeholderTextColor="rgba(255,255,255,0.30)" />
+    </View>
+    <View style={styles.techCell}>
+      <Text style={styles.techLabel}>Cold Water Temp (°C)</Text>
+      <TextInput style={styles.input} value={coldWaterTemp} onChangeText={setColdWaterTemp} keyboardType="decimal-pad" placeholder="e.g. 18" placeholderTextColor="rgba(255,255,255,0.30)" />
+    </View>
+    <View style={styles.techCell}>
+      <Text style={styles.techLabel}>Flow Rate (L/min)</Text>
+      <TextInput style={styles.input} value={flowRate} onChangeText={setFlowRate} keyboardType="decimal-pad" placeholder="e.g. 12" placeholderTextColor="rgba(255,255,255,0.30)" />
+    </View>
+    <View style={styles.techCell}>
+      <Text style={styles.techLabel}>Pipe Size (mm)</Text>
+      <TextInput style={styles.input} value={pipeSize} onChangeText={setPipeSize} keyboardType="decimal-pad" placeholder="e.g. 20" placeholderTextColor="rgba(255,255,255,0.30)" />
+    </View>
+  </View>
+  <Text style={styles.techLabel}>Pipe Material</Text>
+  <TextInput style={styles.input} value={pipeMaterial} onChangeText={setPipeMaterial} placeholder="e.g. Copper, PEX, CPVC" placeholderTextColor="rgba(255,255,255,0.30)" />
+  <Text style={styles.techLabel}>Installation Standard</Text>
+  <TextInput style={styles.input} value={installationStandard} onChangeText={setInstallationStandard} placeholder="e.g. AS/NZS 3500" placeholderTextColor="rgba(255,255,255,0.30)" />
+</View>
+)}
 
 {/* ── Materials List ── */}
 <View style={styles.card}>
@@ -1691,6 +1769,9 @@ fieldSub: {
   marginTop: -4,
   marginBottom: 4,
 },
+techGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 4 },
+techCell: { width: "47%" },
+techLabel: { color: "rgba(255,255,255,0.6)", fontWeight: "700", fontSize: 12, marginBottom: 4 },
 materialRow: {
   flexDirection: "row",
   gap: 6,
