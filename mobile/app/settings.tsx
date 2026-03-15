@@ -409,11 +409,9 @@ ios_backgroundColor="rgba(255,255,255,0.15)"
 {/* Privacy & Data */}
 <Text style={styles.sectionLabel}>PRIVACY & DATA</Text>
 <View style={styles.group}>
-<Pressable style={styles.row} onPress={exportData} disabled={exportingData}>
-{exportingData
-? <ActivityIndicator size="small" color="#f97316" style={{ flex: 1 }} />
-: <><Text style={styles.rowAction}>Export My Data</Text><Text style={styles.rowChevron}>›</Text></>
-}
+<Pressable style={styles.row} onPress={() => router.push("/data-export")}>
+<Text style={styles.rowAction}>Export My Data</Text>
+<Text style={styles.rowChevron}>›</Text>
 </Pressable>
 <View style={styles.divider} />
 <Pressable style={styles.row} onPress={requestAccountDeletion}>
