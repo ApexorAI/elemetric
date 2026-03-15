@@ -7,11 +7,14 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
+  Dimensions,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import Svg, { Circle, Text as SvgText } from "react-native-svg";
+import Svg, { Circle, Text as SvgText, Polyline, Line, G } from "react-native-svg";
 import * as WebBrowser from "expo-web-browser";
 import { supabase } from "@/lib/supabase";
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
 
 const VBA_URL = "https://www.vba.vic.gov.au/licence-check";
 
@@ -51,6 +54,78 @@ function ComplianceCircle({ score }: { score: number | null }) {
   );
 }
 
+// ── Compliance trend chart ────────────────────────────────────────────────────
+
+type MonthlyScore = { month: string; score: number };
+
+function ComplianceTrendChart({ data }: { data: MonthlyScore[] }) {
+  if (data.length < 2) return null;
+  const chartWidth = SCREEN_WIDTH - 64;
+  const chartHeight = 80;
+  const pad = { left: 32, right: 8, top: 8, bottom: 20 };
+  const plotW = chartWidth - pad.left - pad.right;
+  const plotH = chartHeight - pad.top - pad.bottom;
+  const scores = data.map((d) => d.score);
+  const minScore = Math.max(0, Math.min(...scores) - 10);
+  const maxScore = Math.min(100, Math.max(...scores) + 10);
+  const range = maxScore - minScore || 1;
+
+  const pts = data.map((d, i) => ({
+    x: pad.left + (i / (data.length - 1)) * plotW,
+    y: pad.top + plotH - ((d.score - minScore) / range) * plotH,
+  }));
+
+  const polyPoints = pts.map((p) => `${p.x},${p.y}`).join(" ");
+  const isImproving = scores[scores.length - 1] >= scores[0];
+  const lineColor = isImproving ? "#22c55e" : "#ef4444";
+
+  return (
+    <View style={styles.chartCard}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <Text style={styles.chartTitle}>Compliance Trend</Text>
+        <View style={[styles.trendBadge, { backgroundColor: isImproving ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", borderColor: isImproving ? "rgba(34,197,94,0.40)" : "rgba(239,68,68,0.40)" }]}>
+          <Text style={[styles.trendBadgeText, { color: isImproving ? "#22c55e" : "#ef4444" }]}>
+            {isImproving ? "▲ Improving" : "▼ Declining"}
+          </Text>
+        </View>
+      </View>
+      <Svg width={chartWidth} height={chartHeight}>
+        {/* Grid lines */}
+        {[0, 0.5, 1].map((f, i) => (
+          <Line
+            key={i}
+            x1={pad.left} y1={pad.top + plotH * (1 - f)}
+            x2={pad.left + plotW} y2={pad.top + plotH * (1 - f)}
+            stroke="rgba(255,255,255,0.07)" strokeWidth={1}
+          />
+        ))}
+        {/* Line */}
+        <Polyline points={polyPoints} fill="none" stroke={lineColor} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+        {/* Dots */}
+        {pts.map((p, i) => (
+          <G key={i}>
+            <Circle cx={p.x} cy={p.y} r={4} fill={lineColor} />
+            <SvgText x={p.x} y={p.y - 8} textAnchor="middle" fontSize="9" fill={lineColor} fontWeight="700">{data[i].score}</SvgText>
+          </G>
+        ))}
+        {/* Month labels */}
+        {data.map((d, i) => (
+          <SvgText
+            key={i}
+            x={pad.left + (i / (data.length - 1)) * plotW}
+            y={chartHeight - 4}
+            textAnchor="middle"
+            fontSize="9"
+            fill="rgba(255,255,255,0.35)"
+          >
+            {d.month}
+          </SvgText>
+        ))}
+      </Svg>
+    </View>
+  );
+}
+
 export default function Profile() {
   const router = useRouter();
   const [loading, setLoading]   = useState(true);
@@ -65,6 +140,7 @@ export default function Profile() {
   const [phone, setPhone]                   = useState("");
   const [complianceScore, setComplianceScore] = useState<number | null>(null);
   const [jobCount, setJobCount]             = useState(0);
+  const [trendData, setTrendData]           = useState<MonthlyScore[]>([]);
 
   // Licence verification
   const [licenceVerified, setLicenceVerified]     = useState(false);
@@ -103,10 +179,14 @@ export default function Profile() {
           }
 
           try {
+            const sixMonthsAgo = new Date();
+            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
             const { data: jobs } = await supabase
               .from("jobs")
-              .select("confidence")
-              .eq("user_id", user.id);
+              .select("confidence, created_at")
+              .eq("user_id", user.id)
+              .order("created_at", { ascending: true });
 
             if (jobs && jobs.length > 0 && active) {
               const avg = Math.round(
@@ -120,6 +200,21 @@ export default function Profile() {
                   { onConflict: "user_id" }
                 );
               } catch {}
+
+              // Build monthly trend data (last 6 months)
+              const monthMap: Record<string, number[]> = {};
+              for (const j of jobs) {
+                const d = new Date(j.created_at);
+                if (d < sixMonthsAgo) continue;
+                const key = d.toLocaleDateString("en-AU", { month: "short" });
+                if (!monthMap[key]) monthMap[key] = [];
+                monthMap[key].push(j.confidence ?? 0);
+              }
+              const trend: MonthlyScore[] = Object.entries(monthMap).map(([month, scores]) => ({
+                month,
+                score: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+              }));
+              if (active && trend.length >= 2) setTrendData(trend);
             } else if (active) {
               setComplianceScore(null);
               setJobCount(0);
@@ -261,6 +356,9 @@ export default function Profile() {
             )}
           </View>
         </View>
+
+        {/* Compliance trend chart */}
+        {trendData.length >= 2 && <ComplianceTrendChart data={trendData} />}
 
         {/* Profile fields */}
         <Text style={styles.label}>Full Name</Text>
@@ -520,4 +618,16 @@ const styles = StyleSheet.create({
     padding: 14, alignItems: "center",
   },
   toastText: { color: "white", fontWeight: "900", fontSize: 15 },
+
+  chartCard: {
+    marginBottom: 8, borderRadius: 18, borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    padding: 16,
+  },
+  chartTitle: { color: "white", fontWeight: "900", fontSize: 14 },
+  trendBadge: {
+    borderRadius: 20, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4,
+  },
+  trendBadgeText: { fontWeight: "900", fontSize: 12 },
 });

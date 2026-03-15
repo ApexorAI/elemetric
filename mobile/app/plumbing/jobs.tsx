@@ -105,6 +105,9 @@ const [dateFrom, setDateFrom] = useState<Date | null>(null);
 const [dateTo, setDateTo] = useState<Date | null>(null);
 const [showFromPicker, setShowFromPicker] = useState(false);
 const [showToPicker, setShowToPicker] = useState(false);
+const [selectMode, setSelectMode] = useState(false);
+const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+const [bulkExporting, setBulkExporting] = useState(false);
 
 const loadJobs = async () => {
 try {
@@ -179,6 +182,79 @@ router.push({
 pathname: "/plumbing/job-detail",
 params: { job: JSON.stringify(job) },
 });
+};
+
+const toggleSelect = (id: string) => {
+setSelectedIds((prev) => {
+const next = new Set(prev);
+if (next.has(id)) next.delete(id); else next.add(id);
+return next;
+});
+};
+
+const exportSelected = async () => {
+const selected = jobs.filter((j) => selectedIds.has(j.id));
+if (selected.length === 0) return;
+setBulkExporting(true);
+try {
+const sections = selected.map((job) => {
+const dateStr = new Date(job.createdAt).toLocaleString("en-AU");
+const detectedRows = (job.detected ?? []).map((x) => `<tr><td style="padding:4px 6px;border:1px solid #e5e7eb;">✓ ${x}</td><td style="padding:4px 6px;border:1px solid #e5e7eb;color:#16a34a;font-weight:bold;">Verified</td></tr>`).join("");
+const unclearRows = (job.unclear ?? []).map((x) => `<tr><td style="padding:4px 6px;border:1px solid #e5e7eb;">? ${x}</td><td style="padding:4px 6px;border:1px solid #e5e7eb;color:#d97706;font-weight:bold;">Unclear</td></tr>`).join("");
+const missingRows = (job.missing ?? []).map((x) => `<tr><td style="padding:4px 6px;border:1px solid #e5e7eb;">✗ ${x}</td><td style="padding:4px 6px;border:1px solid #e5e7eb;color:#dc2626;font-weight:bold;">Incomplete</td></tr>`).join("");
+return `
+<div style="page-break-before:always;padding:20px;">
+<div style="background:#07152b;color:white;padding:14px 20px;margin-bottom:0;">
+<span style="font-size:22px;font-weight:900;letter-spacing:3px;">ELEMETRIC</span>
+</div>
+<div style="background:#f97316;color:white;padding:8px 20px;margin-bottom:16px;font-size:13px;font-weight:bold;">
+${JOB_TYPE_LABELS[job.jobType] ?? job.jobType} · ${new Date(job.createdAt).toLocaleDateString("en-AU")}
+</div>
+<table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
+<tr><td style="padding:4px 0;width:160px;font-weight:bold;">Job Name</td><td>${job.jobName}</td></tr>
+<tr><td style="padding:4px 0;font-weight:bold;">Address</td><td>${job.jobAddr}</td></tr>
+<tr><td style="padding:4px 0;font-weight:bold;">AI Confidence</td><td style="font-size:18px;font-weight:bold;">${job.confidence}%</td></tr>
+</table>
+${(detectedRows || unclearRows || missingRows) ? `<table style="width:100%;border-collapse:collapse;"><tr><th style="padding:4px 6px;border:1px solid #e5e7eb;background:#f3f4f6;text-align:left;">Item</th><th style="padding:4px 6px;border:1px solid #e5e7eb;background:#f3f4f6;text-align:left;">Status</th></tr>${detectedRows}${unclearRows}${missingRows}</table>` : ""}
+</div>`;
+});
+
+const html = `<html><head><style>body{margin:0;padding:0;font-family:Helvetica,Arial,sans-serif;}</style></head><body>
+<div style="padding:20px;text-align:center;background:#07152b;color:white;">
+<div style="font-size:28px;font-weight:900;letter-spacing:3px;margin-bottom:8px;">ELEMETRIC</div>
+<div style="font-size:14px;opacity:0.7;">Bulk Export — ${selected.length} Job${selected.length > 1 ? "s" : ""}</div>
+<div style="font-size:12px;opacity:0.5;margin-top:4px;">${new Date().toLocaleDateString("en-AU")}</div>
+</div>
+${sections.join("")}
+</body></html>`;
+
+const { uri } = await Print.printToFileAsync({ html });
+const canShare = await Sharing.isAvailableAsync();
+if (canShare) {
+await Sharing.shareAsync(uri, { mimeType: "application/pdf", dialogTitle: `Export ${selected.length} Jobs`, UTI: "com.adobe.pdf" });
+} else {
+Alert.alert("Exported", `PDF saved to: ${uri}`);
+}
+setSelectMode(false);
+setSelectedIds(new Set());
+} catch (e: any) {
+Alert.alert("Export Error", e?.message ?? "Could not generate PDF.");
+} finally {
+setBulkExporting(false);
+}
+};
+
+const duplicateJob = async (job: SavedJob) => {
+Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+const newJob = {
+type: job.jobType,
+jobName: `${job.jobName} (Copy)`,
+jobAddr: job.jobAddr,
+startTime: new Date().toISOString(),
+weather: "",
+};
+await AsyncStorage.setItem("elemetric_current_job", JSON.stringify(newJob));
+router.push("/plumbing/new-job");
 };
 
 const shareJob = async (job: SavedJob) => {
@@ -285,8 +361,35 @@ return (
 <View style={styles.screen}>
 <View style={styles.header}>
 <Text style={styles.brand}>ELEMETRIC</Text>
+<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
 <Text style={styles.title}>Saved Jobs</Text>
+<Pressable
+style={[styles.selectModeBtn, selectMode && styles.selectModeBtnActive]}
+onPress={() => { setSelectMode((v) => !v); setSelectedIds(new Set()); }}
+accessibilityRole="button"
+accessibilityLabel={selectMode ? "Exit select mode" : "Enter select mode"}
+>
+<Text style={[styles.selectModeBtnText, selectMode && styles.selectModeBtnTextActive]}>
+{selectMode ? "Cancel" : "Select"}
+</Text>
+</Pressable>
 </View>
+</View>
+
+{selectMode && selectedIds.size > 0 && (
+<Pressable
+style={[styles.exportSelectedBtn, bulkExporting && { opacity: 0.6 }]}
+onPress={exportSelected}
+disabled={bulkExporting}
+accessibilityRole="button"
+accessibilityLabel={`Export ${selectedIds.size} selected jobs as PDF`}
+>
+{bulkExporting
+? <ActivityIndicator color="white" size="small" />
+: <Text style={styles.exportSelectedText}>Export {selectedIds.size} Job{selectedIds.size > 1 ? "s" : ""} as PDF</Text>
+}
+</Pressable>
+)}
 
 {/* Search bar */}
 <View style={styles.searchWrap}>
@@ -415,8 +518,13 @@ jobs.length === 0 ? (
 )
 ) : (
 filtered.map((job) => (
-<View key={job.id} style={styles.card}>
-<Pressable onPress={() => openJob(job)}>
+<Pressable key={job.id} onPress={() => selectMode ? toggleSelect(job.id) : openJob(job)} accessibilityRole="button" accessibilityLabel={`Job: ${job.jobName}`}>
+<View style={[styles.card, selectMode && selectedIds.has(job.id) && styles.cardSelected]}>
+{selectMode && (
+<View style={[styles.checkbox, selectedIds.has(job.id) && styles.checkboxChecked]}>
+{selectedIds.has(job.id) && <Text style={styles.checkboxTick}>✓</Text>}
+</View>
+)}
 <View style={styles.cardTop}>
 <View style={styles.tradeIconWrap}>
 <Text style={styles.tradeIcon}>{JOB_TYPE_ICONS[job.jobType] ?? "📋"}</Text>
@@ -447,14 +555,20 @@ day: "2-digit", month: "short", year: "numeric",
 </View>
 </Pressable>
 
+{!selectMode && (
 <View style={styles.cardActions}>
-<Pressable style={styles.openBtn} onPress={() => openJob(job)}>
-<Text style={styles.openBtnText}>Open review →</Text>
+<Pressable style={styles.openBtn} onPress={() => openJob(job)} accessibilityRole="button" accessibilityLabel="Open job review">
+<Text style={styles.openBtnText}>Open →</Text>
+</Pressable>
+<Pressable style={styles.dupBtn} onPress={() => duplicateJob(job)} accessibilityRole="button" accessibilityLabel="Duplicate this job">
+<Text style={styles.dupBtnText}>Duplicate</Text>
 </Pressable>
 <Pressable
 style={[styles.shareBtn, sharingJobId === job.id && { opacity: 0.6 }]}
 onPress={() => shareJob(job)}
 disabled={sharingJobId === job.id}
+accessibilityRole="button"
+accessibilityLabel="Share job as PDF"
 >
 {sharingJobId === job.id
 ? <ActivityIndicator size="small" color="#f97316" />
@@ -462,7 +576,9 @@ disabled={sharingJobId === job.id}
 }
 </Pressable>
 </View>
+)}
 </View>
+</Pressable>
 ))
 )}
 
@@ -667,6 +783,16 @@ borderWidth: 1,
 borderColor: "rgba(255,255,255,0.10)",
 },
 openBtnText: { color: "rgba(255,255,255,0.8)", fontWeight: "800", fontSize: 13 },
+dupBtn: {
+flex: 1,
+paddingVertical: 9,
+borderRadius: 10,
+alignItems: "center",
+backgroundColor: "rgba(59,130,246,0.12)",
+borderWidth: 1,
+borderColor: "rgba(59,130,246,0.30)",
+},
+dupBtnText: { color: "#60a5fa", fontWeight: "800", fontSize: 12 },
 shareBtn: {
 flex: 1,
 paddingVertical: 9,
@@ -690,4 +816,41 @@ clearText: { color: "rgba(255,255,255,0.6)", fontWeight: "800" },
 
 back: { marginTop: 6, alignItems: "center" },
 backText: { color: "rgba(255,255,255,0.55)", fontWeight: "700" },
+
+selectModeBtn: {
+paddingHorizontal: 14,
+paddingVertical: 7,
+borderRadius: 20,
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.15)",
+backgroundColor: "rgba(255,255,255,0.05)",
+},
+selectModeBtnActive: {
+borderColor: "rgba(249,115,22,0.50)",
+backgroundColor: "rgba(249,115,22,0.12)",
+},
+selectModeBtnText: { color: "rgba(255,255,255,0.7)", fontWeight: "800", fontSize: 13 },
+selectModeBtnTextActive: { color: "#f97316" },
+
+exportSelectedBtn: {
+marginHorizontal: 18,
+marginBottom: 8,
+backgroundColor: "#f97316",
+borderRadius: 14,
+paddingVertical: 14,
+alignItems: "center",
+},
+exportSelectedText: { color: "#0b1220", fontWeight: "900", fontSize: 15 },
+
+cardSelected: {
+borderColor: "rgba(249,115,22,0.50)",
+backgroundColor: "rgba(249,115,22,0.07)",
+},
+checkbox: {
+width: 22, height: 22, borderRadius: 6, borderWidth: 2,
+borderColor: "rgba(255,255,255,0.30)",
+alignItems: "center", justifyContent: "center", marginBottom: 8,
+},
+checkboxChecked: { backgroundColor: "#f97316", borderColor: "#f97316" },
+checkboxTick: { color: "white", fontWeight: "900", fontSize: 13 },
 });
