@@ -26,11 +26,14 @@ const [email, setEmail] = useState("");
 const [loading, setLoading] = useState(true);
 const [toast, setToast] = useState<string | null>(null);
 const [signingOut, setSigningOut] = useState(false);
+const [fullName, setFullName] = useState("");
 const [role, setRole] = useState<"individual" | "employer">("individual");
 const [switchingRole, setSwitchingRole] = useState(false);
 const [secretInput, setSecretInput] = useState("");
 const [betaUnlocked, setBetaUnlocked] = useState(false);
 const [activatingBeta, setActivatingBeta] = useState(false);
+const [deletingAccount, setDeletingAccount] = useState(false);
+const [exportingData, setExportingData] = useState(false);
 
 useFocusEffect(
 useCallback(() => {
@@ -42,10 +45,11 @@ if (user && active) {
 setEmail(user.email ?? "");
 const { data: profile } = await supabase
 .from("profiles")
-.select("role")
+.select("role, full_name")
 .eq("user_id", user.id)
 .single();
 if (active && profile?.role) setRole(profile.role as "individual" | "employer");
+if (active && profile?.full_name) setFullName(profile.full_name);
 }
 } catch {}
 if (active) setLoading(false);
@@ -213,6 +217,51 @@ showToast("Demo mode activated! 5 sample jobs loaded.");
 }
 };
 
+const exportData = async () => {
+setExportingData(true);
+try {
+const { data: { user } } = await supabase.auth.getUser();
+if (!user) throw new Error("Not signed in.");
+const { data: jobs } = await supabase
+.from("jobs")
+.select("*")
+.eq("user_id", user.id);
+const localJobs = await AsyncStorage.getItem("elemetric_jobs");
+const exportObj = {
+exportedAt: new Date().toISOString(),
+email,
+supabaseJobs: jobs ?? [],
+localJobs: localJobs ? JSON.parse(localJobs) : [],
+};
+await AsyncStorage.setItem("elemetric_data_export", JSON.stringify(exportObj));
+showToast("Data exported to app storage. Use Files to access elemetric_data_export.");
+} catch (e: any) {
+Alert.alert("Export Failed", e?.message ?? "Could not export data.");
+} finally {
+setExportingData(false);
+}
+};
+
+const requestAccountDeletion = () => {
+Alert.alert(
+"Request Account Deletion",
+"We'll send a deletion request to our team. Your data will be removed within 30 days as per our privacy policy.",
+[
+{ text: "Cancel", style: "cancel" },
+{
+text: "Submit Request",
+style: "destructive",
+onPress: () => {
+const subject = encodeURIComponent("Account Deletion Request");
+const body = encodeURIComponent(`Please delete the account associated with: ${email}`);
+Linking.openURL(`mailto:cayde@elemetric.com.au?subject=${subject}&body=${body}`).catch(() => {});
+showToast("Deletion request opened in Mail app.");
+},
+},
+]
+);
+};
+
 const activateBeta = async () => {
 setActivatingBeta(true);
 try {
@@ -253,6 +302,15 @@ return (
 {/* Account */}
 <Text style={styles.sectionLabel}>ACCOUNT</Text>
 <View style={styles.group}>
+{fullName ? (
+<>
+<View style={styles.row}>
+<Text style={styles.rowLabel}>Name</Text>
+<Text style={styles.rowValue} numberOfLines={1}>{fullName}</Text>
+</View>
+<View style={styles.divider} />
+</>
+) : null}
 <View style={styles.row}>
 <Text style={styles.rowLabel}>Email</Text>
 <Text style={styles.rowValue} numberOfLines={1}>{email || "—"}</Text>
@@ -335,6 +393,31 @@ ios_backgroundColor="rgba(255,255,255,0.15)"
 <View style={styles.group}>
 <Pressable style={styles.row} onPress={() => router.push("/subscription")}>
 <Text style={styles.rowAction}>Manage Subscription</Text>
+<Text style={styles.rowChevron}>›</Text>
+</Pressable>
+</View>
+
+{/* Notifications */}
+<Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
+<View style={styles.group}>
+<Pressable style={styles.row} onPress={() => router.push("/notifications")}>
+<Text style={styles.rowAction}>Notification Centre</Text>
+<Text style={styles.rowChevron}>›</Text>
+</Pressable>
+</View>
+
+{/* Privacy & Data */}
+<Text style={styles.sectionLabel}>PRIVACY & DATA</Text>
+<View style={styles.group}>
+<Pressable style={styles.row} onPress={exportData} disabled={exportingData}>
+{exportingData
+? <ActivityIndicator size="small" color="#f97316" style={{ flex: 1 }} />
+: <><Text style={styles.rowAction}>Export My Data</Text><Text style={styles.rowChevron}>›</Text></>
+}
+</Pressable>
+<View style={styles.divider} />
+<Pressable style={styles.row} onPress={requestAccountDeletion}>
+<Text style={[styles.rowAction, { color: "#ef4444" }]}>Request Account Deletion</Text>
 <Text style={styles.rowChevron}>›</Text>
 </Pressable>
 </View>
