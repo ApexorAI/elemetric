@@ -10,11 +10,38 @@ const [email, setEmail] = useState("");
 const [password, setPassword] = useState("");
 const [loading, setLoading] = useState(false);
 
+const REVIEWER_EMAIL = "reviewer@elemetric.com.au";
+const REVIEWER_PASSWORD = "ElemetricReview2026";
+
 const signIn = async () => {
 if (!email || !password) {
 Alert.alert("Missing fields", "Please enter your email and password.");
 return;
 }
+
+// App Store review account bypass — skip verification, load demo data
+if (email.trim().toLowerCase() === REVIEWER_EMAIL && password === REVIEWER_PASSWORD) {
+setLoading(true);
+try {
+const demoJobs = [
+{ id: "rev-001", jobType: "hotwater", jobName: "Hot Water Service", jobAddr: "14 Collins Street, Melbourne VIC 3000", confidence: 88, relevant: true, detected: ["Existing system photographed", "PTR valve installed", "Tempering valve present", "Compliance plate visible"], unclear: ["Pressure test value unclear"], missing: [], action: "All major items detected.", createdAt: new Date(Date.now() - 2 * 86400000).toISOString(), status: "completed" },
+{ id: "rev-002", jobType: "gas", jobName: "Gas Rough-In", jobAddr: "52 Flinders Lane, Melbourne VIC 3000", confidence: 82, relevant: true, detected: ["Gas line installation", "Isolation valve present", "Flexible connector installed"], unclear: [], missing: [], action: "Documentation complete.", createdAt: new Date(Date.now() - 5 * 86400000).toISOString(), status: "completed" },
+{ id: "rev-003", jobType: "drainage", jobName: "Drainage Inspection", jobAddr: "88 Bourke Street, Melbourne VIC 3000", confidence: 91, relevant: true, detected: ["Drainage pipe grade correct", "Junction connections complete", "Inspection point accessible"], unclear: [], missing: [], action: "Excellent documentation.", createdAt: new Date(Date.now() - 10 * 86400000).toISOString(), status: "completed" },
+{ id: "rev-004", jobType: "electrical", jobName: "Electrical Switchboard", jobAddr: "220 Queen Street, Melbourne VIC 3000", confidence: 79, relevant: true, detected: ["Switchboard upgrade complete", "RCD protection installed"], unclear: [], missing: [], action: "Certificate of Electrical Safety obtained.", createdAt: new Date(Date.now() - 15 * 86400000).toISOString(), status: "completed" },
+{ id: "rev-005", jobType: "hvac", jobName: "HVAC Installation", jobAddr: "1 Spring Street, Melbourne VIC 3000", confidence: 85, relevant: true, detected: ["Unit installed per manufacturer specs", "Refrigerant lines insulated", "Condensate drain connected"], unclear: [], missing: [], action: "Commissioning report provided.", createdAt: new Date(Date.now() - 20 * 86400000).toISOString(), status: "completed" },
+];
+await AsyncStorage.setItem("elemetric_jobs", JSON.stringify(demoJobs));
+await AsyncStorage.setItem("elemetric_installer_name", "James Mitchell");
+await AsyncStorage.setItem("elemetric_onboarding_seen", "true");
+router.replace("/home");
+return;
+} catch {
+// Fall through to normal sign in
+} finally {
+setLoading(false);
+}
+}
+
 setLoading(true);
 try {
 const { error, data } = await supabase.auth.signInWithPassword({ email, password });

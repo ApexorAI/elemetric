@@ -13,6 +13,7 @@ TextInput,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { useTheme } from "@/lib/theme";
 
@@ -130,9 +131,86 @@ setSwitchingRole(false);
 }
 };
 
-const onSecretChange = (text: string) => {
+const onSecretChange = async (text: string) => {
 setSecretInput(text);
 if (text === "ELEMETRIC BETA") setBetaUnlocked(true);
+if (text === "DEMO MODE") {
+const demoJobs = [
+{
+id: "demo-001",
+jobType: "hotwater",
+jobName: "Hot Water Service",
+jobAddr: "14 Collins Street, Melbourne VIC 3000",
+confidence: 88,
+relevant: true,
+detected: ["Existing system photographed", "PTR valve installed correctly", "Tempering valve present", "Compliance plate visible"],
+unclear: ["Pressure test value unclear"],
+missing: [],
+action: "All major items detected. Ensure pressure test documentation is retained on site.",
+createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+status: "completed",
+},
+{
+id: "demo-002",
+jobType: "gas",
+jobName: "Gas Rough-In",
+jobAddr: "52 Flinders Lane, Melbourne VIC 3000",
+confidence: 82,
+relevant: true,
+detected: ["Gas line installation", "Isolation valve present", "Flexible connector installed"],
+unclear: ["Leak test result not visible"],
+missing: ["Gas compliance certificate photo"],
+action: "Photograph the gas compliance certificate before closing walls.",
+createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+status: "completed",
+},
+{
+id: "demo-003",
+jobType: "drainage",
+jobName: "Drainage Inspection",
+jobAddr: "88 Bourke Street, Melbourne VIC 3000",
+confidence: 91,
+relevant: true,
+detected: ["Drainage pipe grade correct", "Junction connections complete", "Inspection point accessible", "Floor waste installed"],
+unclear: [],
+missing: [],
+action: "All drainage items verified. Excellent documentation.",
+createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+status: "completed",
+},
+{
+id: "demo-004",
+jobType: "electrical",
+jobName: "Electrical Switchboard",
+jobAddr: "220 Queen Street, Melbourne VIC 3000",
+confidence: 79,
+relevant: true,
+detected: ["Switchboard upgrade complete", "RCD protection installed", "Circuit labels present"],
+unclear: ["Earth continuity test result"],
+missing: ["Certificate of Electrical Safety"],
+action: "Obtain Certificate of Electrical Safety before handover.",
+createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+status: "completed",
+},
+{
+id: "demo-005",
+jobType: "hvac",
+jobName: "HVAC Installation",
+jobAddr: "1 Spring Street, Melbourne VIC 3000",
+confidence: 85,
+relevant: true,
+detected: ["Unit installed per manufacturer specs", "Refrigerant lines insulated", "Condensate drain connected"],
+unclear: [],
+missing: ["Commissioning report"],
+action: "Provide commissioning report with refrigerant charge amount.",
+createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+status: "completed",
+},
+];
+await AsyncStorage.setItem("elemetric_jobs", JSON.stringify(demoJobs));
+setSecretInput("");
+showToast("Demo mode activated! 5 sample jobs loaded.");
+}
 };
 
 const activateBeta = async () => {

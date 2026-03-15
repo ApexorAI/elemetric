@@ -1,8 +1,12 @@
-import { useEffect } from "react";
-import { Stack } from "expo-router";
+import { useEffect, useRef } from "react";
+import { View } from "react-native";
+import { Stack, useRouter } from "expo-router";
 import { registerForPushNotifications } from "@/lib/notifications";
 import { ThemeProvider } from "@/lib/theme";
 import { supabase } from "@/lib/supabase";
+import { OfflineBanner } from "@/components/OfflineBanner";
+import * as Notifications from "expo-notifications";
+import * as Linking from "expo-linking";
 
 // ── Compliance alert background check ────────────────────────────────────────
 // Runs once on app launch. Scans jobs older than 6 years (expiring within 1 year)
@@ -112,20 +116,54 @@ async function runLicenceExpiryCheck() {
 // ── Root layout ───────────────────────────────────────────────────────────────
 
 export default function RootLayout() {
+  const router = useRouter();
+  const notifListener = useRef<Notifications.EventSubscription | null>(null);
+  const responseListener = useRef<Notifications.EventSubscription | null>(null);
+
   useEffect(() => {
     registerForPushNotifications();
     runComplianceAlerts();
     runLicenceExpiryCheck();
-  }, []);
+
+    // Handle notification taps — deep link to the relevant screen
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as Record<string, any>;
+      if (data?.jobId) {
+        router.push("/assigned-jobs");
+      } else if (data?.screen) {
+        router.push(data.screen as any);
+      } else if (data?.type === "compliance_alert") {
+        router.push("/(tabs)/liability-timeline");
+      } else if (data?.type === "near_miss") {
+        router.push("/near-miss");
+      } else {
+        router.push("/notifications");
+      }
+    });
+
+    // Handle incoming deep links while app is open
+    const linkSub = Linking.addEventListener("url", ({ url }) => {
+      if (url.includes("job")) router.push("/plumbing/jobs");
+      else if (url.includes("notification")) router.push("/notifications");
+    });
+
+    return () => {
+      responseListener.current?.remove();
+      linkSub.remove();
+    };
+  }, [router]);
 
   return (
     <ThemeProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          animation: "fade",
-        }}
-      />
+      <View style={{ flex: 1 }}>
+        <OfflineBanner />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: "fade",
+          }}
+        />
+      </View>
     </ThemeProvider>
   );
 }
