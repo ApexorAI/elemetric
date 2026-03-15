@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -9,18 +9,109 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Modal,
+  Dimensions,
+  TouchableOpacity,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
+import { GestureDetector, Gesture } from "react-native-gesture-handler";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+} from "react-native-reanimated";
 
 const API_BASE = "https://elemetric-ai-production.up.railway.app";
+const { width: SW, height: SH } = Dimensions.get("window");
+
+// ── Brand data ─────────────────────────────────────────────────────────────────
+
+type Category = "Split System" | "Ducted" | "Wood Heater" | "Gas Heater";
+
+const CATEGORIES: Category[] = ["Split System", "Ducted", "Wood Heater", "Gas Heater"];
+
+const BRANDS: Record<Category, string[]> = {
+  "Split System": [
+    "Mitsubishi Electric", "Daikin", "Fujitsu", "Panasonic",
+    "LG", "Samsung", "Hitachi", "Toshiba", "Carrier", "Actron",
+  ],
+  "Ducted": [
+    "Daikin", "Mitsubishi Electric", "Fujitsu", "Panasonic",
+    "Carrier", "Actron", "Rinnai", "Brivis", "Braemar", "Pyrox",
+  ],
+  "Wood Heater": ["Regency", "Archer", "Cheminees Philippe", "Pyrox"],
+  "Gas Heater": ["Rinnai", "Brivis", "Braemar", "Pyrox", "Regency"],
+};
+
+// ── Full-screen image viewer ───────────────────────────────────────────────────
+
+function FullscreenViewer({ uri, onClose }: { uri: string; onClose: () => void }) {
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  const tx = useSharedValue(0);
+  const ty = useSharedValue(0);
+  const savedTx = useSharedValue(0);
+  const savedTy = useSharedValue(0);
+
+  const pinch = Gesture.Pinch()
+    .onUpdate((e) => {
+      scale.value = Math.max(1, savedScale.value * e.scale);
+    })
+    .onEnd(() => {
+      savedScale.value = scale.value;
+    });
+
+  const pan = Gesture.Pan()
+    .onUpdate((e) => {
+      tx.value = savedTx.value + e.translationX;
+      ty.value = savedTy.value + e.translationY;
+    })
+    .onEnd(() => {
+      savedTx.value = tx.value;
+      savedTy.value = ty.value;
+    });
+
+  const composed = Gesture.Simultaneous(pinch, pan);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: scale.value },
+      { translateX: tx.value },
+      { translateY: ty.value },
+    ],
+  }));
+
+  return (
+    <Modal visible statusBarTranslucent animationType="fade">
+      <View style={fs.bg}>
+        <GestureDetector gesture={composed}>
+          <Animated.View style={[fs.imgWrap, animStyle]}>
+            <Image source={{ uri }} style={fs.img} resizeMode="contain" />
+          </Animated.View>
+        </GestureDetector>
+        <TouchableOpacity style={fs.closeBtn} onPress={onClose} activeOpacity={0.8}>
+          <Text style={fs.closeText}>✕</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  );
+}
+
+// ── Main screen ────────────────────────────────────────────────────────────────
 
 export default function VisualiserScreen() {
   const [wallUri, setWallUri] = useState<string | null>(null);
-  const [modelNumber, setModelNumber] = useState("");
+  const [category, setCategory] = useState<Category>("Split System");
+  const [query, setQuery] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [resultBase64, setResultBase64] = useState<string | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  const filteredBrands = BRANDS[category].filter((b) =>
+    query.length === 0 || b.toLowerCase().includes(query.toLowerCase())
+  );
 
   const pickWallPhoto = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -58,11 +149,12 @@ export default function VisualiserScreen() {
       Alert.alert("No photo", "Please take or select a wall photo first.");
       return;
     }
-    if (!modelNumber.trim()) {
-      Alert.alert("No model", "Please enter a product model number.");
+    if (!query.trim()) {
+      Alert.alert("No product", "Please enter or select a brand and model.");
       return;
     }
 
+    setShowDropdown(false);
     setLoading(true);
     setResultUrl(null);
     setResultBase64(null);
@@ -84,7 +176,7 @@ export default function VisualiserScreen() {
         body: JSON.stringify({
           wallImage: r.base64,
           mime: "image/jpeg",
-          modelNumber: modelNumber.trim(),
+          modelNumber: `${category} ${query.trim()}`,
         }),
       });
 
@@ -105,10 +197,17 @@ export default function VisualiserScreen() {
     }
   };
 
-  const hasResult = resultBase64 || resultUrl;
+  const resultUri = resultBase64
+    ? `data:image/png;base64,${resultBase64}`
+    : resultUrl ?? null;
 
   return (
     <View style={styles.screen}>
+      {/* Full-screen viewer */}
+      {fullscreen && resultUri && (
+        <FullscreenViewer uri={resultUri} onClose={() => setFullscreen(false)} />
+      )}
+
       <View style={styles.header}>
         <Text style={styles.brand}>ELEMETRIC</Text>
         <View style={styles.titleRow}>
@@ -127,6 +226,30 @@ export default function VisualiserScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Category selector */}
+        <Text style={styles.label}>PRODUCT CATEGORY</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryRow}
+        >
+          {CATEGORIES.map((c) => (
+            <Pressable
+              key={c}
+              style={[styles.categoryTab, category === c && styles.categoryTabActive]}
+              onPress={() => {
+                setCategory(c);
+                setQuery("");
+                setShowDropdown(false);
+              }}
+            >
+              <Text style={[styles.categoryTabText, category === c && styles.categoryTabTextActive]}>
+                {c}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+
         {/* Wall Photo */}
         <Text style={styles.label}>WALL / SPACE PHOTO</Text>
         <View style={styles.photoArea}>
@@ -153,17 +276,39 @@ export default function VisualiserScreen() {
           )}
         </View>
 
-        {/* Model Number */}
-        <Text style={styles.label}>PRODUCT MODEL NUMBER</Text>
-        <TextInput
-          style={styles.input}
-          value={modelNumber}
-          onChangeText={setModelNumber}
-          placeholder="e.g. Daikin FTXM25YVMA"
-          placeholderTextColor="rgba(255,255,255,0.28)"
-          autoCapitalize="characters"
-          returnKeyType="done"
-        />
+        {/* Brand / Model search */}
+        <Text style={styles.label}>BRAND & MODEL NUMBER</Text>
+        <View style={styles.searchWrap}>
+          <TextInput
+            style={styles.input}
+            value={query}
+            onChangeText={(t) => {
+              setQuery(t);
+              setShowDropdown(true);
+            }}
+            onFocus={() => setShowDropdown(true)}
+            placeholder={`e.g. ${BRANDS[category][0]} FTXM25YVMA`}
+            placeholderTextColor="rgba(255,255,255,0.28)"
+            returnKeyType="done"
+            onSubmitEditing={() => setShowDropdown(false)}
+          />
+          {showDropdown && filteredBrands.length > 0 && (
+            <View style={styles.dropdown}>
+              {filteredBrands.slice(0, 8).map((brand) => (
+                <Pressable
+                  key={brand}
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    setQuery(brand + " ");
+                    setShowDropdown(false);
+                  }}
+                >
+                  <Text style={styles.dropdownText}>{brand}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
 
         {/* Generate */}
         <Pressable
@@ -185,18 +330,17 @@ export default function VisualiserScreen() {
         )}
 
         {/* Result */}
-        {hasResult && (
+        {resultUri && (
           <View style={styles.resultWrap}>
             <Text style={styles.resultLabel}>VISUALISATION RESULT</Text>
-            <Image
-              source={
-                resultBase64
-                  ? { uri: `data:image/png;base64,${resultBase64}` }
-                  : { uri: resultUrl! }
-              }
-              style={styles.resultImage}
-              resizeMode="contain"
-            />
+            <Pressable onPress={() => setFullscreen(true)} activeOpacity={0.9}>
+              <Image
+                source={{ uri: resultUri }}
+                style={styles.resultImage}
+                resizeMode="contain"
+              />
+              <Text style={styles.tapToExpand}>Tap to expand · Pinch to zoom</Text>
+            </Pressable>
             <Text style={styles.disclaimer}>
               AI-generated visualisation for reference only. Actual product appearance and
               installation may differ.
@@ -213,13 +357,30 @@ export default function VisualiserScreen() {
   );
 }
 
+// ── Styles ─────────────────────────────────────────────────────────────────────
+
+const fs = StyleSheet.create({
+  bg: { flex: 1, backgroundColor: "#000", justifyContent: "center", alignItems: "center" },
+  imgWrap: { width: SW, height: SH },
+  img: { width: SW, height: SH },
+  closeBtn: {
+    position: "absolute",
+    top: 52,
+    right: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+  },
+  closeText: { color: "white", fontSize: 16, fontWeight: "900" },
+});
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#07152b" },
-  header: {
-    paddingTop: 18,
-    paddingHorizontal: 18,
-    paddingBottom: 8,
-  },
+  header: { paddingTop: 18, paddingHorizontal: 18, paddingBottom: 8 },
   brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 6 },
   title: { color: "white", fontSize: 28, fontWeight: "900" },
@@ -246,6 +407,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
+  categoryRow: { gap: 8, paddingBottom: 4 },
+  categoryTab: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  categoryTabActive: {
+    borderColor: "#f97316",
+    backgroundColor: "rgba(249,115,22,0.15)",
+  },
+  categoryTabText: { color: "rgba(255,255,255,0.55)", fontWeight: "700", fontSize: 13 },
+  categoryTabTextActive: { color: "#f97316" },
+
   photoArea: {
     borderRadius: 16,
     overflow: "hidden",
@@ -259,11 +436,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   photoPlaceholderIcon: { fontSize: 40 },
-  photoPlaceholderText: {
-    color: "rgba(255,255,255,0.50)",
-    fontSize: 14,
-    textAlign: "center",
-  },
+  photoPlaceholderText: { color: "rgba(255,255,255,0.50)", fontSize: 14, textAlign: "center" },
   photoButtons: { flexDirection: "row", gap: 12, marginTop: 8 },
   photoBtn: {
     borderRadius: 10,
@@ -274,11 +447,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   photoBtnText: { color: "#f97316", fontWeight: "700", fontSize: 14 },
-  wallImage: {
-    width: "100%",
-    height: 220,
-    backgroundColor: "rgba(255,255,255,0.04)",
-  },
+  wallImage: { width: "100%", height: 220, backgroundColor: "rgba(255,255,255,0.04)" },
   changePhoto: {
     color: "rgba(255,255,255,0.45)",
     fontSize: 12,
@@ -288,6 +457,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.40)",
   },
 
+  searchWrap: { position: "relative", zIndex: 10 },
   input: {
     borderRadius: 12,
     borderWidth: 1,
@@ -297,6 +467,21 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 15,
   },
+  dropdown: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.30)",
+    backgroundColor: "#0d1f3c",
+    marginTop: 4,
+    overflow: "hidden",
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.06)",
+  },
+  dropdownText: { color: "white", fontSize: 14, fontWeight: "600" },
 
   generateBtn: {
     borderRadius: 14,
@@ -315,17 +500,19 @@ const styles = StyleSheet.create({
   },
 
   resultWrap: { gap: 10 },
-  resultLabel: {
-    color: "rgba(255,255,255,0.40)",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
+  resultLabel: { color: "rgba(255,255,255,0.40)", fontSize: 12, fontWeight: "800", letterSpacing: 1 },
   resultImage: {
     width: "100%",
     height: 300,
     borderRadius: 14,
     backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  tapToExpand: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 11,
+    textAlign: "center",
+    marginTop: 6,
+    fontStyle: "italic",
   },
   disclaimer: {
     color: "rgba(255,255,255,0.35)",
