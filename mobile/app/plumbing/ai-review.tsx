@@ -116,6 +116,10 @@ const [generatedPdfUri, setGeneratedPdfUri] = useState<string | null>(null);
 const [generatingCert, setGeneratingCert] = useState(false);
 const [materials, setMaterials] = useState<Material[]>([]);
 const [clientSignatureSvg, setClientSignatureSvg] = useState<string>("");
+const [feedbackRating, setFeedbackRating] = useState<"up" | "down" | null>(null);
+const [feedbackComment, setFeedbackComment] = useState("");
+const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+const [feedbackDone, setFeedbackDone] = useState(false);
 
 useEffect(() => {
 if (!toast) return;
@@ -261,6 +265,51 @@ const removeMaterial = (id: string) => {
   const next = materials.filter((m) => m.id !== id);
   setMaterials(next);
   AsyncStorage.setItem("elemetric_materials", JSON.stringify(next)).catch(() => {});
+};
+
+const submitFeedback = async (rating: "up" | "down") => {
+  setFeedbackRating(rating);
+  if (rating === "up") {
+    // Submit immediately for thumbs-up; thumbs-down waits for comment
+    setFeedbackSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from("ai_feedback").insert({
+        job_id: Date.now().toString(),
+        user_id: user?.id ?? null,
+        rating: "up",
+        comment: null,
+        job_type: currentJob.type,
+        confidence_score: confidence,
+      });
+    } catch {
+      // Best-effort — don't block the user
+    } finally {
+      setFeedbackSubmitting(false);
+      setFeedbackDone(true);
+    }
+  }
+};
+
+const submitNegativeFeedback = async () => {
+  if (!feedbackComment.trim()) return;
+  setFeedbackSubmitting(true);
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from("ai_feedback").insert({
+      job_id: Date.now().toString(),
+      user_id: user?.id ?? null,
+      rating: "down",
+      comment: feedbackComment.trim(),
+      job_type: currentJob.type,
+      confidence_score: confidence,
+    });
+  } catch {
+    // Best-effort
+  } finally {
+    setFeedbackSubmitting(false);
+    setFeedbackDone(true);
+  }
 };
 
 const checklistItems = [
@@ -930,6 +979,67 @@ return (
   </View>
 )}
 
+{/* ── AI Feedback ── */}
+<View style={styles.feedbackCard}>
+  <Text style={styles.feedbackTitle}>Was this analysis accurate?</Text>
+
+  {feedbackDone ? (
+    <View style={styles.feedbackThanks}>
+      <Text style={styles.feedbackThanksText}>Thanks for your feedback — it helps improve the AI.</Text>
+    </View>
+  ) : (
+    <>
+      <View style={styles.feedbackBtnRow}>
+        <Pressable
+          style={[styles.feedbackBtn, feedbackRating === "up" && styles.feedbackBtnUpActive]}
+          onPress={() => submitFeedback("up")}
+          disabled={feedbackSubmitting || feedbackRating !== null}
+        >
+          <Text style={styles.feedbackBtnEmoji}>👍</Text>
+          <Text style={[styles.feedbackBtnText, feedbackRating === "up" && styles.feedbackBtnTextActive]}>
+            AI got this right
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={[styles.feedbackBtn, feedbackRating === "down" && styles.feedbackBtnDownActive]}
+          onPress={() => submitFeedback("down")}
+          disabled={feedbackSubmitting || feedbackDone}
+        >
+          <Text style={styles.feedbackBtnEmoji}>👎</Text>
+          <Text style={[styles.feedbackBtnText, feedbackRating === "down" && styles.feedbackBtnTextActive]}>
+            AI missed something
+          </Text>
+        </Pressable>
+      </View>
+
+      {feedbackRating === "down" && !feedbackDone && (
+        <View style={styles.feedbackCommentWrap}>
+          <TextInput
+            style={styles.feedbackInput}
+            placeholder="What did the AI miss? (required)"
+            placeholderTextColor="rgba(255,255,255,0.30)"
+            value={feedbackComment}
+            onChangeText={setFeedbackComment}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+          />
+          <Pressable
+            style={[styles.feedbackSubmitBtn, (!feedbackComment.trim() || feedbackSubmitting) && { opacity: 0.5 }]}
+            onPress={submitNegativeFeedback}
+            disabled={!feedbackComment.trim() || feedbackSubmitting}
+          >
+            <Text style={styles.feedbackSubmitText}>
+              {feedbackSubmitting ? "Sending…" : "Send Feedback"}
+            </Text>
+          </Pressable>
+        </View>
+      )}
+    </>
+  )}
+</View>
+
 {/* ── Materials List ── */}
 <View style={styles.card}>
   <Text style={styles.fieldLabel}>Materials Used</Text>
@@ -1570,6 +1680,92 @@ clientSigText: {
   color: "#c4b5fd",
   fontWeight: "900",
   fontSize: 15,
+},
+feedbackCard: {
+borderRadius: 20,
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.10)",
+backgroundColor: "rgba(255,255,255,0.04)",
+padding: 18,
+gap: 12,
+},
+feedbackTitle: {
+color: "white",
+fontWeight: "800",
+fontSize: 15,
+},
+feedbackBtnRow: {
+flexDirection: "row",
+gap: 10,
+},
+feedbackBtn: {
+flex: 1,
+flexDirection: "row",
+alignItems: "center",
+justifyContent: "center",
+gap: 8,
+borderRadius: 12,
+paddingVertical: 12,
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.12)",
+backgroundColor: "rgba(255,255,255,0.05)",
+},
+feedbackBtnUpActive: {
+backgroundColor: "rgba(34,197,94,0.18)",
+borderColor: "rgba(34,197,94,0.45)",
+},
+feedbackBtnDownActive: {
+backgroundColor: "rgba(239,68,68,0.18)",
+borderColor: "rgba(239,68,68,0.45)",
+},
+feedbackBtnEmoji: {
+fontSize: 18,
+},
+feedbackBtnText: {
+color: "rgba(255,255,255,0.65)",
+fontWeight: "700",
+fontSize: 13,
+},
+feedbackBtnTextActive: {
+color: "white",
+},
+feedbackCommentWrap: {
+gap: 10,
+},
+feedbackInput: {
+borderRadius: 12,
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.12)",
+backgroundColor: "rgba(255,255,255,0.06)",
+color: "white",
+paddingHorizontal: 14,
+paddingVertical: 12,
+fontSize: 14,
+minHeight: 80,
+},
+feedbackSubmitBtn: {
+borderRadius: 12,
+paddingVertical: 12,
+alignItems: "center",
+backgroundColor: "#f97316",
+},
+feedbackSubmitText: {
+color: "#0b1220",
+fontWeight: "900",
+fontSize: 15,
+},
+feedbackThanks: {
+borderRadius: 10,
+padding: 14,
+backgroundColor: "rgba(34,197,94,0.12)",
+borderWidth: 1,
+borderColor: "rgba(34,197,94,0.25)",
+},
+feedbackThanksText: {
+color: "#86efac",
+fontWeight: "700",
+fontSize: 14,
+textAlign: "center",
 },
 toast: {
 position: "absolute",
