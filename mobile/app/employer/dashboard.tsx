@@ -329,8 +329,19 @@ export default function EmployerDashboard() {
         <Pressable
           style={styles.inviteBtn}
           onPress={() => router.push("/employer/invite")}
+          accessibilityRole="button"
+          accessibilityLabel="Invite a team member"
         >
           <Text style={styles.inviteBtnText}>+ Invite Member</Text>
+        </Pressable>
+
+        <Pressable
+          style={styles.templatesBtn}
+          onPress={() => router.push("/employer/job-templates")}
+          accessibilityRole="button"
+          accessibilityLabel="Job Templates"
+        >
+          <Text style={styles.templatesBtnText}>📋 Job Templates</Text>
         </Pressable>
 
         <Pressable onPress={() => router.back()} style={styles.back}>
@@ -503,6 +514,16 @@ const styles = StyleSheet.create({
 
   back: { marginTop: 4, alignItems: "center" },
   backText: { color: "rgba(255,255,255,0.55)", fontWeight: "700" },
+  templatesBtn: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderRadius: 14,
+    paddingVertical: 15,
+    alignItems: "center",
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+  },
+  templatesBtnText: { color: "rgba(255,255,255,0.8)", fontWeight: "800", fontSize: 15 },
   searchInput: {
     backgroundColor: "rgba(255,255,255,0.07)",
     borderRadius: 12,
