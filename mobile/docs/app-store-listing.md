@@ -9,7 +9,7 @@ Elemetric
 
 **Subtitle** (30 chars max)
 ```
-Plumbing Compliance Reports
+Trade Compliance & AI Reports
 ```
 
 **Bundle ID**
@@ -32,41 +32,103 @@ Utilities
 ## Description (4000 chars max)
 
 ```
-Elemetric is the compliance reporting app built for licensed plumbers, gas fitters, and trade professionals in Australia.
+Elemetric is the compliance reporting app built for licensed tradespeople in Australia — plumbers, gas fitters, electricians, HVAC technicians, and carpenters.
 
-Run on-site checklists, capture photo evidence, and generate professional PDF compliance reports — all from your phone, in minutes.
+Run on-site checklists, photograph your work, and generate professional PDF compliance reports in minutes. Protect yourself from liability. Impress your clients.
 
-WHAT ELEMETRIC DOES
+──────────────────────────────
+9 JOB TYPES ACROSS 4 TRADES
+──────────────────────────────
 
-• AI-powered photo analysis — photograph your work and let Elemetric identify compliance items, flag unclear work, and highlight missing requirements against AS/NZS 3500, AS/NZS 5601, and related standards.
+PLUMBER (6 job types)
+• Hot Water System — AS/NZS 3500 installation compliance
+• Gas Rough-In — AS/NZS 5601 gas fitting documentation
+• Drainage — AS/NZS 3500.2 drainage and sanitary
+• New Installation — Full new install compliance package
+• Wood Heater — AS/NZS 2918 solid fuel appliance compliance
+• Gas Heater — AS/NZS 5601.1 gas appliance installation
 
-• Instant PDF reports — generate clean, branded compliance reports with your licence number, company name, job address, QR code, and a compliance score. Share directly from the app via email, AirDrop, or any other share method.
+ELECTRICIAN
+• Electrical Documentation — AS/NZS 3000 wiring rules
 
-• Gas rough-in checklists — walk through every AS/NZS 5601.1 inspection point with photo evidence attached to each item.
+HVAC TECHNICIAN
+• HVAC Documentation — AS/NZS 1668 mechanical services
 
-• Hot water system compliance — full checklist and AI review for hot water system installations under AS/NZS 3500.
+CARPENTER
+• Carpentry Documentation — AS 1684 residential timber framing
 
-• Drainage and new installation reports — structured checklists for drainage work and new plumbing installations.
+──────────────────────────────
+AI-POWERED ANALYSIS
+──────────────────────────────
 
-• Electrical and HVAC documentation — general compliance photo documentation for electrical (AS/NZS 3000) and HVAC (AS/NZS 1668) work.
+Photograph your completed work and let Elemetric's AI analyse it against Australian compliance standards.
 
-• Near miss reporting — quickly document pre-existing non-compliant work found on site with photos, trade type, and a liability disclaimer. Protect yourself before work begins.
+• Circular confidence gauge — instantly see your documentation score (green 80%+, orange 50–79%, red below 50%)
+• Risk rating — LOW RISK, MEDIUM RISK, or HIGH RISK based on your evidence
+• Detailed breakdown — Detected Items (green tick), Missing Items (red X), Unclear Items (orange warning)
+• Recommended actions — specific instructions for every item that needs attention
+• One-tap retake — tap "Retake Photo" next to any failed item and go straight back to that photo
+• AI feedback — rate the analysis and tell us what the AI missed to improve future results
 
-• Address autocomplete — intelligent Australian address lookup powered by OpenStreetMap.
+──────────────────────────────
+PROFESSIONAL PDF REPORTS
+──────────────────────────────
 
-• GPS location capture — automatically reverse-geocodes your GPS coordinates into a formatted address.
+• Branded PDF with ELEMETRIC header, orange compliance bar, and QR verification code
+• Includes job details, installer name, licence number, company name, and report date
+• Materials used section — list every material, quantity, and brand
+• Weather conditions recorded at time of job
+• Time on site calculated and included in executive summary
+• Before & after photo comparisons with GPS coordinates and capture time
+• SHA-256 tamper-evident photo hashing — every image is cryptographically verified
+• Certificate of Compliance — a separate formal certificate for client handover
 
-FOR EMPLOYERS
+──────────────────────────────
+SIGNATURES & CLIENT SIGN-OFF
+──────────────────────────────
 
-• Create a team and invite your plumbers by email.
-• View each team member's compliance score, job count, and last active date.
-• Track your team's overall compliance performance at a glance.
+• Plumber signs on-screen with finger — saved and embedded in every PDF
+• Optional client acknowledgement signature — capture client sign-off on the spot
+• Declaration screen — plumber confirms compliance before signing
 
-YOUR DATA, YOUR REPORTS
+──────────────────────────────
+LIABILITY PROTECTION
+──────────────────────────────
 
-Jobs are saved to your device and backed up securely to the cloud. Your profile details — full name, licence number, and company — appear on every report you generate, so your paperwork always looks professional.
+• Near miss reporting — document pre-existing non-compliant work before you start, with photos and a liability disclaimer. Protect yourself before a single tool touches the job.
+• Liability timeline — every completed job tracked with a 7-year liability window countdown. See at a glance which reports are active, expiring soon, or expired.
+• Property Compliance Passport — generate a full compliance history for any address.
 
-Elemetric is designed in Australia for Australian trade professionals. Compliance standards referenced include AS/NZS 3500, AS/NZS 5601, AS/NZS 3000, and AS/NZS 1668.
+──────────────────────────────
+EMPLOYER PORTAL
+──────────────────────────────
+
+Running a team? Elemetric's employer portal gives you full visibility over your workforce:
+• Create a team and invite plumbers by email
+• View each team member's compliance score, job count, and last active date
+• Assign jobs to specific plumbers
+• Team performance report — overall compliance score across your entire workforce
+• Track your team's job history and compliance trends
+
+──────────────────────────────
+MORE TOOLS
+──────────────────────────────
+
+• Visualiser — HVAC and heating product reference tool. Search by brand and category, zoom into product specs, and reference installation requirements on site.
+• Compliance score — your personal score averaged across all jobs, shown prominently on your profile.
+• Job notes — add private notes to any job for future reference.
+• Job timer — records time on site from the moment a job starts.
+• Address autocomplete — intelligent Australian address lookup.
+• Push notifications — get notified when a job saves successfully.
+
+──────────────────────────────
+YOUR DATA
+──────────────────────────────
+
+Jobs are saved locally and backed up to the cloud. Work offline and sync when reconnected. All photos are stored securely with cryptographic integrity verification.
+
+Elemetric is designed in Australia for Australian trade professionals.
+Standards referenced: AS/NZS 3500, AS/NZS 5601, AS/NZS 3000, AS/NZS 1668, AS/NZS 2918, AS 1684.
 ```
 
 ---
@@ -74,7 +136,7 @@ Elemetric is designed in Australia for Australian trade professionals. Complianc
 ## Keywords (100 chars max, comma-separated)
 
 ```
-plumbing,compliance,gas fitter,checklist,PDF report,tradesperson,AS/NZS,inspection,licence
+plumbing,compliance,gas fitter,checklist,PDF report,tradesperson,AS/NZS,certificate,inspection
 ```
 
 ---
@@ -82,13 +144,31 @@ plumbing,compliance,gas fitter,checklist,PDF report,tradesperson,AS/NZS,inspecti
 ## What's New (latest version — 4000 chars max)
 
 ```
-• Employer Portal: create a team, invite plumbers, and view their compliance scores
-• Push notifications when jobs are saved
-• Address autocomplete for Australian addresses
-• GPS reverse geocoding — auto-fills job address from your location
+Version 1.0 — Initial Release
+
+• 9 job types across Plumber, Electrician, HVAC, and Carpenter trades
+• AI photo analysis with confidence gauge and risk rating (LOW / MEDIUM / HIGH RISK)
+• Circular confidence gauge — green, orange, or red based on documentation quality
+• Detailed AI breakdown: Detected Items, Missing Items, Unclear Items
+• One-tap photo retake — pre-selects the failed item on the photo screen
+• AI feedback system — rate results and report what was missed
+• Job summary screen — review all photos with PASS/FAIL before signing
+• Materials used — add materials, quantities, and brands to every report
+• Weather conditions — recorded at job start, shown in PDF
+• Job timer — time on site calculated and included in executive summary
+• Client signature — optional client sign-off captured on screen
+• Certificate of Compliance — formal certificate separate from the compliance report
+• SHA-256 tamper-evident photo hashing
+• GPS-stamped photos with burn-in overlay
+• Before & after photo comparisons in PDF
+• Liability timeline — 7-year liability window tracked for every job
 • Near miss reporting with photo evidence and liability disclaimer
-• Compliance score on your profile — averaged across all your jobs
-• Improved PDF reports with QR code, licence number, and company name
+• Property Compliance Passport
+• Employer portal — team management, job assignment, compliance reporting
+• Visualiser — HVAC and heating product reference tool
+• Compliance score on profile
+• Australian address autocomplete
+• Offline-first — works without internet, syncs when reconnected
 ```
 
 ---
@@ -116,12 +196,13 @@ https://elemetric.com.au/privacy
 ## App Store Review Information
 
 **Sign-in required:** Yes
+
 **Demo account:**
 - Email: `reviewer@elemetric.com.au`
 - Password: *(set before submission in App Store Connect)*
 
 **Notes for reviewer:**
-> Elemetric is a compliance reporting tool for licensed Australian tradespeople. The app requires an account to function. The AI analysis feature uses a backend server to analyse photos against Australian plumbing and gas standards. PDF generation uses on-device rendering — no third-party PDF service is used.
+> Elemetric is a compliance reporting tool for licensed Australian tradespeople. The app requires a free account to save jobs and generate reports. The AI photo analysis feature sends images to a backend server (hosted on Railway) which analyses them against Australian plumbing and gas standards — a network connection is required for this feature. PDF generation is entirely on-device using expo-print. Near miss reporting and the liability timeline are standard data entry and display features with no unusual permissions. The employer portal allows a supervisor to create a team and monitor compliance metrics.
 
 ---
 
@@ -141,49 +222,13 @@ Questionnaire answers:
 
 ---
 
-## Screenshot Descriptions (iPhone 6.9" — 1320 × 2868px)
-
-Capture these 6 screens on an iPhone 15 Pro Max or iPhone 16 Pro Max in portrait orientation. Use the dark navy theme. Avoid any sensitive personal data in screenshots.
-
-### Screenshot 1 — Home Screen
-**Screen:** `app/home.tsx`
-**State:** Show the home screen with all three onboarding checklist items ticked (allDone state), "New Job", "Past Jobs", and "Report Near Miss" buttons visible.
-**Caption to add in post-production:** *"Your compliance hub — everything in one place"*
-
-### Screenshot 2 — New Job / Trade Selection
-**Screen:** `app/trade.tsx`
-**State:** Show the trade type selection screen with all job types visible: Hot Water System, Gas Rough-In, Drainage, New Installation, Electrical, HVAC.
-**Caption:** *"Six trade types — from gas to HVAC"*
-
-### Screenshot 3 — AI Review Results
-**Screen:** `app/plumbing/ai-review.tsx`
-**State:** Show the AI review screen after analysis is complete, with a compliance score badge (e.g. 87%), a list of detected items in green, and 1–2 unclear items.
-**Caption:** *"AI-powered analysis against Australian standards"*
-
-### Screenshot 4 — PDF Report Preview
-**Content:** Export a sample PDF from a gas or hot water job and screenshot the first page.
-**State:** Shows the navy ELEMETRIC header, orange sub-bar with report title and date, QR code, plumber name, licence number, company, job address, and compliance table.
-**Caption:** *"Professional PDF reports — ready to share"*
-
-### Screenshot 5 — Profile & Compliance Score
-**Screen:** `app/(tabs)/profile.tsx`
-**State:** Show the profile screen with the circular compliance score widget filled in green (score ≥ 80), "Excellent" badge, licence number and company fields filled.
-**Caption:** *"Track your compliance score over time"*
-
-### Screenshot 6 — Past Jobs List
-**Screen:** `app/plumbing/jobs.tsx`
-**State:** Show the jobs list with 4–5 varied job types (hot water, gas, drainage), the search bar visible at top, filter chips visible (All selected), each card showing job name, address, and confidence score badge.
-**Caption:** *"Every job, every report — always at hand"*
-
----
-
 ## Pricing
 
 **Price:** Free
-**In-App Purchases:** None at launch
+**In-App Purchases:** None at launch (subscription tier planned)
 
 ---
 
 ## Content Rights
 
-All compliance checklists reference publicly available Australian Standards (AS/NZS series). No copyrighted standards content is reproduced in the app.
+All compliance checklists reference publicly available Australian Standards (AS/NZS series). No copyrighted standards content is reproduced in the app. All AI analysis is performed against publicly known compliance requirements for Australian trade work.

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Elemetric",
     "slug": "elemetric",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/app.png",
     "scheme": "elemetric",
@@ -16,14 +16,15 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.elemetric.mobile",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "NSCameraUsageDescription": "Elemetric uses the camera to photograph your work for compliance reports.",
-        "NSPhotoLibraryUsageDescription": "Elemetric saves compliance photos to your photo library.",
-        "NSPhotoLibraryAddUsageDescription": "Elemetric saves compliance photos to your photo library.",
-        "NSLocationWhenInUseUsageDescription": "Elemetric uses your location to auto-fill the job site address on checklists.",
-        "NSUserNotificationsUsageDescription": "Elemetric notifies you when a job is saved successfully.",
-        "UIBackgroundModes": []
+        "NSPhotoLibraryUsageDescription": "Elemetric reads photos from your library to attach to compliance checklists.",
+        "NSPhotoLibraryAddUsageDescription": "Elemetric saves stamped compliance photos to your photo library.",
+        "NSLocationWhenInUseUsageDescription": "Elemetric uses your location to auto-fill the job site address and to embed GPS coordinates in compliance photos.",
+        "NSUserNotificationsUsageDescription": "Elemetric sends notifications when jobs are saved and to remind you of expiring compliance reports.",
+        "UIBackgroundModes": [],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -89,6 +90,18 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5fb98e2b-bc92-4cd8-ad9f-f6a0876ae9fd"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/5fb98e2b-bc92-4cd8-ad9f-f6a0876ae9fd"
     }
   }
 }
