@@ -23,6 +23,9 @@ import { hashBase64, captureTimestamp } from "@/lib/photoHash";
 const API_BASE = "https://elemetric-ai-production.up.railway.app";
 const CHECKLIST_KEY = "elemetric_current_checklist";
 const REVIEW_PHOTOS_FILE = `${FileSystem.documentDirectory}review-photos.json`;
+const PHOTO_360_TOOLTIP_KEY = "elemetric_360_tooltip_shown";
+const REVIEW_PHOTOS_360_FILE = `${FileSystem.documentDirectory}review-photos-360.json`;
+const FLOOR_PLAN_PINS_KEY = "elemetric_floor_plan_pins";
 
 type CurrentJob = {
 type: string;
@@ -107,6 +110,10 @@ const [photoMap, setPhotoMap] = useState<Record<string, string[]>>({});
 const [photoMeta, setPhotoMeta] = useState<Record<string, PhotoMeta[]>>({});
 const [loading, setLoading] = useState(false);
 const [previewUri, setPreviewUri] = useState<string | null>(null);
+const [photo360Map, setPhoto360Map] = useState<Record<string, string[]>>({});
+const [photo360Meta, setPhoto360Meta] = useState<Record<string, PhotoMeta[]>>({});
+const [showTooltip360, setShowTooltip360] = useState(false);
+const [floorPlanUri, setFloorPlanUri] = useState<string | null>(null);
 
 useFocusEffect(
 useCallback(() => {
@@ -136,6 +143,19 @@ HOTWATER_ITEMS.forEach((item) => {
 blankPhotoMap[item.id] = [];
 });
 setPhotoMap(blankPhotoMap);
+}
+// Load 360° photos
+const raw360 = await AsyncStorage.getItem("elemetric_360_photos");
+if (raw360 && active) {
+  const p360 = JSON.parse(raw360);
+  setPhoto360Map(p360.photo360Map || {});
+  setPhoto360Meta(p360.photo360Meta || {});
+}
+// Load floor plan URI from current job
+const rawJobAgain = await AsyncStorage.getItem("elemetric_current_job");
+if (rawJobAgain && active) {
+  const parsedJob = JSON.parse(rawJobAgain);
+  if (parsedJob.floorPlanUri) setFloorPlanUri(parsedJob.floorPlanUri);
 }
 } catch {
 // ignore
@@ -171,6 +191,22 @@ const totalRequiredPhotosAdded = useMemo(() => {
 return Object.values(photoMap).reduce((sum, arr) => sum + (arr?.length || 0), 0);
 }, [photoMap]);
 
+const allWorkDays = useMemo(() => {
+  const dates = new Set<string>();
+  Object.values(photoMeta).flat().forEach((m) => {
+    if (m.capturedAt) dates.add(new Date(m.capturedAt).toDateString());
+  });
+  Object.values(photo360Meta).flat().forEach((m) => {
+    if (m.capturedAt) dates.add(new Date(m.capturedAt).toDateString());
+  });
+  return Array.from(dates).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+}, [photoMeta, photo360Meta]);
+
+const todayStr = new Date().toDateString();
+const currentDayIndex = allWorkDays.includes(todayStr)
+  ? allWorkDays.indexOf(todayStr)
+  : allWorkDays.length;
+
 const saveChecklistState = async (
 nextChecked: Record<string, boolean>,
 nextPhotoMap: Record<string, string[]>,
@@ -184,6 +220,16 @@ photoMap: nextPhotoMap,
 photoMeta: nextPhotoMeta,
 })
 );
+};
+
+const save360State = async (
+  next360Map: Record<string, string[]>,
+  next360Meta: Record<string, PhotoMeta[]>
+) => {
+  await AsyncStorage.setItem(
+    "elemetric_360_photos",
+    JSON.stringify({ photo360Map: next360Map, photo360Meta: next360Meta })
+  );
 };
 
 const addPhotoForItem = async (itemId: string) => {
@@ -316,6 +362,52 @@ await saveChecklistState(nextChecked, nextPhotoMap, nextPhotoMeta);
 } catch {}
 };
 
+const addPhoto360ForItem = async (itemId: string) => {
+  // Show tooltip on first use
+  const tooltipShown = await AsyncStorage.getItem(PHOTO_360_TOOLTIP_KEY);
+  if (!tooltipShown) {
+    setShowTooltip360(true);
+    await AsyncStorage.setItem(PHOTO_360_TOOLTIP_KEY, "true");
+    // Don't return — still let them pick
+  }
+  try {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("Camera Roll Access Required", "Enable photo access in Settings.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 1,
+    });
+    if (result.canceled) return;
+    const asset = result.assets?.[0];
+    if (!asset?.uri) return;
+    const ts = captureTimestamp();
+    let b64 = "";
+    try {
+      b64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
+    } catch {}
+    let hash = "";
+    try { hash = await hashBase64(b64); } catch {}
+    const next360Map = { ...photo360Map, [itemId]: [...(photo360Map[itemId] || []), asset.uri] };
+    const next360Meta = { ...photo360Meta, [itemId]: [...(photo360Meta[itemId] || []), { uri: asset.uri, hash, capturedAt: ts, is360: true }] };
+    setPhoto360Map(next360Map);
+    setPhoto360Meta(next360Meta);
+    await save360State(next360Map, next360Meta);
+  } catch (e: any) {
+    Alert.alert("360° Photo Error", e?.message ?? "Could not load photo.");
+  }
+};
+
+const remove360Photo = async (itemId: string, uri: string) => {
+  const next360Map = { ...photo360Map, [itemId]: (photo360Map[itemId] || []).filter((u) => u !== uri) };
+  const next360Meta = { ...photo360Meta, [itemId]: (photo360Meta[itemId] || []).filter((m) => m.uri !== uri) };
+  setPhoto360Map(next360Map);
+  setPhoto360Meta(next360Meta);
+  await save360State(next360Map, next360Meta);
+};
+
 const rotatePhoto = async (itemId: string, uri: string) => {
 try {
 const result = await ImageManipulator.manipulateAsync(uri, [{ rotate: 90 }], {
@@ -415,6 +507,32 @@ await FileSystem.writeAsStringAsync(REVIEW_PHOTOS_FILE, payload, {
 encoding: FileSystem.EncodingType.UTF8,
 });
 
+// Write 360° photos to separate file
+const all360Photos: ReviewPhoto[] = [];
+for (const item of HOTWATER_ITEMS) {
+  const uris360 = photo360Map[item.id] || [];
+  const meta360 = photo360Meta[item.id] || [];
+  for (const uri of uris360) {
+    try {
+      const converted = await convertToJpeg(uri);
+      const meta = meta360.find((m) => m.uri === uri);
+      all360Photos.push({
+        label: `360° — ${item.title}`,
+        uri: converted.uri,
+        base64: converted.base64,
+        mime: converted.mime,
+        capturedAt: meta?.capturedAt,
+        hash: meta?.hash,
+      });
+    } catch {}
+  }
+}
+if (all360Photos.length > 0) {
+  await FileSystem.writeAsStringAsync(REVIEW_PHOTOS_360_FILE, JSON.stringify(all360Photos), {
+    encoding: FileSystem.EncodingType.UTF8,
+  });
+}
+
 // Upload photos to Supabase Storage (best-effort — does not block AI)
 try {
 const { data: { user } } = await supabase.auth.getUser();
@@ -492,6 +610,22 @@ return (
 </Pressable>
 </Modal>
 
+{/* 360° Tooltip */}
+<Modal visible={showTooltip360} transparent animationType="fade" onRequestClose={() => setShowTooltip360(false)}>
+  <Pressable style={styles.tooltipOverlay} onPress={() => setShowTooltip360(false)}>
+    <View style={styles.tooltipCard}>
+      <Text style={styles.tooltipEmoji}>🔮</Text>
+      <Text style={styles.tooltipTitle}>360° Photo Tip</Text>
+      <Text style={styles.tooltipBody}>
+        One 360° photo can satisfy multiple checklist items at once! The AI scans the entire room and detects all visible compliance items in a single shot.{"\n\n"}Take your 360° photo from the centre of the room for best coverage.
+      </Text>
+      <Pressable style={styles.tooltipBtn} onPress={() => setShowTooltip360(false)}>
+        <Text style={styles.tooltipBtnText}>Got it →</Text>
+      </Pressable>
+    </View>
+  </Pressable>
+</Modal>
+
 <View style={styles.header}>
 <Text style={styles.brand}>ELEMETRIC</Text>
 <Text style={styles.title}>Add Photos</Text>
@@ -503,6 +637,41 @@ return (
 <Text style={styles.metaLine}>Address: {currentJob.jobAddr}</Text>
 </View>
 </View>
+
+{/* Multi-day timeline */}
+{allWorkDays.length > 0 && (
+  <View style={styles.timelineWrap}>
+    <Text style={styles.timelineHeading}>PROJECT TIMELINE</Text>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.timelineRow}>
+      {allWorkDays.map((dateStr, i) => {
+        const isToday = dateStr === todayStr;
+        const d = new Date(dateStr);
+        return (
+          <View key={dateStr} style={[styles.timelineItem, { marginHorizontal: 20 }]}>
+            {i > 0 && <View style={styles.timelineConnector} />}
+            <View style={[styles.timelineDot, isToday && styles.timelineDotActive]} />
+            <Text style={[styles.timelineDayLabel, isToday && styles.timelineDayLabelActive]}>
+              Day {i + 1}
+            </Text>
+            <Text style={styles.timelineDateLabel}>
+              {d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+            </Text>
+          </View>
+        );
+      })}
+      {!allWorkDays.includes(todayStr) && (
+        <View style={[styles.timelineItem, { marginHorizontal: 20 }]}>
+          {allWorkDays.length > 0 && <View style={styles.timelineConnector} />}
+          <View style={[styles.timelineDot, styles.timelineDotActive]} />
+          <Text style={[styles.timelineDayLabel, styles.timelineDayLabelActive]}>
+            Day {allWorkDays.length + 1}
+          </Text>
+          <Text style={styles.timelineDateLabel}>Today</Text>
+        </View>
+      )}
+    </ScrollView>
+  </View>
+)}
 
 <ScrollView ref={scrollRef} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
 {HOTWATER_ITEMS.map((item) => {
@@ -532,6 +701,29 @@ disabled={loading}
 >
 <Text style={styles.addBtnText}>+ Add Photo</Text>
 </Pressable>
+
+{/* 360° Photo button */}
+<Pressable
+  style={styles.btn360}
+  onPress={() => addPhoto360ForItem(item.id)}
+  disabled={loading}
+>
+  <View style={styles.btn360Ring}>
+    <Text style={styles.btn360Text}>360°</Text>
+  </View>
+  <Text style={styles.btn360Label}>Add 360° Photo</Text>
+</Pressable>
+
+{/* Mark on Floor Plan button (if floor plan exists) */}
+{floorPlanUri && (
+  <Pressable
+    style={styles.planBtn}
+    onPress={() => router.push({ pathname: "/plumbing/floor-plan-pin", params: { itemId: item.id, itemLabel: item.title } })}
+    disabled={loading}
+  >
+    <Text style={styles.planBtnText}>📍 Mark on Floor Plan</Text>
+  </Pressable>
+)}
 
 {itemPhotos.length > 0 && (
 <View style={styles.photoGrid}>
@@ -613,6 +805,32 @@ disabled={loading || i === itemPhotos.length - 1}
 );
 })}
 </View>
+)}
+
+{/* 360° Photos */}
+{(photo360Map[item.id] || []).length > 0 && (
+  <View style={styles.photos360Wrap}>
+    <Text style={styles.photos360Label}>360° PHOTOS</Text>
+    <View style={styles.photoGrid}>
+      {(photo360Map[item.id] || []).map((uri, i) => (
+        <View key={`360-${item.id}-${i}`} style={styles.photoWrap}>
+          <Pressable onPress={() => setPreviewUri(uri)} disabled={loading}>
+            <Image source={{ uri }} style={styles.photo} />
+          </Pressable>
+          <View style={styles.badge360}>
+            <Text style={styles.badge360Text}>360°</Text>
+          </View>
+          <Pressable
+            style={styles.remove}
+            onPress={() => remove360Photo(item.id, uri)}
+            disabled={loading}
+          >
+            <Text style={styles.removeText}>×</Text>
+          </Pressable>
+        </View>
+      ))}
+    </View>
+  </View>
 )}
 </View>
 );
@@ -872,4 +1090,136 @@ reorderText: {
 color: "rgba(255,255,255,0.55)",
 fontSize: 11,
 },
+  // 360° button
+  btn360: {
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 2,
+    borderColor: "#f97316",
+    backgroundColor: "rgba(249,115,22,0.08)",
+  },
+  btn360Ring: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 2,
+    borderColor: "#f97316",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(249,115,22,0.12)",
+  },
+  btn360Text: { color: "#f97316", fontWeight: "900", fontSize: 11 },
+  btn360Label: { color: "#f97316", fontWeight: "800", fontSize: 13 },
+  planBtn: {
+    marginTop: 8,
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "rgba(96,165,250,0.40)",
+    backgroundColor: "rgba(96,165,250,0.08)",
+    alignItems: "center",
+  },
+  planBtnText: { color: "#60a5fa", fontWeight: "700", fontSize: 13 },
+  photos360Wrap: { marginTop: 10 },
+  photos360Label: {
+    color: "#f97316",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  badge360: {
+    position: "absolute",
+    top: 4,
+    right: 28,
+    backgroundColor: "rgba(249,115,22,0.90)",
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  badge360Text: { color: "white", fontSize: 9, fontWeight: "900" },
+  // Day timeline
+  timelineWrap: {
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.06)",
+    paddingVertical: 12,
+  },
+  timelineHeading: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+    paddingHorizontal: 18,
+    marginBottom: 8,
+  },
+  timelineRow: { paddingHorizontal: 18, gap: 0, alignItems: "center" },
+  timelineItem: { alignItems: "center", position: "relative" },
+  timelineConnector: {
+    position: "absolute",
+    left: -24,
+    top: 9,
+    width: 48,
+    height: 2,
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  timelineDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.20)",
+  },
+  timelineDotActive: {
+    backgroundColor: "#f97316",
+    borderColor: "#f97316",
+  },
+  timelineDayLabel: {
+    color: "rgba(255,255,255,0.40)",
+    fontSize: 10,
+    fontWeight: "800",
+    marginTop: 4,
+  },
+  timelineDayLabelActive: { color: "#f97316" },
+  timelineDateLabel: {
+    color: "rgba(255,255,255,0.25)",
+    fontSize: 9,
+    marginTop: 2,
+  },
+  // Tooltip
+  tooltipOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.80)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 28,
+  },
+  tooltipCard: {
+    backgroundColor: "#0d1f3d",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.30)",
+    padding: 24,
+    gap: 12,
+    alignItems: "center",
+    maxWidth: 340,
+  },
+  tooltipEmoji: { fontSize: 40 },
+  tooltipTitle: { color: "white", fontWeight: "900", fontSize: 18, textAlign: "center" },
+  tooltipBody: { color: "rgba(255,255,255,0.65)", fontSize: 14, lineHeight: 22, textAlign: "center" },
+  tooltipBtn: {
+    backgroundColor: "#f97316",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    marginTop: 4,
+  },
+  tooltipBtnText: { color: "#0b1220", fontWeight: "900", fontSize: 15 },
 });

@@ -121,6 +121,16 @@ const [feedbackRating, setFeedbackRating] = useState<"up" | "down" | null>(null)
 const [feedbackComment, setFeedbackComment] = useState("");
 const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
 const [feedbackDone, setFeedbackDone] = useState(false);
+const [result360, setResult360] = useState<{
+  coverageScore: number;
+  detected: string[];
+  missingFromView: string[];
+  recommendedPhotos: string[];
+} | null>(null);
+const [loading360, setLoading360] = useState(false);
+const [floorPlanData, setFloorPlanData] = useState<{ uri: string; pins: any[] } | null>(null);
+const [reviewPhotos360, setReviewPhotos360] = useState<ReviewPhoto[]>([]);
+const [jobDays, setJobDays] = useState<string[]>([]);
 
 // Plumbing technical data (hotwater/newinstall)
 const [waterPressureMeter,   setWaterPressureMeter]   = useState("");
@@ -209,6 +219,42 @@ try {
 
 const savedClientSig = await AsyncStorage.getItem("elemetric_client_signature_svg");
 if (savedClientSig && active) setClientSignatureSvg(savedClientSig);
+
+// Load 360° review photos
+try {
+  const info360 = await FileSystem.getInfoAsync(`${FileSystem.documentDirectory}review-photos-360.json`);
+  if (info360.exists && active) {
+    const raw360 = await FileSystem.readAsStringAsync(`${FileSystem.documentDirectory}review-photos-360.json`, { encoding: FileSystem.EncodingType.UTF8 });
+    const parsed360 = JSON.parse(raw360);
+    setReviewPhotos360(Array.isArray(parsed360) ? parsed360 : []);
+  }
+} catch {}
+
+// Load floor plan + pins
+try {
+  const rawJob2 = await AsyncStorage.getItem("elemetric_current_job");
+  if (rawJob2 && active) {
+    const jobData = JSON.parse(rawJob2);
+    if (jobData.floorPlanUri) {
+      const rawPins = await AsyncStorage.getItem("elemetric_floor_plan_pins");
+      const pins = rawPins ? JSON.parse(rawPins) : [];
+      setFloorPlanData({ uri: jobData.floorPlanUri, pins });
+    }
+  }
+} catch {}
+
+// Compute job days from review photos capturedAt
+try {
+  const info = await FileSystem.getInfoAsync(`${FileSystem.documentDirectory}review-photos.json`);
+  if (info.exists && active) {
+    const rawP = await FileSystem.readAsStringAsync(`${FileSystem.documentDirectory}review-photos.json`, { encoding: FileSystem.EncodingType.UTF8 });
+    const photos = JSON.parse(rawP) as ReviewPhoto[];
+    const dates = new Set<string>();
+    photos.forEach((p) => { if (p.capturedAt) dates.add(new Date(p.capturedAt).toDateString()); });
+    if (active) setJobDays(Array.from(dates).sort((a, b) => new Date(a).getTime() - new Date(b).getTime()));
+  }
+} catch {}
+
 } catch {
 // keep defaults
 }
@@ -448,6 +494,39 @@ setSignatureSvg("");
 Alert.alert("Removed", "Saved signature removed.");
 };
 
+const analyze360 = async () => {
+  if (reviewPhotos360.length === 0) {
+    Alert.alert("No 360° Photos", "Add 360° photos in the photo step first.");
+    return;
+  }
+  setLoading360(true);
+  try {
+    const images = reviewPhotos360.map((p) => ({ mime: p.mime, data: p.base64, label: p.label }));
+    const res = await fetch("https://elemetric-ai-production.up.railway.app/process-360", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Elemetric-Key": process.env.EXPO_PUBLIC_ELEMETRIC_API_KEY ?? "",
+      },
+      body: JSON.stringify({ type: currentJob.type, images }),
+    });
+    const text = await res.text();
+    let json: any;
+    try { json = JSON.parse(text); } catch { throw new Error(`Invalid response: ${text.slice(0, 100)}`); }
+    if (!res.ok) throw new Error(json?.error ?? "360° analysis failed");
+    setResult360({
+      coverageScore: json.coverageScore ?? json.coverage_score ?? 0,
+      detected: json.detected ?? [],
+      missingFromView: json.missing_from_view ?? json.missingFromView ?? [],
+      recommendedPhotos: json.recommended_photos ?? json.recommendedPhotos ?? [],
+    });
+  } catch (e: any) {
+    Alert.alert("360° Analysis Failed", e?.message ?? "Could not analyse 360° photo.");
+  } finally {
+    setLoading360(false);
+  }
+};
+
 const listToHtml = (items: string[]) => {
 if (!items.length) return `<p style="margin: 0; color: #6b7280;">None</p>`;
 return `<ul style="margin-top: 8px; margin-bottom: 0;">${items
@@ -541,6 +620,105 @@ ${otherPhotos.map((photo) => `
 
 if (!photoHtml) {
   photoHtml = `<div style="color:#6b7280;">No photos available for report.</div>`;
+}
+
+// 360° photos section
+let photo360Html = "";
+if (reviewPhotos360.length > 0) {
+  photo360Html = `
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+<div style="margin-bottom:18px;">
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:19px;font-weight:bold;margin-bottom:6px;">360° Room Documentation</div>
+<div style="font-size:11px;color:#6b7280;margin-bottom:12px;">Full-room panoramic photos captured for spatial context</div>
+${result360 ? `
+<div style="background:#fffbf5;border:1px solid #fed7aa;border-radius:8px;padding:14px;margin-bottom:12px;">
+  <div style="font-size:13px;font-weight:bold;color:#92400e;margin-bottom:6px;">360° Coverage Score: ${result360.coverageScore}%</div>
+  ${result360.detected.length > 0 ? `<div style="font-size:12px;color:#166534;margin-bottom:4px;"><strong>Detected in 360°:</strong> ${result360.detected.join(", ")}</div>` : ""}
+  ${result360.missingFromView.length > 0 ? `<div style="font-size:12px;color:#991b1b;margin-bottom:4px;"><strong>Not visible in 360°:</strong> ${result360.missingFromView.join(", ")}</div>` : ""}
+  ${result360.recommendedPhotos.length > 0 ? `<div style="font-size:12px;color:#1e40af;"><strong>Recommend additional photos of:</strong> ${result360.recommendedPhotos.join(", ")}</div>` : ""}
+</div>` : ""}
+<div style="display:flex;flex-wrap:wrap;gap:12px;">
+${reviewPhotos360.map((p) => `
+  <div style="width:48%;box-sizing:border-box;">
+    <div style="font-weight:bold;font-size:11px;margin-bottom:5px;color:#7c3aed;">${p.label}</div>
+    <img src="data:${p.mime};base64,${p.base64}" style="width:100%;height:160px;object-fit:cover;border:2px solid #7c3aed;border-radius:6px;"/>
+  </div>`).join("")}
+</div>
+</div>`;
+}
+
+// Floor plan section
+let floorPlanHtml = "";
+if (floorPlanData?.uri) {
+  try {
+    const fpInfo = await FileSystem.getInfoAsync(floorPlanData.uri);
+    if (fpInfo.exists) {
+      const fpB64 = await FileSystem.readAsStringAsync(floorPlanData.uri, { encoding: FileSystem.EncodingType.Base64 });
+      const pinsHtml = floorPlanData.pins.map((pin: any) => `
+        <div style="position:absolute;left:${pin.x * 100}%;top:${pin.y * 100}%;transform:translate(-50%,-50%);">
+          <div style="width:16px;height:16px;background:#f97316;border:2px solid white;border-radius:50%;"></div>
+          <div style="position:absolute;top:18px;left:50%;transform:translateX(-50%);background:#f97316;color:white;font-size:9px;font-weight:bold;border-radius:4px;padding:2px 4px;white-space:nowrap;font-family:Helvetica,Arial,sans-serif;">${pin.label}</div>
+        </div>`).join("");
+      floorPlanHtml = `
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+<div style="margin-bottom:18px;">
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:19px;font-weight:bold;margin-bottom:6px;">Floor Plan — Item Locations</div>
+<div style="font-size:11px;color:#6b7280;margin-bottom:12px;">${floorPlanData.pins.length} item${floorPlanData.pins.length !== 1 ? "s" : ""} marked on the floor plan</div>
+<div style="position:relative;display:inline-block;width:100%;">
+  <img src="data:image/jpeg;base64,${fpB64}" style="width:100%;border-radius:8px;border:1px solid #e5e7eb;"/>
+  ${pinsHtml}
+</div>
+${floorPlanData.pins.length > 0 ? `
+<table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:11px;">
+<thead><tr style="background:#f3f4f6;"><th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;">Item</th><th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;">Location</th></tr></thead>
+<tbody>
+${floorPlanData.pins.map((pin: any, i: number) => `<tr style="${i%2===0?"":"background:#f9fafb;"}"><td style="padding:6px 8px;border:1px solid #e5e7eb;font-weight:600;">${pin.label}</td><td style="padding:6px 8px;border:1px solid #e5e7eb;">${Math.round(pin.x*100)}% from left, ${Math.round(pin.y*100)}% from top</td></tr>`).join("")}
+</tbody></table>` : ""}
+</div>`;
+    }
+  } catch {}
+}
+
+// Multi-day photo grouping
+const photosByDay = new Map<string, ReviewPhoto[]>();
+safePhotos.forEach((p) => {
+  const dayKey = p.capturedAt ? new Date(p.capturedAt).toDateString() : "Unknown";
+  if (!photosByDay.has(dayKey)) photosByDay.set(dayKey, []);
+  photosByDay.get(dayKey)!.push(p);
+});
+
+let timelineHtml = "";
+if (jobDays.length > 1 || (jobDays.length === 1 && photosByDay.size > 1)) {
+  const sortedDays = Array.from(photosByDay.keys()).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+  timelineHtml = `
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+<div style="margin-bottom:18px;">
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:19px;font-weight:bold;margin-bottom:10px;">Multi-Day Project Timeline</div>
+<div style="display:flex;gap:0;margin-bottom:16px;align-items:center;">
+${sortedDays.map((d, i) => `
+  <div style="text-align:center;flex:1;">
+    <div style="width:20px;height:20px;background:${i===sortedDays.length-1?"#f97316":"#22c55e"};border-radius:50%;margin:0 auto 4px;"></div>
+    <div style="font-size:10px;font-weight:bold;font-family:Helvetica,Arial,sans-serif;color:#374151;">Day ${i+1}</div>
+    <div style="font-size:9px;color:#6b7280;font-family:Helvetica,Arial,sans-serif;">${new Date(d).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}</div>
+    <div style="font-size:9px;color:#6b7280;font-family:Helvetica,Arial,sans-serif;">${photosByDay.get(d)?.length ?? 0} photos</div>
+  </div>
+  ${i < sortedDays.length-1 ? '<div style="flex:1;height:2px;background:#e5e7eb;margin-top:10px;"></div>' : ""}
+`).join("")}
+</div>
+${sortedDays.map((d, di) => `
+<div style="margin-bottom:16px;">
+  <div style="font-family:Helvetica,Arial,sans-serif;font-size:14px;font-weight:bold;color:#07152b;border-left:3px solid #f97316;padding-left:10px;margin-bottom:8px;">
+    Day ${di+1} — ${new Date(d).toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long"})} (${photosByDay.get(d)?.length ?? 0} photos)
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;">
+  ${(photosByDay.get(d) ?? []).map((p) => `
+    <div style="width:30%;box-sizing:border-box;">
+      <div style="font-size:9px;font-weight:bold;margin-bottom:3px;color:#374151;">${p.label}</div>
+      <img src="data:${p.mime};base64,${p.base64}" style="width:100%;height:90px;object-fit:cover;border:1px solid #d1d5db;border-radius:4px;"/>
+    </div>`).join("")}
+  </div>
+</div>`).join("")}
+</div>`;
 }
 
 const signatureHtml = signatureSvg
@@ -762,6 +940,8 @@ decoded.analysis
 ${photoHtml}
 </div>
 
+${photo360Html}${floorPlanHtml}${timelineHtml}
+
 <div style="margin-top: 18px; border-top: 1px solid #d1d5db; padding-top: 18px; page-break-inside: avoid;">
 <div style="font-size: 18px; font-weight: bold; margin-bottom: 14px;">Installer Sign-Off</div>
 
@@ -969,6 +1149,23 @@ return (
 </View>
 ) : (
 <>
+{/* Multi-day timeline display */}
+{jobDays.length > 0 && (
+  <View style={styles.dayTimelineCard}>
+    <Text style={styles.dayTimelineTitle}>PROJECT TIMELINE</Text>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dayTimelineRow}>
+      {jobDays.map((d, i) => (
+        <View key={d} style={[styles.dayTimelineItem, { marginHorizontal: 20 }]}>
+          {i > 0 && <View style={styles.dayTimelineConnector} />}
+          <View style={[styles.dayTimelineDot, i === jobDays.length - 1 && styles.dayTimelineDotLast]} />
+          <Text style={styles.dayTimelineLabel}>Day {i + 1}</Text>
+          <Text style={styles.dayTimelineDate}>{new Date(d).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}</Text>
+        </View>
+      ))}
+    </ScrollView>
+  </View>
+)}
+
 {/* ── Confidence Gauge ── */}
 <View style={styles.gaugeCard}>
   <View style={{ position: "relative", alignSelf: "center" }}>
@@ -1085,6 +1282,61 @@ return (
   <View style={styles.card}>
     <Text style={styles.section}>Analysis</Text>
     <Text style={styles.item}>{decoded!.analysis}</Text>
+  </View>
+)}
+
+{/* ── 360° Analysis ── */}
+{reviewPhotos360.length > 0 && (
+  <View style={styles.analysis360Card}>
+    <Text style={styles.analysis360Title}>360° Room Analysis</Text>
+    {result360 ? (
+      <>
+        <View style={styles.coverageRow}>
+          <Text style={styles.coverageLabel}>Coverage Score</Text>
+          <Text style={[styles.coverageScore, { color: result360.coverageScore >= 80 ? "#22c55e" : result360.coverageScore >= 50 ? "#f97316" : "#ef4444" }]}>
+            {result360.coverageScore}%
+          </Text>
+        </View>
+        {result360.detected.length > 0 && (
+          <View style={styles.analysis360Section}>
+            <Text style={styles.analysis360SectionLabel}>Detected in 360° shot</Text>
+            {result360.detected.map((x, i) => (
+              <Text key={i} style={styles.analysis360Item}>✓ {x}</Text>
+            ))}
+          </View>
+        )}
+        {result360.missingFromView.length > 0 && (
+          <View style={styles.analysis360Section}>
+            <Text style={[styles.analysis360SectionLabel, { color: "#ef4444" }]}>Not visible in 360°</Text>
+            {result360.missingFromView.map((x, i) => (
+              <Text key={i} style={[styles.analysis360Item, { color: "rgba(255,255,255,0.55)" }]}>✗ {x}</Text>
+            ))}
+          </View>
+        )}
+        {result360.recommendedPhotos.length > 0 && (
+          <View style={styles.analysis360Section}>
+            <Text style={[styles.analysis360SectionLabel, { color: "#f97316" }]}>Recommend additional photos of</Text>
+            {result360.recommendedPhotos.map((x, i) => (
+              <Text key={i} style={[styles.analysis360Item, { color: "#f97316" }]}>→ {x}</Text>
+            ))}
+          </View>
+        )}
+      </>
+    ) : (
+      <Pressable
+        style={[styles.analyze360Btn, loading360 && { opacity: 0.6 }]}
+        onPress={analyze360}
+        disabled={loading360}
+      >
+        {loading360
+          ? <ActivityIndicator color="#7c3aed" size="small" />
+          : <Text style={styles.analyze360BtnText}>Analyse 360° Photos ({reviewPhotos360.length})</Text>
+        }
+      </Pressable>
+    )}
+    <Text style={styles.analysis360Hint}>
+      360° photos are analysed separately for spatial coverage
+    </Text>
   </View>
 )}
 
@@ -1928,6 +2180,47 @@ padding: 14,
 alignItems: "center",
 },
 toastText: { color: "white", fontWeight: "900", fontSize: 15 },
+  analysis360Card: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(124,58,237,0.30)",
+    backgroundColor: "rgba(124,58,237,0.08)",
+    padding: 18,
+    gap: 12,
+  },
+  analysis360Title: { color: "white", fontWeight: "900", fontSize: 17 },
+  coverageRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  coverageLabel: { color: "rgba(255,255,255,0.65)", fontWeight: "700", fontSize: 14 },
+  coverageScore: { fontSize: 28, fontWeight: "900" },
+  analysis360Section: { gap: 4 },
+  analysis360SectionLabel: { color: "#22c55e", fontWeight: "800", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: 0.5 },
+  analysis360Item: { color: "rgba(255,255,255,0.70)", fontSize: 13 },
+  analyze360Btn: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(124,58,237,0.40)",
+    backgroundColor: "rgba(124,58,237,0.12)",
+  },
+  analyze360BtnText: { color: "#a78bfa", fontWeight: "900", fontSize: 14 },
+  analysis360Hint: { color: "rgba(255,255,255,0.30)", fontSize: 11 },
+  dayTimelineCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    padding: 14,
+    gap: 10,
+  },
+  dayTimelineTitle: { color: "rgba(255,255,255,0.35)", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
+  dayTimelineRow: { gap: 0, alignItems: "center" },
+  dayTimelineItem: { alignItems: "center", position: "relative" },
+  dayTimelineConnector: { position: "absolute", left: -12, top: 9, width: 24, height: 2, backgroundColor: "rgba(255,255,255,0.12)" },
+  dayTimelineDot: { width: 18, height: 18, borderRadius: 9, backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 2, borderColor: "rgba(255,255,255,0.25)" },
+  dayTimelineDotLast: { backgroundColor: "#f97316", borderColor: "#f97316" },
+  dayTimelineLabel: { color: "rgba(255,255,255,0.55)", fontSize: 11, fontWeight: "800", marginTop: 4 },
+  dayTimelineDate: { color: "rgba(255,255,255,0.30)", fontSize: 9 },
 });
 
 const shareStyles = StyleSheet.create({
