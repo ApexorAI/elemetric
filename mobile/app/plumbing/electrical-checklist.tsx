@@ -305,10 +305,19 @@ export default function ElectricalChecklist() {
   const [contractorName,      setContractorName]       = useState("");
 
   // Test readings
-  const [circuitVoltage,       setCircuitVoltage]       = useState("");
-  const [circuitCurrent,       setCircuitCurrent]       = useState("");
-  const [insulationResistance, setInsulationResistance] = useState("");
-  const [rcdTripTime,          setRcdTripTime]          = useState("");
+  const [circuitVoltage,          setCircuitVoltage]          = useState("");
+  const [supplyFrequency,         setSupplyFrequency]         = useState("");
+  const [circuitCurrent,          setCircuitCurrent]          = useState("");
+  const [insulationResistance,    setInsulationResistance]    = useState("");
+  const [insulationResistanceLN,  setInsulationResistanceLN]  = useState("");
+  const [insulationResistanceLPE, setInsulationResistanceLPE] = useState("");
+  const [insulationResistanceNPE, setInsulationResistanceNPE] = useState("");
+  const [earthLoopImpedance,      setEarthLoopImpedance]      = useState("");
+  const [pscc,                    setPscc]                    = useState("");
+  const [rcdTripTime,             setRcdTripTime]             = useState("");
+  const [rcdTripCurrent,          setRcdTripCurrent]          = useState("");
+  const [testInstrumentModel,     setTestInstrumentModel]     = useState("");
+  const [testInstrumentCalDate,   setTestInstrumentCalDate]   = useState("");
 
   // Profile
   const [profileCompany, setProfileCompany] = useState("");
@@ -598,23 +607,42 @@ ${qrHtml}
 
 <hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
 
-<!-- Test Readings -->
+<!-- Electrical Test Results -->
 <div style="margin-bottom:16px;">
-<div style="font-size:19px;font-weight:bold;margin-bottom:10px;font-family:Helvetica,Arial,sans-serif;">Test Results</div>
-<table style="width:100%;border-collapse:collapse;">
+<div style="font-size:19px;font-weight:bold;margin-bottom:6px;font-family:Helvetica,Arial,sans-serif;">Electrical Test Results</div>
+<div style="font-size:11px;color:#6b7280;margin-bottom:12px;font-family:Helvetica,Arial,sans-serif;">AS/NZS 3000:2018 — All values recorded using calibrated test instrument</div>
+<table style="width:100%;border-collapse:collapse;margin-bottom:14px;">
 <thead>
-<tr>
-<th style="${th}width:55%;">Test Parameter</th>
-<th style="${th}">Recorded Value</th>
+<tr style="background:#f8fafc;">
+<th style="${th}width:45%;">Test Parameter</th>
+<th style="${th}width:20%;">Recorded Value</th>
+<th style="${th}">Reference / Limit (AS/NZS 3000)</th>
 </tr>
 </thead>
 <tbody>
-<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Circuit Voltage</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${circuitVoltage || "—"} V</td></tr>
-<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Circuit Current</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${circuitCurrent || "—"} A</td></tr>
-<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Insulation Resistance</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${insulationResistance || "—"} MΩ</td></tr>
-<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">RCD Trip Time</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${rcdTripTime || "—"} ms</td></tr>
+<tr style="background:#fafafa;"><td colspan="3" style="${td}font-family:Helvetica,Arial,sans-serif;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#374151;">Supply Characteristics</td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Supply Voltage</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${circuitVoltage ? circuitVoltage + " V" : "—"}</td><td style="${td}font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">230 V ±6% (216–244 V)</td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Supply Frequency</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${supplyFrequency ? supplyFrequency + " Hz" : "—"}</td><td style="${td}font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">50 Hz ±0.5 Hz</td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Circuit Current</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${circuitCurrent ? circuitCurrent + " A" : "—"}</td><td style="${td}font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">Must not exceed rated current</td></tr>
+<tr style="background:#fafafa;"><td colspan="3" style="${td}font-family:Helvetica,Arial,sans-serif;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#374151;">Insulation Resistance @ 500 V DC</td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Line → Neutral (L-N)</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${insulationResistanceLN ? insulationResistanceLN + " MΩ" : "—"}</td><td style="${td}font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">≥ 1 MΩ (cl. 8.3.3)</td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Line → Earth (L-PE)</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${insulationResistanceLPE ? insulationResistanceLPE + " MΩ" : "—"}</td><td style="${td}font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">≥ 1 MΩ (cl. 8.3.3)</td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Neutral → Earth (N-PE)</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${insulationResistanceNPE ? insulationResistanceNPE + " MΩ" : "—"}</td><td style="${td}font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">≥ 1 MΩ (cl. 8.3.3)</td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Overall IR</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${insulationResistance ? insulationResistance + " MΩ" : "—"}</td><td style="${td}font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">≥ 1 MΩ (cl. 8.3.3)</td></tr>
+<tr style="background:#fafafa;"><td colspan="3" style="${td}font-family:Helvetica,Arial,sans-serif;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#374151;">Earth Fault Loop &amp; Short-Circuit Protection</td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Earth Loop Impedance (Ze)</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${earthLoopImpedance ? earthLoopImpedance + " Ω" : "—"}</td><td style="${td}font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">≤ 0.8 Ω (typical)</td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Prospective Short-Circuit Current (PSCC)</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${pscc ? pscc + " A" : "—"}</td><td style="${td}font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">Within device rating</td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">RCD Trip Time</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${rcdTripTime ? rcdTripTime + " ms" : "—"}</td><td style="${td}font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">≤ 300 ms @ I△n (cl. 2.6.2)</td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">RCD Trip Current</td><td style="${td}font-weight:bold;font-family:Helvetica,Arial,sans-serif;">${rcdTripCurrent ? rcdTripCurrent + " mA" : "—"}</td><td style="${td}font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">≤ 30 mA (personal protection)</td></tr>
+<tr style="background:#fafafa;"><td colspan="3" style="${td}font-family:Helvetica,Arial,sans-serif;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#374151;">Test Instrument</td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Instrument Serial Number</td><td style="${td}font-family:Helvetica,Arial,sans-serif;">${testInstrumentSerial || "—"}</td><td style="${td}font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;"></td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Instrument Model</td><td style="${td}font-family:Helvetica,Arial,sans-serif;">${testInstrumentModel || "—"}</td><td style="${td}font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;"></td></tr>
+<tr><td style="${td}font-family:Helvetica,Arial,sans-serif;">Calibration Due Date</td><td style="${td}font-family:Helvetica,Arial,sans-serif;">${testInstrumentCalDate || "—"}</td><td style="${td}font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">Must be current</td></tr>
 </tbody>
 </table>
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px 14px;font-family:Helvetica,Arial,sans-serif;font-size:11px;color:#1e40af;line-height:1.5;">
+  <strong>Test Method Note:</strong> All tests performed in accordance with AS/NZS 3000:2018 Appendix B and Energy Safe Victoria Certificate of Electrical Safety requirements. Test instrument calibrated and traceable to national standards.
+</div>
 </div>
 
 ${aiSection}
@@ -781,28 +809,75 @@ ${allPhotoMeta.length > 0 ? `
           <TextInput style={styles.input} value={testInstrumentSerial} onChangeText={setTestInstrumentSerial} placeholderTextColor="#555" placeholder="e.g. SN-2024-0001" />
         </View>
 
+        {/* ── Electrician Details continued ── */}
+        {/* Additional instrument info now in Electrician Details section */}
+
         {/* ── Test Readings ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Test Readings</Text>
-          <Text style={styles.sectionSub}>Record actual measured values</Text>
+          <Text style={styles.sectionTitle}>Electrical Test Results</Text>
+          <Text style={styles.sectionSub}>AS/NZS 3000:2018 — All values per calibrated instrument</Text>
+
+          <Text style={styles.subHeading}>Supply Characteristics</Text>
           <View style={styles.readingsGrid}>
             <View style={styles.readingCell}>
-              <Text style={styles.fieldLabel}>Circuit Voltage (V)</Text>
+              <Text style={styles.fieldLabel}>Supply Voltage (V)</Text>
               <TextInput style={styles.input} value={circuitVoltage} onChangeText={setCircuitVoltage} keyboardType="decimal-pad" placeholderTextColor="#555" placeholder="e.g. 230" />
+            </View>
+            <View style={styles.readingCell}>
+              <Text style={styles.fieldLabel}>Frequency (Hz)</Text>
+              <TextInput style={styles.input} value={supplyFrequency} onChangeText={setSupplyFrequency} keyboardType="decimal-pad" placeholderTextColor="#555" placeholder="e.g. 50" />
             </View>
             <View style={styles.readingCell}>
               <Text style={styles.fieldLabel}>Circuit Current (A)</Text>
               <TextInput style={styles.input} value={circuitCurrent} onChangeText={setCircuitCurrent} keyboardType="decimal-pad" placeholderTextColor="#555" placeholder="e.g. 15.4" />
             </View>
+          </View>
+
+          <Text style={styles.subHeading}>Insulation Resistance (MΩ @ 500V DC)</Text>
+          <View style={styles.readingsGrid}>
             <View style={styles.readingCell}>
-              <Text style={styles.fieldLabel}>Insulation Resistance (MΩ)</Text>
-              <TextInput style={styles.input} value={insulationResistance} onChangeText={setInsulationResistance} keyboardType="decimal-pad" placeholderTextColor="#555" placeholder="e.g. 100" />
+              <Text style={styles.fieldLabel}>Line → Neutral</Text>
+              <TextInput style={styles.input} value={insulationResistanceLN} onChangeText={setInsulationResistanceLN} keyboardType="decimal-pad" placeholderTextColor="#555" placeholder="e.g. 200" />
+            </View>
+            <View style={styles.readingCell}>
+              <Text style={styles.fieldLabel}>Line → Earth</Text>
+              <TextInput style={styles.input} value={insulationResistanceLPE} onChangeText={setInsulationResistanceLPE} keyboardType="decimal-pad" placeholderTextColor="#555" placeholder="e.g. 200" />
+            </View>
+            <View style={styles.readingCell}>
+              <Text style={styles.fieldLabel}>Neutral → Earth</Text>
+              <TextInput style={styles.input} value={insulationResistanceNPE} onChangeText={setInsulationResistanceNPE} keyboardType="decimal-pad" placeholderTextColor="#555" placeholder="e.g. 200" />
+            </View>
+            <View style={styles.readingCell}>
+              <Text style={styles.fieldLabel}>Overall IR (MΩ)</Text>
+              <TextInput style={styles.input} value={insulationResistance} onChangeText={setInsulationResistance} keyboardType="decimal-pad" placeholderTextColor="#555" placeholder="≥ 1 MΩ" />
+            </View>
+          </View>
+
+          <Text style={styles.subHeading}>Earth Fault Loop &amp; Protection</Text>
+          <View style={styles.readingsGrid}>
+            <View style={styles.readingCell}>
+              <Text style={styles.fieldLabel}>Earth Loop Impedance (Ω)</Text>
+              <TextInput style={styles.input} value={earthLoopImpedance} onChangeText={setEarthLoopImpedance} keyboardType="decimal-pad" placeholderTextColor="#555" placeholder="e.g. 0.45" />
+            </View>
+            <View style={styles.readingCell}>
+              <Text style={styles.fieldLabel}>PSCC (A)</Text>
+              <TextInput style={styles.input} value={pscc} onChangeText={setPscc} keyboardType="decimal-pad" placeholderTextColor="#555" placeholder="Prospective short-circuit" />
             </View>
             <View style={styles.readingCell}>
               <Text style={styles.fieldLabel}>RCD Trip Time (ms)</Text>
-              <TextInput style={styles.input} value={rcdTripTime} onChangeText={setRcdTripTime} keyboardType="decimal-pad" placeholderTextColor="#555" placeholder="e.g. 28" />
+              <TextInput style={styles.input} value={rcdTripTime} onChangeText={setRcdTripTime} keyboardType="decimal-pad" placeholderTextColor="#555" placeholder="≤ 300 ms" />
+            </View>
+            <View style={styles.readingCell}>
+              <Text style={styles.fieldLabel}>RCD Trip Current (mA)</Text>
+              <TextInput style={styles.input} value={rcdTripCurrent} onChangeText={setRcdTripCurrent} keyboardType="decimal-pad" placeholderTextColor="#555" placeholder="≤ 30 mA" />
             </View>
           </View>
+
+          <Text style={styles.subHeading}>Test Instrument Details</Text>
+          <Text style={styles.fieldLabel}>Instrument Model</Text>
+          <TextInput style={styles.input} value={testInstrumentModel} onChangeText={setTestInstrumentModel} placeholderTextColor="#555" placeholder="e.g. Fluke 1663" />
+          <Text style={styles.fieldLabel}>Calibration Due Date</Text>
+          <TextInput style={styles.input} value={testInstrumentCalDate} onChangeText={setTestInstrumentCalDate} placeholderTextColor="#555" placeholder="DD/MM/YYYY" />
         </View>
 
         {/* ── Installation Checks ── */}
@@ -1003,6 +1078,7 @@ const styles = StyleSheet.create({
 
   readingsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   readingCell:  { width: "47%" },
+  subHeading: { color: "rgba(255,255,255,0.55)", fontWeight: "800", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 8 },
 
   checkCard: {
     borderRadius: 12,
