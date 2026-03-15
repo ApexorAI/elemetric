@@ -21,7 +21,33 @@ type MemberData = {
   jobCount: number;
   lastActive: string | null;
   role: string;
+  periodJobCount: number;
+  periodAvgScore: number | null;
 };
+
+type ActivityItem = {
+  id: string;
+  userName: string;
+  jobType: string;
+  jobName: string;
+  confidence: number;
+  createdAt: string;
+};
+
+type Period = "week" | "month" | "year";
+
+const JOB_TYPE_ICONS: Record<string, string> = {
+  hotwater: "🔧", gas: "🔥", drainage: "🚿", newinstall: "🏗️",
+  electrical: "⚡", hvac: "❄️", carpentry: "🪚",
+};
+
+function periodStart(p: Period): Date {
+  const d = new Date();
+  if (p === "week") d.setDate(d.getDate() - 7);
+  else if (p === "month") d.setMonth(d.getMonth() - 1);
+  else d.setFullYear(d.getFullYear() - 1);
+  return d;
+}
 
 // ── Main screen ──────────────────────────────────────────────────────────────
 
@@ -31,8 +57,10 @@ export default function EmployerDashboard() {
   const [loading, setLoading] = useState(true);
   const [teamName, setTeamName] = useState("");
   const [members, setMembers] = useState<MemberData[]>([]);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [period, setPeriod] = useState<Period>("month");
 
   // ── Load data ────────────────────────────────────────────────────────────────
 
@@ -74,6 +102,7 @@ export default function EmployerDashboard() {
 
           // Hydrate each member with profile + job data
           const hydrated: MemberData[] = [];
+          const activityItems: ActivityItem[] = [];
 
           for (const m of rawMembers) {
             if (!active) break;
@@ -99,16 +128,35 @@ export default function EmployerDashboard() {
               }
             } catch {}
 
+            let periodJobCount = 0;
+            let periodAvgScore: number | null = null;
             try {
               const { data: jobs } = await supabase
                 .from("jobs")
-                .select("created_at")
+                .select("created_at, confidence, job_type, job_name, id")
                 .eq("user_id", m.user_id)
                 .order("created_at", { ascending: false });
 
               if (jobs) {
                 jobCount = jobs.length;
                 lastActive = jobs[0]?.created_at ?? null;
+                const pStart = periodStart(period);
+                const pJobs = jobs.filter((j: any) => new Date(j.created_at) >= pStart);
+                periodJobCount = pJobs.length;
+                if (pJobs.length > 0) {
+                  periodAvgScore = Math.round(pJobs.reduce((s: number, j: any) => s + (j.confidence ?? 0), 0) / pJobs.length);
+                }
+                // Add to activity feed
+                for (const j of pJobs.slice(0, 5)) {
+                  activityItems.push({
+                    id: j.id,
+                    userName: fullName,
+                    jobType: j.job_type,
+                    jobName: j.job_name,
+                    confidence: j.confidence ?? 0,
+                    createdAt: j.created_at,
+                  });
+                }
               }
             } catch {}
 
@@ -120,10 +168,19 @@ export default function EmployerDashboard() {
               jobCount,
               lastActive,
               role: m.role ?? "member",
+              periodJobCount,
+              periodAvgScore,
             });
           }
 
-          if (active) setMembers(hydrated);
+          if (active) {
+            setMembers(hydrated);
+            setActivity(
+              activityItems
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                .slice(0, 10)
+            );
+          }
         } catch (e: any) {
           if (active)
             setErrorMsg(e?.message ?? "An error occurred loading team data.");
@@ -212,17 +269,98 @@ export default function EmployerDashboard() {
         contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}
       >
+        {/* ── Period selector ── */}
+        <View style={styles.periodRow}>
+          {(["week", "month", "year"] as Period[]).map((p) => (
+            <Pressable
+              key={p}
+              style={[styles.periodBtn, period === p && styles.periodBtnActive]}
+              onPress={() => setPeriod(p)}
+            >
+              <Text style={[styles.periodBtnText, period === p && styles.periodBtnTextActive]}>
+                {p === "week" ? "This Week" : p === "month" ? "This Month" : "This Year"}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
         {/* ── Stats row ── */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{members.length}</Text>
-            <Text style={styles.statLabel}>Total Members</Text>
+            <Text style={styles.statLabel}>Team Members</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{avgCompliance()}</Text>
             <Text style={styles.statLabel}>Avg Compliance</Text>
           </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{members.reduce((s, m) => s + m.periodJobCount, 0)}</Text>
+            <Text style={styles.statLabel}>Jobs This {period === "week" ? "Week" : period === "month" ? "Month" : "Year"}</Text>
+          </View>
         </View>
+
+        {/* ── Compliance distribution ── */}
+        {members.length > 0 && (() => {
+          const compliant = members.filter((m) => (m.complianceScore ?? 0) >= 80).length;
+          const review = members.filter((m) => (m.complianceScore ?? 0) >= 60 && (m.complianceScore ?? 0) < 80).length;
+          const nonCompliant = members.filter((m) => m.complianceScore !== null && (m.complianceScore ?? 0) < 60).length;
+          const total = members.length;
+          return (
+            <View style={styles.distCard}>
+              <Text style={styles.sectionLabel}>COMPLIANCE DISTRIBUTION</Text>
+              {[
+                { label: "Compliant (≥80%)", count: compliant, color: "#22c55e" },
+                { label: "Review (60–79%)", count: review, color: "#f97316" },
+                { label: "Non-Compliant (<60%)", count: nonCompliant, color: "#ef4444" },
+              ].map((row) => (
+                <View key={row.label} style={styles.distRow}>
+                  <Text style={styles.distLabel}>{row.label}</Text>
+                  <View style={styles.distBarWrap}>
+                    <View style={[styles.distBar, { width: `${total > 0 ? (row.count / total) * 100 : 0}%` as any, backgroundColor: row.color }]} />
+                  </View>
+                  <Text style={[styles.distCount, { color: row.color }]}>{row.count}</Text>
+                </View>
+              ))}
+            </View>
+          );
+        })()}
+
+        {/* ── League table ── */}
+        <Text style={styles.sectionLabel}>LEAGUE TABLE — SORTED BY COMPLIANCE</Text>
+        {members
+          .slice()
+          .sort((a, b) => (b.complianceScore ?? -1) - (a.complianceScore ?? -1))
+          .map((m, rank) => (
+            <View key={m.userId} style={[styles.leagueRow, rank === 0 && styles.leagueRowFirst]}>
+              <Text style={[styles.leagueRank, rank === 0 && { color: "#f97316" }]}>#{rank + 1}</Text>
+              <View style={styles.leagueInfo}>
+                <Text style={styles.leagueName}>{m.fullName}</Text>
+                <Text style={styles.leagueMeta}>{m.periodJobCount} job{m.periodJobCount !== 1 ? "s" : ""} this {period} · {m.jobCount} total</Text>
+              </View>
+              <Text style={[styles.leagueScore, { color: complianceColor(m.complianceScore) }]}>
+                {m.complianceScore != null ? `${m.complianceScore}%` : "—"}
+              </Text>
+            </View>
+          ))
+        }
+
+        {/* ── Activity feed ── */}
+        {activity.length > 0 && (
+          <>
+            <Text style={styles.sectionLabel}>RECENT ACTIVITY</Text>
+            {activity.map((a) => (
+              <View key={a.id} style={styles.activityRow}>
+                <Text style={styles.activityIcon}>{JOB_TYPE_ICONS[a.jobType] ?? "📋"}</Text>
+                <View style={styles.activityInfo}>
+                  <Text style={styles.activityName} numberOfLines={1}>{a.jobName}</Text>
+                  <Text style={styles.activityMeta}>{a.userName} · {new Date(a.createdAt).toLocaleDateString("en-AU", { day: "2-digit", month: "short" })}</Text>
+                </View>
+                <Text style={[styles.activityScore, { color: complianceColor(a.confidence) }]}>{a.confidence}%</Text>
+              </View>
+            ))}
+          </>
+        )}
 
         {/* ── Members list ── */}
         <Text style={styles.sectionLabel}>TEAM MEMBERS</Text>
@@ -376,6 +514,68 @@ const styles = StyleSheet.create({
   teamName: { marginTop: 4, color: "#f97316", fontSize: 14, fontWeight: "700" },
 
   body: { padding: 18, gap: 12, paddingBottom: 60 },
+
+  periodRow: { flexDirection: "row", gap: 8, marginBottom: -4 },
+  periodBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  periodBtnActive: { borderColor: "#f97316", backgroundColor: "rgba(249,115,22,0.12)" },
+  periodBtnText: { color: "rgba(255,255,255,0.5)", fontWeight: "700", fontSize: 12 },
+  periodBtnTextActive: { color: "#f97316" },
+
+  distCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    padding: 14,
+    gap: 10,
+  },
+  distRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  distLabel: { color: "rgba(255,255,255,0.6)", fontSize: 12, width: 130 },
+  distBarWrap: { flex: 1, height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" },
+  distBar: { height: 8, borderRadius: 4 },
+  distCount: { fontWeight: "900", fontSize: 14, width: 24, textAlign: "right" },
+
+  leagueRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "rgba(255,255,255,0.03)",
+  },
+  leagueRowFirst: { borderColor: "rgba(249,115,22,0.25)", backgroundColor: "rgba(249,115,22,0.06)" },
+  leagueRank: { color: "rgba(255,255,255,0.35)", fontWeight: "900", fontSize: 15, width: 28 },
+  leagueInfo: { flex: 1 },
+  leagueName: { color: "white", fontWeight: "700", fontSize: 14 },
+  leagueMeta: { color: "rgba(255,255,255,0.40)", fontSize: 11, marginTop: 1 },
+  leagueScore: { fontWeight: "900", fontSize: 18 },
+
+  activityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "rgba(255,255,255,0.02)",
+  },
+  activityIcon: { fontSize: 18, width: 24, textAlign: "center" },
+  activityInfo: { flex: 1 },
+  activityName: { color: "white", fontWeight: "700", fontSize: 13 },
+  activityMeta: { color: "rgba(255,255,255,0.40)", fontSize: 11 },
+  activityScore: { fontWeight: "900", fontSize: 14 },
 
   statsRow: { flexDirection: "row", gap: 12 },
   statCard: {
