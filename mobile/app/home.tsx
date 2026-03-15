@@ -253,6 +253,15 @@ export default function Home() {
           <Text style={s.secondaryBtnText}>Near Miss</Text>
         </Pressable>
         <Pressable
+          style={s.secondaryBtn}
+          onPress={() => router.push("/client-portal")}
+          accessibilityRole="button"
+          accessibilityLabel="Client Portal"
+          accessibilityHint="Share compliance records with a client"
+        >
+          <Text style={s.secondaryBtnText}>Client Portal</Text>
+        </Pressable>
+        <Pressable
           style={[s.secondaryBtn, s.visualiserBtn]}
           onPress={() => router.push("/(tabs)/visualiser")}
           accessibilityRole="button"
