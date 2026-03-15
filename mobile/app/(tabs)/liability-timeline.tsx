@@ -7,6 +7,7 @@ ScrollView,
 Pressable,
 ActivityIndicator,
 } from "react-native";
+import { SkeletonTimelineCard } from "@/components/SkeletonLoader";
 import { useFocusEffect, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
@@ -139,9 +140,14 @@ const active = sorted.filter((j) => calcDaysRemaining(j.createdAt) > 365).length
 
 if (loading) {
 return (
-<View style={styles.loadingScreen}>
-<ActivityIndicator />
-<Text style={styles.loadingText}>Loading timeline…</Text>
+<View style={styles.screen}>
+<View style={styles.header}>
+<Text style={styles.brand}>ELEMETRIC</Text>
+<Text style={styles.title}>Liability Timeline</Text>
+</View>
+<ScrollView contentContainerStyle={[styles.body]}>
+{[1,2,3].map((i) => <SkeletonTimelineCard key={i} />)}
+</ScrollView>
 </View>
 );
 }

@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Dimensions,
 } from "react-native";
+import { SkeletonBox, SkeletonProfileCard } from "@/components/SkeletonLoader";
 import { useFocusEffect, useRouter } from "expo-router";
 import Svg, { Circle, Text as SvgText, Polyline, Line, G } from "react-native-svg";
 import * as WebBrowser from "expo-web-browser";
@@ -294,9 +295,22 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <View style={styles.loadingScreen}>
-        <ActivityIndicator />
-        <Text style={styles.loadingText}>Loading profile…</Text>
+      <View style={styles.screen}>
+        <View style={styles.header}>
+          <View style={styles.headerRow}>
+            <Text style={styles.brand}>ELEMETRIC</Text>
+          </View>
+          <Text style={styles.title}>Profile</Text>
+        </View>
+        <ScrollView contentContainerStyle={[styles.body, { gap: 12 }]}>
+          <SkeletonProfileCard />
+          {[1,2,3,4].map((i) => (
+            <View key={i} style={{ gap: 6 }}>
+              <SkeletonBox width={100} height={12} />
+              <SkeletonBox width="100%" height={44} borderRadius={12} />
+            </View>
+          ))}
+        </ScrollView>
       </View>
     );
   }

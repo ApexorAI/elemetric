@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useState, useEffect } from "react";
+import React, { useCallback, useMemo, useState, useEffect, useRef } from "react";
+import * as StoreReview from "expo-store-review";
 import {
 View,
 Text,
@@ -385,6 +386,23 @@ sendLocalNotification("Job Saved", "Saved locally — will sync when back online
 } else {
 setToast("Job saved successfully.");
 sendLocalNotification("Job Saved", "Your compliance report has been saved.");
+
+// Check if this is the 5th completed job — show app review prompt
+try {
+const reviewShownKey = "elemetric_review_prompt_shown";
+const alreadyShown = await AsyncStorage.getItem(reviewShownKey);
+if (!alreadyShown) {
+const existing = await AsyncStorage.getItem("elemetric_jobs");
+const localJobs = existing ? JSON.parse(existing) : [];
+if (localJobs.length >= 5) {
+const isAvailable = await StoreReview.isAvailableAsync();
+if (isAvailable) {
+await StoreReview.requestReview();
+await AsyncStorage.setItem(reviewShownKey, "true");
+}
+}
+}
+} catch {}
 }
 } catch (e: any) {
 Alert.alert("Save Failed", e?.message ?? "Could not save job. Check your internet connection and try again — your analysis is not lost.");

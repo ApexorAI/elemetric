@@ -7,6 +7,7 @@ import {
   ScrollView,
   Linking,
 } from "react-native";
+import { SkeletonBox, SkeletonHomeCard } from "@/components/SkeletonLoader";
 import { useRouter, useFocusEffect } from "expo-router";
 import Svg, { Circle, G } from "react-native-svg";
 import { supabase } from "@/lib/supabase";
@@ -95,6 +96,7 @@ export default function Home() {
   const [isEmployer,      setIsEmployer]      = useState(false);
   const [assignedCount,   setAssignedCount]   = useState(0);
   const [updateBanner,    setUpdateBanner]    = useState(false);
+  const [homeLoading,     setHomeLoading]     = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -174,6 +176,7 @@ export default function Home() {
             if (active) setUnreadNotifs(count ?? 0);
           } catch {}
         } catch {}
+        if (active) setHomeLoading(false);
       })();
       return () => { active = false; };
     }, [])
@@ -272,7 +275,14 @@ export default function Home() {
       )}
 
       {/* Recent jobs */}
-      {recentJobs.length > 0 && (
+      {homeLoading ? (
+        <View style={s.section}>
+          <View style={s.sectionHeader}>
+            <Text style={s.sectionLabel}>RECENT JOBS</Text>
+          </View>
+          {[1,2,3].map((i) => <SkeletonHomeCard key={i} />)}
+        </View>
+      ) : recentJobs.length > 0 && (
         <View style={s.section}>
           <View style={s.sectionHeader}>
             <Text style={s.sectionLabel}>RECENT JOBS</Text>

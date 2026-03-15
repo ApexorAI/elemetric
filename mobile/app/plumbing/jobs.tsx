@@ -11,6 +11,7 @@ RefreshControl,
 ActivityIndicator,
 Platform,
 } from "react-native";
+import { SkeletonJobCard } from "@/components/SkeletonLoader";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -108,6 +109,7 @@ const [showToPicker, setShowToPicker] = useState(false);
 const [selectMode, setSelectMode] = useState(false);
 const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 const [bulkExporting, setBulkExporting] = useState(false);
+const [loading, setLoading] = useState(true);
 
 const loadJobs = async () => {
 try {
@@ -135,6 +137,7 @@ createdAt: row.created_at,
 status: row.status ?? "unassigned",
 }));
 setJobs(remoteJobs);
+setLoading(false);
 return;
 }
 }
@@ -149,6 +152,7 @@ setJobs(parsed);
 } catch {
 setJobs([]);
 }
+setLoading(false);
 };
 
 useFocusEffect(
@@ -500,7 +504,9 @@ colors={["#f97316"]}
 />
 }
 >
-{filtered.length === 0 ? (
+{loading ? (
+[1,2,3].map((i) => <SkeletonJobCard key={i} />)
+) : filtered.length === 0 ? (
 jobs.length === 0 ? (
 <View style={styles.emptyState}>
 <Text style={styles.emptyLogo}>ELEMETRIC</Text>
@@ -582,7 +588,7 @@ accessibilityLabel="Share job as PDF"
 ))
 )}
 
-{jobs.length > 0 && (
+{jobs.length > 0 && !loading && (
 <Pressable style={styles.clearBtn} onPress={clearJobs}>
 <Text style={styles.clearText}>Clear All Jobs</Text>
 </Pressable>
