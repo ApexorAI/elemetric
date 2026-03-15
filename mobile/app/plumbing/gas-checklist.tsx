@@ -317,7 +317,16 @@ const [registrationNumber,setRegistrationNumber]= useState("");
 const [applianceLocation, setApplianceLocation] = useState("");
 const [applianceType,     setApplianceType]     = useState("");
 const [applianceMakeModel,setApplianceMakeModel]= useState("");
+const [applianceSerial,   setApplianceSerial]   = useState("");
+const [lastServiceDate,   setLastServiceDate]   = useState("");
 const [nextServiceDate,   setNextServiceDate]   = useState("");
+
+// Gas technical data
+const [gasType,          setGasType]          = useState<"Natural Gas" | "LPG" | "">("");
+const [inletPressure,    setInletPressure]    = useState("");
+const [outletPressure,   setOutletPressure]   = useState("");
+const [consumptionRate,  setConsumptionRate]  = useState("");
+const [certifyingBody,   setCertifyingBody]   = useState("");
 
 // GPS
 const [gpsCoords,  setGpsCoords]  = useState<{ lat: number; lng: number } | null>(null);
@@ -695,6 +704,7 @@ body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: 
     <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Date</td><td style="font-family:Helvetica,Arial,sans-serif;">${dateStr}</td></tr>
     <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Address</td><td style="font-family:Helvetica,Arial,sans-serif;">${jobAddr}</td></tr>
     <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">GPS Coordinates</td><td style="font-family:Helvetica,Arial,sans-serif;">${gpsLine}</td></tr>
+    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Gas Type</td><td style="font-family:Helvetica,Arial,sans-serif;">${gasType || "Not recorded"}</td></tr>
     <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Gas Fitter</td><td style="font-family:Helvetica,Arial,sans-serif;">${licenceNumber || "Not entered"}</td></tr>
     <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">AI Confidence</td><td style="font-family:Helvetica,Arial,sans-serif;">${aiResult ? `${aiResult.confidence ?? 0}%` : "Not analysed"}</td></tr>
     <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Overall Result</td><td style="font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:${resultColor};">${overallResult}</td></tr>
@@ -736,8 +746,49 @@ body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: 
     <tr><td style="padding:5px 0;width:180px;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Location</td><td style="font-family:Helvetica,Arial,sans-serif;">${applianceLocation || "Not entered"}</td></tr>
     <tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Type</td><td style="font-family:Helvetica,Arial,sans-serif;">${applianceType || "Not entered"}</td></tr>
     <tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Make / Model</td><td style="font-family:Helvetica,Arial,sans-serif;">${applianceMakeModel || "Not entered"}</td></tr>
+    <tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Serial Number</td><td style="font-family:Helvetica,Arial,sans-serif;">${applianceSerial || "Not entered"}</td></tr>
+    <tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Last Service Date</td><td style="font-family:Helvetica,Arial,sans-serif;">${lastServiceDate || "Not entered"}</td></tr>
     <tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Next Service Due</td><td style="font-family:Helvetica,Arial,sans-serif;">${nextServiceDate || "Not entered"}</td></tr>
+    <tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Certifying Body</td><td style="font-family:Helvetica,Arial,sans-serif;">${certifyingBody || "Not entered"}</td></tr>
   </table>
+</div>
+
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
+<!-- Gas Technical Data -->
+<div style="margin-bottom:16px;">
+  <div style="font-family:Helvetica,Arial,sans-serif;font-size:19px;font-weight:bold;margin-bottom:6px;">Gas Technical Data</div>
+  <div style="font-family:Helvetica,Arial,sans-serif;font-size:11px;color:#6b7280;margin-bottom:12px;">AS/NZS 5601.1:2013 — Pressure &amp; Consumption Measurements</div>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:14px;">
+    <tr style="background:#f8fafc;">
+      <th style="padding:7px 10px;text-align:left;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#374151;">Parameter</th>
+      <th style="padding:7px 10px;text-align:left;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#374151;">Recorded Value</th>
+      <th style="padding:7px 10px;text-align:left;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#374151;">Reference (AS/NZS 5601.1)</th>
+    </tr>
+    <tr>
+      <td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Gas Type</td>
+      <td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${gasType || "Not recorded"}</td>
+      <td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:12px;">Natural Gas or LPG</td>
+    </tr>
+    <tr style="background:#fafafa;">
+      <td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Inlet Supply Pressure</td>
+      <td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${inletPressure ? inletPressure + " kPa" : "Not recorded"}</td>
+      <td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:12px;">NG: 1.0–2.75 kPa · LPG: 2.75 kPa</td>
+    </tr>
+    <tr>
+      <td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Outlet Working Pressure</td>
+      <td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${outletPressure ? outletPressure + " kPa" : "Not recorded"}</td>
+      <td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:12px;">Per appliance data plate ±10%</td>
+    </tr>
+    <tr style="background:#fafafa;">
+      <td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Gas Consumption Rate</td>
+      <td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${consumptionRate ? consumptionRate + " MJ/h" : "Not recorded"}</td>
+      <td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:12px;">Must not exceed rated input</td>
+    </tr>
+  </table>
+  <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:10px 14px;font-family:Helvetica,Arial,sans-serif;font-size:11px;color:#92400e;line-height:1.5;">
+    <strong>Pressure Test Note:</strong> All pressure measurements recorded using calibrated gauge. Inlet pressure measured at the meter outlet/regulator downstream. Outlet working pressure measured at the appliance test point per manufacturer specification and AS/NZS 5601.1 Clause 8.
+  </div>
 </div>
 
 ${aiSection}
@@ -906,8 +957,41 @@ showsVerticalScrollIndicator={false}
 <TextInput style={styles.input} value={applianceType} onChangeText={setApplianceType} placeholderTextColor="#555" />
 <Text style={styles.fieldLabel}>Make / Model</Text>
 <TextInput style={styles.input} value={applianceMakeModel} onChangeText={setApplianceMakeModel} placeholderTextColor="#555" />
+<Text style={styles.fieldLabel}>Serial Number</Text>
+<TextInput style={styles.input} value={applianceSerial} onChangeText={setApplianceSerial} placeholder="Manufacturer serial number" placeholderTextColor="#555" />
+<Text style={styles.fieldLabel}>Last Service Date</Text>
+<TextInput style={styles.input} value={lastServiceDate} onChangeText={setLastServiceDate} placeholder="DD/MM/YYYY" placeholderTextColor="#555" />
 <Text style={styles.fieldLabel}>Next Service Due</Text>
 <TextInput style={styles.input} value={nextServiceDate} onChangeText={setNextServiceDate} placeholder="DD/MM/YYYY" placeholderTextColor="#555" />
+<Text style={styles.fieldLabel}>Certifying Body</Text>
+<TextInput style={styles.input} value={certifyingBody} onChangeText={setCertifyingBody} placeholder="e.g. Energy Safe Victoria" placeholderTextColor="#555" />
+</View>
+
+{/* ── Gas Technical Data ── */}
+<View style={styles.section}>
+<Text style={styles.sectionTitle}>Gas Technical Data</Text>
+<Text style={styles.sectionSub}>AS/NZS 5601.1:2013 — Pressure &amp; Consumption</Text>
+<Text style={styles.fieldLabel}>Gas Type</Text>
+<View style={styles.chipRow}>
+{(["Natural Gas", "LPG"] as const).map((t) => (
+  <Pressable
+    key={t}
+    style={[styles.chip, gasType === t && styles.chipActive]}
+    onPress={() => setGasType(gasType === t ? "" : t)}
+  >
+    <Text style={[styles.chipText, gasType === t && styles.chipTextActive]}>{t}</Text>
+  </Pressable>
+))}
+</View>
+<Text style={styles.fieldLabel}>Inlet Supply Pressure (kPa)</Text>
+<TextInput style={styles.input} value={inletPressure} onChangeText={setInletPressure} placeholder="e.g. 1.25" keyboardType="decimal-pad" placeholderTextColor="#555" />
+<Text style={styles.fieldHint}>NG: 1.0–2.75 kPa  ·  LPG: 2.75 kPa</Text>
+<Text style={styles.fieldLabel}>Outlet Working Pressure (kPa)</Text>
+<TextInput style={styles.input} value={outletPressure} onChangeText={setOutletPressure} placeholder="e.g. 1.0" keyboardType="decimal-pad" placeholderTextColor="#555" />
+<Text style={styles.fieldHint}>Per appliance data plate ±10%</Text>
+<Text style={styles.fieldLabel}>Gas Consumption Rate (MJ/h)</Text>
+<TextInput style={styles.input} value={consumptionRate} onChangeText={setConsumptionRate} placeholder="e.g. 18.5" keyboardType="decimal-pad" placeholderTextColor="#555" />
+<Text style={styles.fieldHint}>Must not exceed rated input on data plate</Text>
 </View>
 
 {/* ── GPS ── */}
@@ -1115,6 +1199,23 @@ sectionTitle: { color: "white", fontWeight: "900", fontSize: 16 },
 sectionSub:   { color: "rgba(255,255,255,0.45)", fontSize: 12, marginTop: -4 },
 
 fieldLabel: { color: "rgba(255,255,255,0.7)", fontWeight: "700", fontSize: 13 },
+fieldHint: { color: "rgba(255,255,255,0.35)", fontSize: 11, marginTop: -6 },
+
+chipRow: { flexDirection: "row", gap: 10 },
+chip: {
+  paddingHorizontal: 16,
+  paddingVertical: 9,
+  borderRadius: 20,
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.15)",
+  backgroundColor: "rgba(255,255,255,0.05)",
+},
+chipActive: {
+  borderColor: "#f97316",
+  backgroundColor: "rgba(249,115,22,0.15)",
+},
+chipText: { color: "rgba(255,255,255,0.6)", fontWeight: "700", fontSize: 13 },
+chipTextActive: { color: "#f97316" },
 input: {
 backgroundColor: "rgba(255,255,255,0.06)",
 borderRadius: 10,
