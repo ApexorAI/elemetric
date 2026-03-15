@@ -9,7 +9,9 @@ Alert,
 TextInput,
 RefreshControl,
 ActivityIndicator,
+Platform,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -99,6 +101,10 @@ const [search, setSearch] = useState("");
 const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
 const [refreshing, setRefreshing] = useState(false);
 const [sharingJobId, setSharingJobId] = useState<string | null>(null);
+const [dateFrom, setDateFrom] = useState<Date | null>(null);
+const [dateTo, setDateTo] = useState<Date | null>(null);
+const [showFromPicker, setShowFromPicker] = useState(false);
+const [showToPicker, setShowToPicker] = useState(false);
 
 const loadJobs = async () => {
 try {
@@ -260,7 +266,7 @@ setSharingJobId(null);
 const countFor = (key: FilterKey) =>
 key === "all" ? jobs.length : jobs.filter((j) => j.jobType === key).length;
 
-// Apply filter + search
+// Apply filter + search + date range
 const filtered = jobs.filter((job) => {
 const matchesFilter = activeFilter === "all" || job.jobType === activeFilter;
 const q = search.trim().toLowerCase();
@@ -269,7 +275,10 @@ const matchesSearch =
 job.jobName.toLowerCase().includes(q) ||
 job.jobAddr.toLowerCase().includes(q) ||
 (JOB_TYPE_LABELS[job.jobType] ?? job.jobType).toLowerCase().includes(q);
-return matchesFilter && matchesSearch;
+const jobDate = new Date(job.createdAt);
+const matchesFrom = !dateFrom || jobDate >= dateFrom;
+const matchesTo = !dateTo || jobDate <= new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), 23, 59, 59);
+return matchesFilter && matchesSearch && matchesFrom && matchesTo;
 });
 
 return (
@@ -291,6 +300,62 @@ clearButtonMode="while-editing"
 returnKeyType="search"
 />
 </View>
+
+{/* Date range pickers */}
+<View style={styles.dateRow}>
+<Pressable
+style={[styles.datePill, dateFrom && styles.datePillActive]}
+onPress={() => { setShowFromPicker(true); setShowToPicker(false); }}
+>
+<Text style={[styles.datePillText, dateFrom && styles.datePillTextActive]}>
+{dateFrom ? `From: ${dateFrom.toLocaleDateString("en-AU", { day:"2-digit", month:"short", year:"numeric" })}` : "From date"}
+</Text>
+{dateFrom && (
+<Pressable onPress={() => setDateFrom(null)} hitSlop={8}>
+<Text style={styles.dateClear}> ✕</Text>
+</Pressable>
+)}
+</Pressable>
+<Pressable
+style={[styles.datePill, dateTo && styles.datePillActive]}
+onPress={() => { setShowToPicker(true); setShowFromPicker(false); }}
+>
+<Text style={[styles.datePillText, dateTo && styles.datePillTextActive]}>
+{dateTo ? `To: ${dateTo.toLocaleDateString("en-AU", { day:"2-digit", month:"short", year:"numeric" })}` : "To date"}
+</Text>
+{dateTo && (
+<Pressable onPress={() => setDateTo(null)} hitSlop={8}>
+<Text style={styles.dateClear}> ✕</Text>
+</Pressable>
+)}
+</Pressable>
+</View>
+
+{showFromPicker && (
+<DateTimePicker
+value={dateFrom ?? new Date()}
+mode="date"
+display={Platform.OS === "ios" ? "inline" : "default"}
+maximumDate={dateTo ?? new Date()}
+onChange={(_, date) => {
+setShowFromPicker(Platform.OS === "ios");
+if (date) setDateFrom(date);
+}}
+/>
+)}
+{showToPicker && (
+<DateTimePicker
+value={dateTo ?? new Date()}
+mode="date"
+display={Platform.OS === "ios" ? "inline" : "default"}
+minimumDate={dateFrom ?? undefined}
+maximumDate={new Date()}
+onChange={(_, date) => {
+setShowToPicker(Platform.OS === "ios");
+if (date) setDateTo(date);
+}}
+/>
+)}
 
 {/* Filter chips */}
 <ScrollView
@@ -431,6 +496,42 @@ color: "white",
 fontSize: 15,
 borderWidth: 1,
 borderColor: "rgba(255,255,255,0.10)",
+},
+
+dateRow: {
+flexDirection: "row",
+gap: 8,
+paddingHorizontal: 18,
+paddingBottom: 10,
+},
+datePill: {
+flex: 1,
+flexDirection: "row",
+alignItems: "center",
+paddingHorizontal: 12,
+paddingVertical: 9,
+borderRadius: 20,
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.15)",
+backgroundColor: "rgba(255,255,255,0.05)",
+},
+datePillActive: {
+borderColor: "rgba(249,115,22,0.50)",
+backgroundColor: "rgba(249,115,22,0.10)",
+},
+datePillText: {
+flex: 1,
+color: "rgba(255,255,255,0.55)",
+fontWeight: "700",
+fontSize: 12,
+},
+datePillTextActive: {
+color: "#f97316",
+},
+dateClear: {
+color: "rgba(249,115,22,0.70)",
+fontWeight: "800",
+fontSize: 13,
 },
 
 filterRow: {

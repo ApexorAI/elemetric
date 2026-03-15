@@ -58,7 +58,12 @@ Create a `.env` file in the `mobile/` directory (never commit this):
 ```env
 EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Resend (transactional email) — get your key at https://resend.com
+EXPO_PUBLIC_RESEND_API_KEY=re_your_key_here
 ```
+
+> **Security note:** `EXPO_PUBLIC_` variables are bundled into the app binary. For production, consider proxying email sends through your backend server and storing `RESEND_API_KEY` as a server-only environment variable.
 
 The AI server URL is hardcoded in `app/plumbing/drainage-checklist.tsx` and `gas-checklist.tsx` as:
 ```
