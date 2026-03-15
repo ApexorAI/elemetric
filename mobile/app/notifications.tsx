@@ -9,9 +9,13 @@ import {
   RefreshControl,
   Alert,
   TextInput,
+  Switch,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
+
+const SOUND_PREF_KEY = "elemetric_notif_sound";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,6 +48,14 @@ export default function Notifications() {
   const [refreshing, setRefreshing]       = useState(false);
   const [markingAll, setMarkingAll]       = useState(false);
   const [search, setSearch]               = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [soundEnabled, setSoundEnabled]   = useState(true);
+  const [showPrefs, setShowPrefs]         = useState(false);
+
+  const loadPrefs = async () => {
+    const val = await AsyncStorage.getItem(SOUND_PREF_KEY);
+    if (val !== null) setSoundEnabled(val === "true");
+  };
 
   const load = async () => {
     try {
@@ -78,8 +90,34 @@ export default function Notifications() {
     useCallback(() => {
       setLoading(true);
       load();
+      loadPrefs();
     }, [])
   );
+
+  const toggleSound = async (val: boolean) => {
+    setSoundEnabled(val);
+    await AsyncStorage.setItem(SOUND_PREF_KEY, val ? "true" : "false");
+  };
+
+  const deleteAll = async () => {
+    Alert.alert("Delete All", "Delete all notifications? This cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete All",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            await supabase.from("notifications").delete().eq("user_id", user.id);
+            setNotifications([]);
+          } catch (e: any) {
+            Alert.alert("Error", e?.message ?? "Could not delete notifications.");
+          }
+        },
+      },
+    ]);
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -151,11 +189,20 @@ export default function Notifications() {
   };
 
   const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
+  const CATEGORIES = [
+    { key: "all", label: "All" },
+    { key: "job_assigned", label: "Jobs" },
+    { key: "compliance_alert", label: "Compliance" },
+    { key: "near_miss", label: "Near Miss" },
+    { key: "general", label: "Updates" },
+  ];
+
   const filtered = useMemo(() => notifications.filter((n) => {
+    if (categoryFilter !== "all" && n.type !== categoryFilter) return false;
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return n.title.toLowerCase().includes(q) || (n.body ?? "").toLowerCase().includes(q);
-  }), [notifications, search]);
+  }), [notifications, search, categoryFilter]);
 
   // ── Loading ──────────────────────────────────────────────────────────────────
 
@@ -209,6 +256,57 @@ export default function Notifications() {
           accessibilityLabel="Search notifications"
         />
       </View>
+
+      {/* Category filter */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
+        {CATEGORIES.map((cat) => (
+          <Pressable
+            key={cat.key}
+            style={[styles.filterChip, categoryFilter === cat.key && styles.filterChipActive]}
+            onPress={() => setCategoryFilter(cat.key)}
+          >
+            <Text style={[styles.filterChipText, categoryFilter === cat.key && styles.filterChipTextActive]}>
+              {cat.label}
+              {cat.key === "all"
+                ? ` (${notifications.length})`
+                : notifications.filter((n) => n.type === cat.key).length > 0
+                  ? ` (${notifications.filter((n) => n.type === cat.key).length})`
+                  : ""}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
+      {/* Actions row */}
+      <View style={styles.actionsRow}>
+        <Pressable onPress={() => setShowPrefs(!showPrefs)} style={styles.prefBtn}>
+          <Text style={styles.prefBtnText}>⚙ Preferences</Text>
+        </Pressable>
+        {notifications.length > 0 && (
+          <Pressable onPress={deleteAll} style={styles.deleteAllBtn}>
+            <Text style={styles.deleteAllBtnText}>Delete All</Text>
+          </Pressable>
+        )}
+      </View>
+
+      {/* Preferences panel */}
+      {showPrefs && (
+        <View style={styles.prefsPanel}>
+          <Text style={styles.prefsPanelTitle}>Notification Preferences</Text>
+          <View style={styles.prefRow}>
+            <View style={styles.prefInfo}>
+              <Text style={styles.prefLabel}>Sound</Text>
+              <Text style={styles.prefSub}>Play sound on new notifications</Text>
+            </View>
+            <Switch
+              value={soundEnabled}
+              onValueChange={toggleSound}
+              trackColor={{ false: "rgba(255,255,255,0.12)", true: "#f97316" }}
+              thumbColor="white"
+            />
+          </View>
+        </View>
+      )}
 
       <ScrollView
         contentContainerStyle={styles.body}
@@ -396,4 +494,64 @@ const styles = StyleSheet.create({
 
   back: { marginTop: 8, alignItems: "center" },
   backText: { color: "rgba(255,255,255,0.55)", fontWeight: "700" },
+
+  filterScroll: { flexGrow: 0 },
+  filterRow: { paddingHorizontal: 16, gap: 8, paddingBottom: 6 },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  filterChipActive: {
+    backgroundColor: "#f97316",
+    borderColor: "#f97316",
+  },
+  filterChipText: { color: "rgba(255,255,255,0.65)", fontSize: 13, fontWeight: "700" },
+  filterChipTextActive: { color: "#0b1220" },
+
+  actionsRow: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    gap: 10,
+    alignItems: "center",
+  },
+  prefBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+  },
+  prefBtnText: { color: "rgba(255,255,255,0.60)", fontSize: 12, fontWeight: "700" },
+  deleteAllBtn: {
+    marginLeft: "auto" as any,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "rgba(239,68,68,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.25)",
+  },
+  deleteAllBtnText: { color: "#ef4444", fontSize: 12, fontWeight: "700" },
+
+  prefsPanel: {
+    marginHorizontal: 16,
+    marginBottom: 6,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    padding: 14,
+    gap: 10,
+  },
+  prefsPanelTitle: { color: "white", fontWeight: "900", fontSize: 14 },
+  prefRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  prefInfo: { flex: 1 },
+  prefLabel: { color: "white", fontWeight: "700", fontSize: 14 },
+  prefSub: { color: "rgba(255,255,255,0.45)", fontSize: 12, marginTop: 2 },
 });
