@@ -12,6 +12,7 @@ Modal,
 Share,
 Linking,
 } from "react-native";
+import Svg, { Circle } from "react-native-svg";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Print from "expo-print";
@@ -194,6 +195,34 @@ const missing = decoded?.missing ?? [];
 const action = decoded?.action ?? "";
 const showLegacyAnalysis = !!decoded?.analysis;
 
+const gaugeColor = confidence >= 80 ? "#22c55e" : confidence >= 50 ? "#f97316" : "#ef4444";
+const riskLabel = confidence >= 80 ? "LOW RISK" : confidence >= 50 ? "MEDIUM RISK" : "HIGH RISK";
+const riskBg = confidence >= 80 ? "rgba(34,197,94,0.15)" : confidence >= 50 ? "rgba(249,115,22,0.15)" : "rgba(239,68,68,0.15)";
+const riskBorderColor = confidence >= 80 ? "rgba(34,197,94,0.40)" : confidence >= 50 ? "rgba(249,115,22,0.40)" : "rgba(239,68,68,0.40)";
+
+const GAUGE_RADIUS = 70;
+const GAUGE_SW = 14;
+const GAUGE_C = 2 * Math.PI * GAUGE_RADIUS;
+const gaugeDashOffset = GAUGE_C - (confidence / 100) * GAUGE_C;
+
+const getWhatThisMeans = () => {
+  if (confidence >= 80 && missing.length === 0 && unclear.length === 0) {
+    return "Your documentation is strong. This report will hold up in a dispute or VBA inspection.";
+  } else if (confidence >= 80) {
+    return "Confidence is high, but some items still need attention. Address the flagged photos to make this report fully dispute-ready.";
+  } else if (confidence >= 50) {
+    return "Your documentation has gaps. Retaking the flagged photos will significantly strengthen this report before you proceed.";
+  }
+  return "This report is not yet compliance-ready. Multiple items need clearer photos before this will hold up to VBA scrutiny.";
+};
+
+const getItemAction = (item: string, status: "missing" | "unclear") => {
+  if (status === "missing") {
+    return `Photo not found. Retake ensuring "${item}" is clearly visible and fills most of the frame.`;
+  }
+  return `Photo was unclear. Move closer, improve lighting, and ensure nothing obstructs the view of "${item}".`;
+};
+
 const checklistItems = [
 { id: "before", label: "Existing system (before)" },
 { id: "ptr", label: "PTR valve installed" },
@@ -269,7 +298,7 @@ setToast("Job saved successfully.");
 sendLocalNotification("Job Saved", "Your compliance report has been saved.");
 }
 } catch (e: any) {
-Alert.alert("Save Error", e?.message ?? "Could not save job.");
+Alert.alert("Save Failed", e?.message ?? "Could not save job. Check your internet connection and try again — your analysis is not lost.");
 } finally {
 setSaving(false);
 }
@@ -582,7 +611,7 @@ await supabase
 setGeneratedPdfUri(uri);
 setShowShareModal(true);
 } catch (e: any) {
-Alert.alert("PDF Error", e?.message ?? "Could not generate report.");
+Alert.alert("Report Generation Failed", e?.message ?? "Could not generate the PDF report. Ensure all photos are loaded and try again. If this persists, restart the app and regenerate.");
 } finally {
 setGeneratingPdf(false);
 }
@@ -688,7 +717,7 @@ if (canShare) {
 await Sharing.shareAsync(dest, { mimeType: "application/pdf", UTI: "com.adobe.pdf", dialogTitle: "Certificate of Compliance" });
 }
 } catch (e: any) {
-Alert.alert("Certificate Error", e?.message ?? "Could not generate certificate.");
+Alert.alert("Certificate Failed", e?.message ?? "Could not generate the certificate. Make sure your installer name and licence number are filled in before trying again.");
 } finally {
 setGeneratingCert(false);
 }
@@ -723,66 +752,124 @@ return (
 </View>
 ) : (
 <>
-<View style={styles.card}>
-<Text style={styles.h}>Documentation Confidence</Text>
-<Text style={[styles.score, !relevant && styles.scoreLow]}>{confidence}%</Text>
+{/* ── Confidence Gauge ── */}
+<View style={styles.gaugeCard}>
+  <View style={{ position: "relative", alignSelf: "center" }}>
+    <Svg width={180} height={180}>
+      <Circle
+        cx={90} cy={90} r={GAUGE_RADIUS}
+        stroke="rgba(255,255,255,0.10)"
+        strokeWidth={GAUGE_SW}
+        fill="none"
+      />
+      <Circle
+        cx={90} cy={90} r={GAUGE_RADIUS}
+        stroke={gaugeColor}
+        strokeWidth={GAUGE_SW}
+        fill="none"
+        strokeDasharray={`${GAUGE_C} ${GAUGE_C}`}
+        strokeDashoffset={gaugeDashOffset}
+        strokeLinecap="round"
+        rotation="-90"
+        originX={90}
+        originY={90}
+      />
+    </Svg>
+    <View style={styles.gaugeCenter}>
+      <Text style={[styles.gaugeScore, { color: gaugeColor }]}>{confidence}%</Text>
+      <Text style={styles.gaugeLabel}>confidence</Text>
+    </View>
+  </View>
 
-{confidence < 35 && decoded && (
-  <View style={styles.lowConfidenceWarning}>
-    <Text style={styles.lowConfidenceText}>
-      ⚠️ Low confidence score. We recommend retaking photos with better lighting and angles before generating your report.
-    </Text>
+  {/* Risk Banner */}
+  <View style={[styles.riskBanner, { backgroundColor: riskBg, borderColor: riskBorderColor }]}>
+    <Text style={[styles.riskText, { color: gaugeColor }]}>{riskLabel}</Text>
+  </View>
+
+  {/* What this means */}
+  <View style={styles.meansCard}>
+    <Text style={styles.meansTitle}>What this means</Text>
+    <Text style={styles.meansBody}>{getWhatThisMeans()}</Text>
+  </View>
+</View>
+
+{/* ── Detected Items ── */}
+{detected.length > 0 && (
+  <View style={styles.breakdownCard}>
+    <Text style={[styles.breakdownTitle, { color: "#22c55e" }]}>Detected Items</Text>
+    {detected.map((x, i) => (
+      <View key={`d-${i}`} style={styles.breakdownRow}>
+        <View style={styles.breakdownIconGreen}>
+          <Text style={styles.breakdownIconText}>✓</Text>
+        </View>
+        <Text style={styles.breakdownItemText}>{x}</Text>
+      </View>
+    ))}
   </View>
 )}
 
-<View style={[styles.badge, relevant ? styles.badgeOk : styles.badgeNo]}>
-<Text style={styles.badgeText}>
-{relevant ? "RELEVANT PHOTO" : "NOT A PLUMBING PHOTO"}
-</Text>
-</View>
-
-<Text style={styles.section}>🟢 Visible</Text>
-{detected.length === 0 ? (
-<Text style={styles.itemDim}>• None</Text>
-) : (
-detected.map((x, i) => (
-<Text key={`d-${i}`} style={styles.item}>
-• {x}
-</Text>
-))
+{/* ── Missing Items ── */}
+{missing.length > 0 && (
+  <View style={styles.breakdownCard}>
+    <Text style={[styles.breakdownTitle, { color: "#ef4444" }]}>Missing Items</Text>
+    {missing.map((x, i) => (
+      <View key={`m-${i}`} style={styles.issueRow}>
+        <View style={styles.breakdownIconRed}>
+          <Text style={styles.breakdownIconText}>✗</Text>
+        </View>
+        <View style={{ flex: 1, gap: 6 }}>
+          <Text style={styles.breakdownItemText}>{x}</Text>
+          <Text style={styles.actionHint}>{getItemAction(x, "missing")}</Text>
+          <Pressable
+            style={styles.retakeBtn}
+            onPress={() => router.push("/plumbing/photos")}
+          >
+            <Text style={styles.retakeBtnText}>Retake Photo →</Text>
+          </Pressable>
+        </View>
+      </View>
+    ))}
+  </View>
 )}
 
-<Text style={styles.section}>🟡 Unclear</Text>
-{unclear.length === 0 ? (
-<Text style={styles.itemDim}>• None</Text>
-) : (
-unclear.map((x, i) => (
-<Text key={`u-${i}`} style={styles.item}>
-• {x}
-</Text>
-))
+{/* ── Unclear Items ── */}
+{unclear.length > 0 && (
+  <View style={styles.breakdownCard}>
+    <Text style={[styles.breakdownTitle, { color: "#f97316" }]}>Unclear Items</Text>
+    {unclear.map((x, i) => (
+      <View key={`u-${i}`} style={styles.issueRow}>
+        <View style={styles.breakdownIconOrange}>
+          <Text style={styles.breakdownIconText}>!</Text>
+        </View>
+        <View style={{ flex: 1, gap: 6 }}>
+          <Text style={styles.breakdownItemText}>{x}</Text>
+          <Text style={styles.actionHint}>{getItemAction(x, "unclear")}</Text>
+          <Pressable
+            style={styles.retakeBtn}
+            onPress={() => router.push("/plumbing/photos")}
+          >
+            <Text style={styles.retakeBtnText}>Retake Photo →</Text>
+          </Pressable>
+        </View>
+      </View>
+    ))}
+  </View>
 )}
 
-<Text style={styles.section}>🔴 Missing</Text>
-{missing.length === 0 ? (
-<Text style={styles.itemDim}>• None</Text>
-) : (
-missing.map((x, i) => (
-<Text key={`m-${i}`} style={styles.item}>
-• {x}
-</Text>
-))
+{/* ── Overall Recommended Action ── */}
+{!!action && (
+  <View style={styles.overallActionCard}>
+    <Text style={styles.overallActionLabel}>RECOMMENDED ACTION</Text>
+    <Text style={styles.overallActionText}>{action}</Text>
+  </View>
 )}
-
-{!!action && <Text style={styles.action}>Suggested action: {action}</Text>}
 
 {showLegacyAnalysis && (
-<>
-<Text style={styles.section}>📝 Analysis</Text>
-<Text style={styles.item}>{decoded.analysis}</Text>
-</>
+  <View style={styles.card}>
+    <Text style={styles.section}>Analysis</Text>
+    <Text style={styles.item}>{decoded!.analysis}</Text>
+  </View>
 )}
-</View>
 
 <View style={styles.card}>
 <Text style={styles.fieldLabel}>Installer Name</Text>
@@ -799,10 +886,8 @@ style={styles.input}
 <Text style={styles.saveText}>{saving ? "Saving..." : "Save Job"}</Text>
 </Pressable>
 
-<Pressable style={styles.signatureBtn} onPress={() => router.push("/plumbing/declaration")}>
-<Text style={styles.signatureText}>
-{signatureSvg ? "Edit Signature" : "Add Signature"}
-</Text>
+<Pressable style={styles.signatureBtn} onPress={() => router.push({ pathname: "/plumbing/job-summary", params: { result: typeof params.result === "string" ? params.result : "" } })}>
+<Text style={styles.signatureText}>Review Summary & Sign →</Text>
 </Pressable>
 
 {signatureSvg ? (
@@ -1158,6 +1243,163 @@ fontSize: 12,
 back: { marginTop: 6, alignItems: "center" },
 backText: { color: "rgba(255,255,255,0.75)", fontWeight: "700" },
 dim: { color: "rgba(255,255,255,0.6)", marginTop: 10, textAlign: "center" },
+gaugeCard: {
+  borderRadius: 20,
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.10)",
+  backgroundColor: "rgba(255,255,255,0.04)",
+  padding: 18,
+  gap: 14,
+  alignItems: "center",
+},
+gaugeCenter: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  alignItems: "center",
+  justifyContent: "center",
+},
+gaugeScore: {
+  fontSize: 40,
+  fontWeight: "900" as const,
+},
+gaugeLabel: {
+  color: "rgba(255,255,255,0.55)",
+  fontSize: 12,
+  marginTop: 2,
+},
+riskBanner: {
+  borderRadius: 12,
+  borderWidth: 1,
+  paddingVertical: 10,
+  paddingHorizontal: 24,
+  alignItems: "center" as const,
+  alignSelf: "stretch" as const,
+},
+riskText: {
+  fontWeight: "900" as const,
+  fontSize: 18,
+  letterSpacing: 2,
+},
+meansCard: {
+  backgroundColor: "rgba(255,255,255,0.04)",
+  borderRadius: 12,
+  padding: 14,
+  gap: 6,
+  alignSelf: "stretch" as const,
+},
+meansTitle: {
+  color: "white",
+  fontWeight: "800" as const,
+  fontSize: 14,
+},
+meansBody: {
+  color: "rgba(255,255,255,0.75)",
+  fontSize: 14,
+  lineHeight: 20,
+},
+breakdownCard: {
+  borderRadius: 20,
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.10)",
+  backgroundColor: "rgba(255,255,255,0.04)",
+  padding: 18,
+  gap: 12,
+},
+breakdownTitle: {
+  fontWeight: "900" as const,
+  fontSize: 16,
+  marginBottom: 2,
+},
+breakdownRow: {
+  flexDirection: "row" as const,
+  alignItems: "center" as const,
+  gap: 12,
+},
+issueRow: {
+  flexDirection: "row" as const,
+  alignItems: "flex-start" as const,
+  gap: 12,
+},
+breakdownIconGreen: {
+  width: 28,
+  height: 28,
+  borderRadius: 14,
+  backgroundColor: "rgba(34,197,94,0.20)",
+  alignItems: "center" as const,
+  justifyContent: "center" as const,
+  flexShrink: 0,
+},
+breakdownIconRed: {
+  width: 28,
+  height: 28,
+  borderRadius: 14,
+  backgroundColor: "rgba(239,68,68,0.20)",
+  alignItems: "center" as const,
+  justifyContent: "center" as const,
+  flexShrink: 0,
+  marginTop: 2,
+},
+breakdownIconOrange: {
+  width: 28,
+  height: 28,
+  borderRadius: 14,
+  backgroundColor: "rgba(249,115,22,0.20)",
+  alignItems: "center" as const,
+  justifyContent: "center" as const,
+  flexShrink: 0,
+  marginTop: 2,
+},
+breakdownIconText: {
+  color: "white",
+  fontWeight: "900" as const,
+  fontSize: 13,
+},
+breakdownItemText: {
+  color: "rgba(255,255,255,0.85)",
+  fontSize: 15,
+  fontWeight: "700" as const,
+},
+actionHint: {
+  color: "rgba(255,255,255,0.55)",
+  fontSize: 13,
+  lineHeight: 18,
+},
+retakeBtn: {
+  backgroundColor: "rgba(249,115,22,0.20)",
+  borderRadius: 8,
+  paddingVertical: 8,
+  paddingHorizontal: 14,
+  alignSelf: "flex-start" as const,
+  borderWidth: 1,
+  borderColor: "rgba(249,115,22,0.35)",
+},
+retakeBtnText: {
+  color: "#f97316",
+  fontWeight: "900" as const,
+  fontSize: 13,
+},
+overallActionCard: {
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: "rgba(249,115,22,0.35)",
+  backgroundColor: "rgba(249,115,22,0.10)",
+  padding: 16,
+  gap: 6,
+},
+overallActionLabel: {
+  color: "#f97316",
+  fontWeight: "900" as const,
+  fontSize: 11,
+  letterSpacing: 1,
+},
+overallActionText: {
+  color: "rgba(255,255,255,0.85)",
+  fontSize: 15,
+  lineHeight: 22,
+},
 toast: {
 position: "absolute",
 bottom: 40,

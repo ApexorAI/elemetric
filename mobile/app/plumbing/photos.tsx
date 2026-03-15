@@ -168,7 +168,7 @@ const addPhotoForItem = async (itemId: string) => {
 try {
 const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
 if (!perm.granted) {
-Alert.alert("Permission needed", "Please allow photo access.");
+Alert.alert("Camera Roll Access Required", "Go to Settings > Elemetric > Photos and enable access, then try again.");
 return;
 }
 
@@ -181,7 +181,7 @@ if (result.canceled) return;
 
 const asset = result.assets?.[0];
 if (!asset?.uri) {
-Alert.alert("Photo error", "Could not read selected image.");
+Alert.alert("Photo Load Failed", "Could not read the selected image. Try selecting a different photo or retaking one with the camera.");
 return;
 }
 
@@ -257,7 +257,7 @@ setChecked(nextChecked);
 
 await saveChecklistState(nextChecked, nextPhotoMap, nextPhotoMeta);
 } catch (e: any) {
-Alert.alert("Photo error", e?.message ?? "Unknown error");
+Alert.alert("Photo Error", e?.message ?? "Could not process this photo. Try selecting a different image or use the camera to take a new one.");
 }
 };
 
@@ -314,7 +314,7 @@ mime: "image/jpeg",
 
 const runAI = async () => {
 if (totalRequiredPhotosAdded < 2) {
-Alert.alert("More photos needed", "Please add at least 2 photos before running AI analysis.");
+Alert.alert("More Photos Required", "Add at least 2 photos before running the AI analysis. Each checklist item should have at least one clear photo.");
 return;
 }
 
@@ -406,7 +406,7 @@ result: JSON.stringify(json),
 },
 });
 } catch (e: any) {
-Alert.alert("AI Error", e?.message ?? "Unknown error");
+Alert.alert("AI Analysis Failed", e?.message ?? "Could not analyse your photos. Check your internet connection and try again. If the problem persists, try retaking photos with better lighting.");
 } finally {
 setLoading(false);
 }
