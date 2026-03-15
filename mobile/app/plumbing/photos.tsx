@@ -8,6 +8,8 @@ Image,
 ScrollView,
 Alert,
 ActivityIndicator,
+Modal,
+Dimensions,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
@@ -104,6 +106,7 @@ const [checked, setChecked] = useState<Record<string, boolean>>({});
 const [photoMap, setPhotoMap] = useState<Record<string, string[]>>({});
 const [photoMeta, setPhotoMeta] = useState<Record<string, PhotoMeta[]>>({});
 const [loading, setLoading] = useState(false);
+const [previewUri, setPreviewUri] = useState<string | null>(null);
 
 useFocusEffect(
 useCallback(() => {
@@ -313,6 +316,43 @@ await saveChecklistState(nextChecked, nextPhotoMap, nextPhotoMeta);
 } catch {}
 };
 
+const rotatePhoto = async (itemId: string, uri: string) => {
+try {
+const result = await ImageManipulator.manipulateAsync(uri, [{ rotate: 90 }], {
+compress: 0.9,
+format: ImageManipulator.SaveFormat.JPEG,
+});
+const newUri = result.uri;
+const nextPhotoMap = {
+...photoMap,
+[itemId]: (photoMap[itemId] || []).map((u) => (u === uri ? newUri : u)),
+};
+const nextPhotoMeta = {
+...photoMeta,
+[itemId]: (photoMeta[itemId] || []).map((m) => (m.uri === uri ? { ...m, uri: newUri } : m)),
+};
+setPhotoMap(nextPhotoMap);
+setPhotoMeta(nextPhotoMeta);
+await saveChecklistState(checked, nextPhotoMap, nextPhotoMeta);
+} catch (e: any) {
+Alert.alert("Rotation Failed", e?.message ?? "Could not rotate the photo.");
+}
+};
+
+const movePhoto = async (itemId: string, index: number, direction: -1 | 1) => {
+const arr = [...(photoMap[itemId] || [])];
+const meta = [...(photoMeta[itemId] || [])];
+const swapIdx = index + direction;
+if (swapIdx < 0 || swapIdx >= arr.length) return;
+[arr[index], arr[swapIdx]] = [arr[swapIdx], arr[index]];
+[meta[index], meta[swapIdx]] = [meta[swapIdx], meta[index]];
+const nextPhotoMap = { ...photoMap, [itemId]: arr };
+const nextPhotoMeta = { ...photoMeta, [itemId]: meta };
+setPhotoMap(nextPhotoMap);
+setPhotoMeta(nextPhotoMeta);
+await saveChecklistState(checked, nextPhotoMap, nextPhotoMeta);
+};
+
 const convertToJpeg = async (uri: string) => {
 const result = await ImageManipulator.manipulateAsync(uri, [{ resize: { width: 1200 } }], {
 compress: 0.8,
@@ -440,8 +480,18 @@ return (
 );
 }
 
+const { width: SCREEN_W } = Dimensions.get("window");
+
 return (
 <View style={styles.screen}>
+{/* Zoom preview modal */}
+<Modal visible={!!previewUri} transparent animationType="fade" onRequestClose={() => setPreviewUri(null)}>
+<Pressable style={styles.modalOverlay} onPress={() => setPreviewUri(null)}>
+<Image source={{ uri: previewUri ?? "" }} style={[styles.modalImage, { width: SCREEN_W, height: SCREEN_W }]} resizeMode="contain" />
+<Text style={styles.modalDismiss}>Tap to close</Text>
+</Pressable>
+</Modal>
+
 <View style={styles.header}>
 <Text style={styles.brand}>ELEMETRIC</Text>
 <Text style={styles.title}>Add Photos</Text>
@@ -489,12 +539,24 @@ disabled={loading}
 const meta = (photoMeta[item.id] || []).find((m) => m.uri === uri);
 return (
 <View key={`${item.id}-${uri}-${i}`} style={styles.photoWrap}>
+{/* Tappable photo for zoom */}
+<Pressable onPress={() => setPreviewUri(uri)} disabled={loading}>
 <Image source={{ uri }} style={styles.photo} />
+</Pressable>
+
+{/* Count badge */}
+<View style={styles.countBadge}>
+<Text style={styles.countBadgeText}>{i + 1}/{itemPhotos.length}</Text>
+</View>
+
+{/* Hash shield */}
 {meta?.hash ? (
 <View style={styles.shield}>
 <Text style={styles.shieldText}>🛡</Text>
 </View>
 ) : null}
+
+{/* Remove */}
 <Pressable
 style={styles.remove}
 onPress={() => removePhotoForItem(item.id, uri)}
@@ -502,7 +564,8 @@ disabled={loading}
 >
 <Text style={styles.removeText}>×</Text>
 </Pressable>
-{/* Before / After role toggle */}
+
+{/* Before / After + rotate */}
 <View style={styles.roleRow}>
 <Pressable
 style={[styles.roleBtn, meta?.role === "before" && styles.roleBtnBefore]}
@@ -518,7 +581,34 @@ disabled={loading}
 >
 <Text style={[styles.roleBtnText, meta?.role === "after" && styles.roleBtnTextActive]}>A</Text>
 </Pressable>
+<Pressable
+style={styles.roleBtn}
+onPress={() => rotatePhoto(item.id, uri)}
+disabled={loading}
+>
+<Text style={styles.roleBtnText}>↻</Text>
+</Pressable>
 </View>
+
+{/* Reorder arrows */}
+{itemPhotos.length > 1 && (
+<View style={styles.reorderRow}>
+<Pressable
+style={[styles.reorderBtn, i === 0 && { opacity: 0.3 }]}
+onPress={() => movePhoto(item.id, i, -1)}
+disabled={loading || i === 0}
+>
+<Text style={styles.reorderText}>◀</Text>
+</Pressable>
+<Pressable
+style={[styles.reorderBtn, i === itemPhotos.length - 1 && { opacity: 0.3 }]}
+onPress={() => movePhoto(item.id, i, 1)}
+disabled={loading || i === itemPhotos.length - 1}
+>
+<Text style={styles.reorderText}>▶</Text>
+</Pressable>
+</View>
+)}
 </View>
 );
 })}
@@ -733,5 +823,53 @@ alignItems: "center",
 },
 backText: {
 color: "rgba(255,255,255,0.6)",
+},
+modalOverlay: {
+flex: 1,
+backgroundColor: "rgba(0,0,0,0.92)",
+alignItems: "center",
+justifyContent: "center",
+gap: 16,
+},
+modalImage: {
+borderRadius: 12,
+},
+modalDismiss: {
+color: "rgba(255,255,255,0.45)",
+fontWeight: "700",
+fontSize: 13,
+},
+countBadge: {
+position: "absolute",
+top: 4,
+left: 4,
+backgroundColor: "rgba(0,0,0,0.60)",
+borderRadius: 6,
+paddingHorizontal: 5,
+paddingVertical: 2,
+},
+countBadgeText: {
+color: "white",
+fontSize: 10,
+fontWeight: "700",
+},
+reorderRow: {
+flexDirection: "row",
+gap: 4,
+marginTop: 4,
+justifyContent: "center",
+},
+reorderBtn: {
+flex: 1,
+paddingVertical: 3,
+borderRadius: 6,
+alignItems: "center",
+backgroundColor: "rgba(255,255,255,0.06)",
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.10)",
+},
+reorderText: {
+color: "rgba(255,255,255,0.55)",
+fontSize: 11,
 },
 });
