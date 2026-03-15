@@ -130,8 +130,7 @@ ${pathMarkup}
 `.trim();
 
 await AsyncStorage.setItem(SIGNATURE_KEY, svgMarkup);
-Alert.alert("Saved", "Signature saved.");
-router.back();
+router.push("/plumbing/client-signature");
 };
 
 return (

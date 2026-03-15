@@ -37,6 +37,8 @@ type CurrentJob = {
 type: string;
 jobName: string;
 jobAddr: string;
+startTime?: string;
+weather?: string;
 };
 
 type ReviewPhoto = {
@@ -48,6 +50,13 @@ hash?: string;
 capturedAt?: string;
 role?: "before" | "after";
 gps?: { lat: number; lng: number };
+};
+
+type Material = {
+  id: string;
+  name: string;
+  qty: string;
+  brand: string;
 };
 
 const REVIEW_PHOTOS_FILE = `${FileSystem.documentDirectory}review-photos.json`;
@@ -105,6 +114,8 @@ const [toast, setToast] = useState<string | null>(null);
 const [showShareModal, setShowShareModal] = useState(false);
 const [generatedPdfUri, setGeneratedPdfUri] = useState<string | null>(null);
 const [generatingCert, setGeneratingCert] = useState(false);
+const [materials, setMaterials] = useState<Material[]>([]);
+const [clientSignatureSvg, setClientSignatureSvg] = useState<string>("");
 
 useEffect(() => {
 if (!toast) return;
@@ -125,6 +136,8 @@ setCurrentJob({
 type: parsed.type || "hotwater",
 jobName: parsed.jobName || "Untitled Job",
 jobAddr: parsed.jobAddr || "No address",
+startTime: parsed.startTime,
+weather: parsed.weather,
 });
 }
 
@@ -172,6 +185,15 @@ setInstallerName(profileData.full_name);
 } catch {
 // profile load failed — continue
 }
+try {
+  const rawMaterials = await AsyncStorage.getItem("elemetric_materials");
+  if (rawMaterials && active) {
+    setMaterials(JSON.parse(rawMaterials));
+  }
+} catch {}
+
+const savedClientSig = await AsyncStorage.getItem("elemetric_client_signature_svg");
+if (savedClientSig && active) setClientSignatureSvg(savedClientSig);
 } catch {
 // keep defaults
 }
@@ -221,6 +243,24 @@ const getItemAction = (item: string, status: "missing" | "unclear") => {
     return `Photo not found. Retake ensuring "${item}" is clearly visible and fills most of the frame.`;
   }
   return `Photo was unclear. Move closer, improve lighting, and ensure nothing obstructs the view of "${item}".`;
+};
+
+const addMaterial = () => {
+  const next: Material[] = [...materials, { id: Date.now().toString(), name: "", qty: "1", brand: "" }];
+  setMaterials(next);
+  AsyncStorage.setItem("elemetric_materials", JSON.stringify(next)).catch(() => {});
+};
+
+const updateMaterial = (id: string, field: keyof Material, value: string) => {
+  const next = materials.map((m) => (m.id === id ? { ...m, [field]: value } : m));
+  setMaterials(next);
+  AsyncStorage.setItem("elemetric_materials", JSON.stringify(next)).catch(() => {});
+};
+
+const removeMaterial = (id: string) => {
+  const next = materials.filter((m) => m.id !== id);
+  setMaterials(next);
+  AsyncStorage.setItem("elemetric_materials", JSON.stringify(next)).catch(() => {});
 };
 
 const checklistItems = [
@@ -458,6 +498,8 @@ ${qrHtml}
     <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Address</td><td style="font-family:Helvetica,Arial,sans-serif;">${currentJob.jobAddr}</td></tr>
     <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Plumber</td><td style="font-family:Helvetica,Arial,sans-serif;">${installerName || "Not entered"}</td></tr>
     <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">AI Confidence</td><td style="font-family:Helvetica,Arial,sans-serif;">${confidence}%</td></tr>
+    ${currentJob.weather ? `<tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Weather</td><td style="font-family:Helvetica,Arial,sans-serif;">${currentJob.weather}</td></tr>` : ""}
+    ${currentJob.startTime ? `<tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Time on Site</td><td style="font-family:Helvetica,Arial,sans-serif;">${(() => { const diff = Math.floor((Date.now() - new Date(currentJob.startTime).getTime()) / 1000); const h = Math.floor(diff/3600); const m = Math.floor((diff%3600)/60); const s = diff%60; return h > 0 ? `${h}h ${m}m` : `${m}m ${s}s`; })()}</td></tr>` : ""}
     <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Overall Status</td><td style="font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:${relevant ? "#16a34a" : "#d97706"};">${relevant ? "RELEVANT PHOTO SET" : "REVIEW REQUIRED"}</td></tr>
   </table>
 </div>
@@ -536,6 +578,13 @@ ${listToHtml(unclear)}
 ${listToHtml(missing)}
 </div>
 
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
+<div style="margin-bottom: 18px;">
+<div style="font-family:Helvetica,Arial,sans-serif;font-size: 19px; font-weight: bold; margin-bottom: 10px;">Materials Used</div>
+${materials.length === 0 ? '<p style="margin:0;color:#6b7280;">No materials recorded.</p>' : `<table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f3f4f6;"><th style="padding:7px 10px;text-align:left;border:1px solid #d1d5db;font-family:Helvetica,Arial,sans-serif;">Material</th><th style="padding:7px 10px;text-align:left;border:1px solid #d1d5db;font-family:Helvetica,Arial,sans-serif;">Qty</th><th style="padding:7px 10px;text-align:left;border:1px solid #d1d5db;font-family:Helvetica,Arial,sans-serif;">Brand</th></tr></thead><tbody>${materials.map((m) => `<tr><td style="padding:7px 10px;border:1px solid #d1d5db;font-family:Helvetica,Arial,sans-serif;">${m.name || "—"}</td><td style="padding:7px 10px;border:1px solid #d1d5db;font-family:Helvetica,Arial,sans-serif;">${m.qty || "1"}</td><td style="padding:7px 10px;border:1px solid #d1d5db;font-family:Helvetica,Arial,sans-serif;">${m.brand || "—"}</td></tr>`).join("")}</tbody></table>`}
+</div>
+
 ${
 decoded.analysis
 ? `
@@ -574,6 +623,16 @@ ${signatureHtml}
 <strong>Date:</strong> ${reportDateShort}
 </div>
 </div>
+
+${clientSignatureSvg ? `
+<div style="margin-top: 24px; padding-top: 18px; border-top: 1px dashed #d1d5db; page-break-inside: avoid;">
+  <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Client Acknowledgement</div>
+  <div style="font-size: 13px; color: #6b7280; margin-bottom: 10px;">The client acknowledges that the work described in this report has been completed to their satisfaction.</div>
+  <div style="margin-bottom: 8px;"><strong>Client Signature:</strong></div>
+  <img src="data:image/svg+xml;utf8,${encodeURIComponent(clientSignatureSvg)}" style="width:220px; height:70px; object-fit:contain; display:block;" />
+  <div style="margin-top: 8px;"><strong>Date:</strong> ${reportDateShort}</div>
+</div>
+` : ""}
 
 <div style="margin-bottom:18px;page-break-inside:avoid;">
 <div style="font-size:19px;font-weight:bold;margin-bottom:6px;">Tamper-Evident Photo Record</div>
@@ -822,7 +881,7 @@ return (
           <Text style={styles.actionHint}>{getItemAction(x, "missing")}</Text>
           <Pressable
             style={styles.retakeBtn}
-            onPress={() => router.push("/plumbing/photos")}
+            onPress={() => router.push({ pathname: "/plumbing/photos", params: { focusItem: x } })}
           >
             <Text style={styles.retakeBtnText}>Retake Photo →</Text>
           </Pressable>
@@ -846,7 +905,7 @@ return (
           <Text style={styles.actionHint}>{getItemAction(x, "unclear")}</Text>
           <Pressable
             style={styles.retakeBtn}
-            onPress={() => router.push("/plumbing/photos")}
+            onPress={() => router.push({ pathname: "/plumbing/photos", params: { focusItem: x } })}
           >
             <Text style={styles.retakeBtnText}>Retake Photo →</Text>
           </Pressable>
@@ -870,6 +929,44 @@ return (
     <Text style={styles.item}>{decoded!.analysis}</Text>
   </View>
 )}
+
+{/* ── Materials List ── */}
+<View style={styles.card}>
+  <Text style={styles.fieldLabel}>Materials Used</Text>
+  <Text style={styles.fieldSub}>Add materials, quantities, and brands for the report</Text>
+  {materials.map((mat) => (
+    <View key={mat.id} style={styles.materialRow}>
+      <TextInput
+        style={[styles.matInput, { flex: 2 }]}
+        placeholder="Material name"
+        placeholderTextColor="rgba(255,255,255,0.30)"
+        value={mat.name}
+        onChangeText={(v) => updateMaterial(mat.id, "name", v)}
+      />
+      <TextInput
+        style={[styles.matInput, { width: 52 }]}
+        placeholder="Qty"
+        placeholderTextColor="rgba(255,255,255,0.30)"
+        value={mat.qty}
+        onChangeText={(v) => updateMaterial(mat.id, "qty", v)}
+        keyboardType="numeric"
+      />
+      <TextInput
+        style={[styles.matInput, { flex: 1.5 }]}
+        placeholder="Brand"
+        placeholderTextColor="rgba(255,255,255,0.30)"
+        value={mat.brand}
+        onChangeText={(v) => updateMaterial(mat.id, "brand", v)}
+      />
+      <Pressable style={styles.matRemove} onPress={() => removeMaterial(mat.id)}>
+        <Text style={styles.matRemoveText}>×</Text>
+      </Pressable>
+    </View>
+  ))}
+  <Pressable style={styles.matAddBtn} onPress={addMaterial}>
+    <Text style={styles.matAddBtnText}>+ Add Material</Text>
+  </Pressable>
+</View>
 
 <View style={styles.card}>
 <Text style={styles.fieldLabel}>Installer Name</Text>
@@ -895,6 +992,15 @@ style={styles.input}
 <Text style={styles.clearText}>Remove Saved Signature</Text>
 </Pressable>
 ) : null}
+
+<Pressable
+  style={styles.clientSigBtn}
+  onPress={() => router.push("/plumbing/client-signature")}
+>
+  <Text style={styles.clientSigText}>
+    {clientSignatureSvg ? "✓ Client Signed — Update" : "Get Client Signature (Optional)"}
+  </Text>
+</Pressable>
 
 <Pressable
 style={styles.reportBtn}
@@ -1399,6 +1505,71 @@ overallActionText: {
   color: "rgba(255,255,255,0.85)",
   fontSize: 15,
   lineHeight: 22,
+},
+fieldSub: {
+  color: "rgba(255,255,255,0.45)",
+  fontSize: 12,
+  marginTop: -4,
+  marginBottom: 4,
+},
+materialRow: {
+  flexDirection: "row",
+  gap: 6,
+  alignItems: "center",
+  marginBottom: 8,
+},
+matInput: {
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.10)",
+  backgroundColor: "rgba(255,255,255,0.06)",
+  color: "white",
+  paddingHorizontal: 10,
+  paddingVertical: 9,
+  fontSize: 13,
+},
+matRemove: {
+  width: 32,
+  height: 32,
+  borderRadius: 8,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "rgba(239,68,68,0.15)",
+  borderWidth: 1,
+  borderColor: "rgba(239,68,68,0.25)",
+},
+matRemoveText: {
+  color: "#fca5a5",
+  fontSize: 18,
+  fontWeight: "900",
+  marginTop: -1,
+},
+matAddBtn: {
+  borderRadius: 10,
+  paddingVertical: 10,
+  alignItems: "center",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.12)",
+  backgroundColor: "rgba(255,255,255,0.05)",
+  marginTop: 4,
+},
+matAddBtnText: {
+  color: "rgba(255,255,255,0.75)",
+  fontWeight: "800",
+  fontSize: 14,
+},
+clientSigBtn: {
+  borderRadius: 14,
+  paddingVertical: 14,
+  alignItems: "center",
+  backgroundColor: "rgba(139,92,246,0.15)",
+  borderWidth: 1,
+  borderColor: "rgba(139,92,246,0.30)",
+},
+clientSigText: {
+  color: "#c4b5fd",
+  fontWeight: "900",
+  fontSize: 15,
 },
 toast: {
 position: "absolute",

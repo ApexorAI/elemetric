@@ -47,6 +47,7 @@ export default function NewJob() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [suggLoading, setSuggLoading] = useState(false);
   const [checking,   setChecking]   = useState(false);
+  const [weather, setWeather] = useState<"Clear" | "Overcast" | "Rain" | "Indoor">("Clear");
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -143,6 +144,8 @@ export default function NewJob() {
         type,
         jobName: jobName.trim() || "Untitled Job",
         jobAddr: jobAddr.trim() || "No address",
+        startTime: new Date().toISOString(),
+        weather: weather,
       };
       await AsyncStorage.setItem("elemetric_current_job", JSON.stringify(currentJob));
 
@@ -212,6 +215,21 @@ export default function NewJob() {
               <Text style={styles.suggAttrib}>© OpenStreetMap contributors</Text>
             </View>
           )}
+        </View>
+
+        <Text style={styles.label}>Weather Conditions</Text>
+        <View style={styles.weatherRow}>
+          {(["Clear", "Overcast", "Rain", "Indoor"] as const).map((w) => (
+            <Pressable
+              key={w}
+              style={[styles.weatherBtn, weather === w && styles.weatherBtnActive]}
+              onPress={() => setWeather(w)}
+            >
+              <Text style={[styles.weatherBtnText, weather === w && styles.weatherBtnTextActive]}>
+                {w === "Clear" ? "☀️ Clear" : w === "Overcast" ? "☁️ Overcast" : w === "Rain" ? "🌧️ Rain" : "🏠 Indoor"}
+              </Text>
+            </Pressable>
+          ))}
         </View>
 
         <Pressable
@@ -287,4 +305,30 @@ const styles = StyleSheet.create({
 
   back: { marginTop: 18, alignItems: "center" },
   backText: { color: "rgba(255,255,255,0.45)", fontWeight: "700", fontSize: 15 },
+  weatherRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 10,
+  },
+  weatherBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  weatherBtnActive: {
+    backgroundColor: "rgba(249,115,22,0.20)",
+    borderColor: "#f97316",
+  },
+  weatherBtnText: {
+    color: "rgba(255,255,255,0.65)",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  weatherBtnTextActive: {
+    color: "white",
+  },
 });

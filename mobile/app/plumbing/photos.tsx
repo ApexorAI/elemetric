@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import {
 View,
 Text,
@@ -13,7 +13,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as Location from "expo-location";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import { hashBase64, captureTimestamp } from "@/lib/photoHash";
@@ -89,6 +89,10 @@ subtitle: "Photo required",
 
 export default function Photos() {
 const router = useRouter();
+const params = useLocalSearchParams<{ focusItem?: string }>();
+const focusItem = params.focusItem ?? "";
+const scrollRef = useRef<any>(null);
+const itemRefs = useRef<Record<string, any>>({});
 
 const [loaded, setLoaded] = useState(false);
 const [currentJob, setCurrentJob] = useState<CurrentJob>({
@@ -144,6 +148,21 @@ active = false;
 };
 }, [])
 );
+
+useEffect(() => {
+  if (!focusItem || !loaded) return;
+  const t = setTimeout(() => {
+    const ref = itemRefs.current[focusItem];
+    if (ref && scrollRef.current) {
+      ref.measureLayout(
+        scrollRef.current,
+        (_x: number, y: number) => { scrollRef.current?.scrollTo({ y: y - 20, animated: true }); },
+        () => {}
+      );
+    }
+  }, 400);
+  return () => clearTimeout(t);
+}, [focusItem, loaded]);
 
 const totalRequiredPhotosAdded = useMemo(() => {
 return Object.values(photoMap).reduce((sum, arr) => sum + (arr?.length || 0), 0);
@@ -435,13 +454,14 @@ return (
 </View>
 </View>
 
-<ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+<ScrollView ref={scrollRef} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
 {HOTWATER_ITEMS.map((item) => {
 const itemPhotos = photoMap[item.id] || [];
 const itemDone = !!checked[item.id];
 
+const isFocused = focusItem && (focusItem.toLowerCase().includes(item.title.toLowerCase()) || item.title.toLowerCase().includes(focusItem.toLowerCase()));
 return (
-<View key={item.id} style={styles.card}>
+<View key={item.id} ref={(r) => { itemRefs.current[item.id] = r; }} style={[styles.card, isFocused ? styles.cardFocused : null]}>
 <View style={styles.itemTopRow}>
 <View style={styles.itemTextWrap}>
 <Text style={styles.itemTitle}>{item.title}</Text>
@@ -562,6 +582,11 @@ borderWidth: 1,
 borderColor: "rgba(255,255,255,0.08)",
 backgroundColor: "rgba(255,255,255,0.04)",
 padding: 14,
+},
+cardFocused: {
+  borderColor: "#f97316",
+  borderWidth: 2,
+  backgroundColor: "rgba(249,115,22,0.08)",
 },
 itemTopRow: {
 flexDirection: "row",

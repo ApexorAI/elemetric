@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
 View,
 Text,
@@ -22,6 +22,7 @@ type CurrentJob = {
 type: string;
 jobName: string;
 jobAddr: string;
+startTime?: string;
 };
 
 type ChecklistState = {
@@ -78,6 +79,9 @@ const [jobName, setJobName] = useState("Untitled Job");
 const [jobAddr, setJobAddr] = useState("No address");
 const [checked, setChecked] = useState<Record<string, boolean>>({});
 const [photoMap, setPhotoMap] = useState<Record<string, string[]>>({});
+const [startTime, setStartTime] = useState<string | null>(null);
+const [elapsed, setElapsed] = useState("00:00:00");
+const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
 useEffect(() => {
 const loadData = async () => {
@@ -87,6 +91,7 @@ if (rawJob) {
 const job: CurrentJob = JSON.parse(rawJob);
 setJobName(job.jobName || "Untitled Job");
 setJobAddr(job.jobAddr || "No address");
+if (job.startTime) setStartTime(job.startTime);
 }
 
 const rawChecklist = await AsyncStorage.getItem(CHECKLIST_KEY);
@@ -110,6 +115,20 @@ setLoaded(true);
 
 loadData();
 }, []);
+
+useEffect(() => {
+  if (!startTime) return;
+  const tick = () => {
+    const diff = Math.floor((Date.now() - new Date(startTime).getTime()) / 1000);
+    const h = Math.floor(diff / 3600).toString().padStart(2, "0");
+    const m = Math.floor((diff % 3600) / 60).toString().padStart(2, "0");
+    const s = (diff % 60).toString().padStart(2, "0");
+    setElapsed(`${h}:${m}:${s}`);
+  };
+  tick();
+  timerRef.current = setInterval(tick, 1000);
+  return () => { if (timerRef.current) clearInterval(timerRef.current); };
+}, [startTime]);
 
 const requiredTotal = useMemo(
 () => HOTWATER_ITEMS.filter((item) => item.kind === "photo").length,
@@ -178,6 +197,9 @@ return (
 <Text style={styles.progress}>
 Required photos: {requiredDone}/{requiredTotal}
 </Text>
+{startTime && (
+  <Text style={styles.timer}>Time on site: {elapsed}</Text>
+)}
 </View>
 
 <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
@@ -281,6 +303,14 @@ progress: {
 color: "rgba(255,255,255,0.7)",
 marginTop: 4,
 fontWeight: "700",
+},
+
+timer: {
+color: "#f97316",
+marginTop: 4,
+fontWeight: "900",
+fontSize: 14,
+letterSpacing: 0.5,
 },
 
 body: {
