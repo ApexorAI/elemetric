@@ -114,6 +114,9 @@ autoCapitalize="none"
 style={[styles.button, loading && { opacity: 0.6 }]}
 onPress={signIn}
 disabled={loading}
+accessibilityRole="button"
+accessibilityLabel="Sign In"
+accessibilityHint="Sign in to your Elemetric account"
 >
 {loading ? (
 <ActivityIndicator color="#07152b" />
@@ -126,11 +129,20 @@ disabled={loading}
 style={[styles.signUpButton, loading && { opacity: 0.6 }]}
 onPress={signUp}
 disabled={loading}
+accessibilityRole="button"
+accessibilityLabel="Create Account"
+accessibilityHint="Create a new Elemetric account"
 >
 <Text style={styles.signUpText}>Create Account</Text>
 </Pressable>
 
-<Pressable style={styles.forgotBtn} onPress={() => router.push("/forgot-password")}>
+<Pressable
+style={styles.forgotBtn}
+onPress={() => router.push("/forgot-password")}
+accessibilityRole="button"
+accessibilityLabel="Forgot Password"
+accessibilityHint="Send a password reset email"
+>
 <Text style={styles.forgotText}>Forgot Password?</Text>
 </Pressable>
 

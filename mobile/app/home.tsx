@@ -189,8 +189,14 @@ export default function Home() {
 
       {/* Header */}
       <View style={s.headerRow}>
-        <Text style={s.brand}>ELEMETRIC</Text>
-        <Pressable style={s.bellBtn} onPress={() => router.push("/notifications")}>
+        <Text style={s.brand} accessibilityRole="text" accessibilityLabel="Elemetric">ELEMETRIC</Text>
+        <Pressable
+          style={s.bellBtn}
+          onPress={() => router.push("/notifications")}
+          accessibilityRole="button"
+          accessibilityLabel={unreadNotifs > 0 ? `Notifications, ${unreadNotifs} unread` : "Notifications"}
+          accessibilityHint="Opens the notifications centre"
+        >
           <Text style={s.bellIcon}>🔔</Text>
           {unreadNotifs > 0 && (
             <View style={s.bellDot}>
@@ -224,19 +230,34 @@ export default function Home() {
       </View>
 
       {/* Start New Job — primary CTA */}
-      <Pressable style={s.newJobBtn} onPress={() => router.push("/trade")}>
+      <Pressable
+        style={s.newJobBtn}
+        onPress={() => router.push("/trade")}
+        accessibilityRole="button"
+        accessibilityLabel="Start New Job"
+        accessibilityHint="Opens the trade selector to begin a new compliance job"
+      >
         <Text style={s.newJobText}>Start New Job</Text>
         <Text style={s.newJobArrow}>→</Text>
       </Pressable>
 
       {/* Secondary actions */}
       <View style={s.secondaryRow}>
-        <Pressable style={s.secondaryBtn} onPress={() => router.push("/near-miss")}>
+        <Pressable
+          style={s.secondaryBtn}
+          onPress={() => router.push("/near-miss")}
+          accessibilityRole="button"
+          accessibilityLabel="Near Miss Report"
+          accessibilityHint="Document a pre-existing non-compliance issue"
+        >
           <Text style={s.secondaryBtnText}>Near Miss</Text>
         </Pressable>
         <Pressable
           style={[s.secondaryBtn, s.visualiserBtn]}
           onPress={() => router.push("/(tabs)/visualiser")}
+          accessibilityRole="button"
+          accessibilityLabel="AI Visualiser, beta feature"
+          accessibilityHint="Opens the HVAC product reference visualiser"
         >
           <Text style={s.visualiserText}>✦ AI Visualiser</Text>
           <View style={s.betaBadge}>
@@ -247,7 +268,13 @@ export default function Home() {
 
       {/* Assigned jobs banner */}
       {assignedCount > 0 && (
-        <Pressable style={s.assignedBanner} onPress={() => router.push("/assigned-jobs")}>
+        <Pressable
+          style={s.assignedBanner}
+          onPress={() => router.push("/assigned-jobs")}
+          accessibilityRole="button"
+          accessibilityLabel={`${assignedCount} assigned ${assignedCount === 1 ? "job" : "jobs"} pending`}
+          accessibilityHint="View and accept your assigned jobs"
+        >
           <View style={s.assignedLeft}>
             <View style={s.assignedDot}>
               <Text style={s.assignedDotNum}>{assignedCount}</Text>
@@ -265,7 +292,13 @@ export default function Home() {
 
       {/* Employer portal banner */}
       {isEmployer && (
-        <Pressable style={s.employerBanner} onPress={() => router.push("/employer/dashboard")}>
+        <Pressable
+          style={s.employerBanner}
+          onPress={() => router.push("/employer/dashboard")}
+          accessibilityRole="button"
+          accessibilityLabel="Employer Portal"
+          accessibilityHint="Manage your team's compliance"
+        >
           <View>
             <Text style={s.employerTitle}>Employer Portal</Text>
             <Text style={s.employerSub}>Manage your team's compliance</Text>

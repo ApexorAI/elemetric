@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  TextInput,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -42,6 +43,7 @@ export default function Notifications() {
   const [loading, setLoading]             = useState(true);
   const [refreshing, setRefreshing]       = useState(false);
   const [markingAll, setMarkingAll]       = useState(false);
+  const [search, setSearch]               = useState("");
 
   const load = async () => {
     try {
@@ -149,6 +151,11 @@ export default function Notifications() {
   };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const filtered = notifications.filter((n) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return n.title.toLowerCase().includes(q) || (n.body ?? "").toLowerCase().includes(q);
+  });
 
   // ── Loading ──────────────────────────────────────────────────────────────────
 
@@ -190,6 +197,19 @@ export default function Notifications() {
         </View>
       )}
 
+      <View style={styles.searchWrap}>
+        <TextInput
+          style={styles.searchInput}
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search notifications…"
+          placeholderTextColor="rgba(255,255,255,0.35)"
+          clearButtonMode="while-editing"
+          returnKeyType="search"
+          accessibilityLabel="Search notifications"
+        />
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}
@@ -202,7 +222,7 @@ export default function Notifications() {
           />
         }
       >
-        {notifications.length === 0 ? (
+        {filtered.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>🔔</Text>
             <Text style={styles.emptyTitle}>No notifications yet</Text>
@@ -211,7 +231,7 @@ export default function Notifications() {
             </Text>
           </View>
         ) : (
-          notifications.map((n) => {
+          filtered.map((n) => {
             const cfg = TYPE_CONFIG[n.type] ?? TYPE_CONFIG.general;
             return (
               <Pressable
@@ -287,6 +307,17 @@ const styles = StyleSheet.create({
   markAllRow: { paddingHorizontal: 18, paddingBottom: 4 },
   markAllBtn: { alignSelf: "flex-start", paddingVertical: 4 },
   markAllText: { color: "#f97316", fontWeight: "700", fontSize: 13 },
+  searchWrap: { paddingHorizontal: 18, paddingBottom: 8 },
+  searchInput: {
+    backgroundColor: "rgba(255,255,255,0.07)",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    color: "white",
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+  },
 
   body: { padding: 16, gap: 10, paddingBottom: 40 },
 

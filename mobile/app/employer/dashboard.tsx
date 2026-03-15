@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -31,6 +32,7 @@ export default function EmployerDashboard() {
   const [teamName, setTeamName] = useState("");
   const [members, setMembers] = useState<MemberData[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   // ── Load data ────────────────────────────────────────────────────────────────
 
@@ -225,14 +227,25 @@ export default function EmployerDashboard() {
         {/* ── Members list ── */}
         <Text style={styles.sectionLabel}>TEAM MEMBERS</Text>
 
-        {members.length === 0 ? (
+        <TextInput
+          style={styles.searchInput}
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search team members…"
+          placeholderTextColor="rgba(255,255,255,0.35)"
+          clearButtonMode="while-editing"
+          returnKeyType="search"
+          accessibilityLabel="Search team members"
+        />
+
+        {members.filter((m) => !search.trim() || m.fullName.toLowerCase().includes(search.toLowerCase()) || m.licenceNumber.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
           <View style={styles.section}>
             <Text style={styles.emptyText}>
               No members yet. Invite someone to get started.
             </Text>
           </View>
         ) : (
-          members.map((m) => (
+          members.filter((m) => !search.trim() || m.fullName.toLowerCase().includes(search.toLowerCase()) || m.licenceNumber.toLowerCase().includes(search.toLowerCase())).map((m) => (
             <View key={m.userId} style={styles.memberCard}>
               <View style={styles.memberCardTop}>
                 <View style={styles.memberCardLeft}>
@@ -490,4 +503,15 @@ const styles = StyleSheet.create({
 
   back: { marginTop: 4, alignItems: "center" },
   backText: { color: "rgba(255,255,255,0.55)", fontWeight: "700" },
+  searchInput: {
+    backgroundColor: "rgba(255,255,255,0.07)",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    color: "white",
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    marginBottom: 4,
+  },
 });

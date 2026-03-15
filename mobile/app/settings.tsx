@@ -380,6 +380,9 @@ Linking.openURL(`mailto:cayde@elemetric.com.au?subject=${subject}`).catch(() => 
 style={[styles.signOutBtn, signingOut && { opacity: 0.6 }]}
 onPress={signOut}
 disabled={signingOut}
+accessibilityRole="button"
+accessibilityLabel="Sign Out"
+accessibilityHint="Signs you out of your Elemetric account"
 >
 {signingOut
 ? <ActivityIndicator color="white" />

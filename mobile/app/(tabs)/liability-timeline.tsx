@@ -6,6 +6,7 @@ StyleSheet,
 ScrollView,
 Pressable,
 ActivityIndicator,
+TextInput,
 } from "react-native";
 import { SkeletonTimelineCard } from "@/components/SkeletonLoader";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -67,6 +68,7 @@ export default function LiabilityTimeline() {
 const router = useRouter();
 const [jobs, setJobs] = useState<Job[]>([]);
 const [loading, setLoading] = useState(true);
+const [search, setSearch] = useState("");
 
 useFocusEffect(
 useCallback(() => {
@@ -126,17 +128,23 @@ return () => { active = false; };
 }, [])
 );
 
-// Sort by days remaining (closest to expiry / most expired first)
-const sorted = [...jobs].sort(
+// Filter by search then sort by days remaining
+const filtered = jobs.filter((j) => {
+if (!search.trim()) return true;
+const q = search.toLowerCase();
+return j.jobName.toLowerCase().includes(q) || j.jobAddr.toLowerCase().includes(q) || jobTypeLabel(j.jobType).toLowerCase().includes(q);
+});
+
+const sorted = [...filtered].sort(
 (a, b) => calcDaysRemaining(a.createdAt) - calcDaysRemaining(b.createdAt)
 );
 
-const expired = sorted.filter((j) => calcDaysRemaining(j.createdAt) <= 0).length;
-const expiringSoon = sorted.filter((j) => {
+const expired = jobs.filter((j) => calcDaysRemaining(j.createdAt) <= 0).length;
+const expiringSoon = jobs.filter((j) => {
 const d = calcDaysRemaining(j.createdAt);
 return d > 0 && d <= 365;
 }).length;
-const active = sorted.filter((j) => calcDaysRemaining(j.createdAt) > 365).length;
+const active = jobs.filter((j) => calcDaysRemaining(j.createdAt) > 365).length;
 
 if (loading) {
 return (
@@ -158,6 +166,19 @@ return (
 <Text style={styles.brand}>ELEMETRIC</Text>
 <Text style={styles.title}>Liability Timeline</Text>
 <Text style={styles.subtitle}>7-year compliance liability window</Text>
+</View>
+
+<View style={styles.searchWrap}>
+<TextInput
+style={styles.searchInput}
+value={search}
+onChangeText={setSearch}
+placeholder="Search by name or address…"
+placeholderTextColor="rgba(255,255,255,0.35)"
+clearButtonMode="while-editing"
+returnKeyType="search"
+accessibilityLabel="Search jobs in liability timeline"
+/>
 </View>
 
 {jobs.length > 0 && (
@@ -335,4 +356,15 @@ paddingHorizontal: 28,
 borderRadius: 14,
 },
 emptyBtnText: { color: "#0b1220", fontWeight: "900", fontSize: 15 },
+searchWrap: { paddingHorizontal: 18, paddingBottom: 8 },
+searchInput: {
+backgroundColor: "rgba(255,255,255,0.07)",
+borderRadius: 12,
+paddingHorizontal: 14,
+paddingVertical: 11,
+color: "white",
+fontSize: 15,
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.10)",
+},
 });
