@@ -48,6 +48,16 @@ const TRADES: Trade[] = [
         description: "Full new install compliance package",
         params: { type: "newinstall" },
       },
+      {
+        label: "Wood Heater",
+        description: "AS/NZS 2918 solid fuel appliances",
+        params: { type: "woodheater" },
+      },
+      {
+        label: "Gas Heater",
+        description: "AS/NZS 5601.1 gas installations",
+        params: { type: "gasheater" },
+      },
     ],
   },
   {
@@ -83,23 +93,6 @@ const TRADES: Trade[] = [
         label: "Carpentry Documentation",
         description: "AS 1684 residential timber framing",
         params: { type: "carpentry" },
-      },
-    ],
-  },
-  {
-    id: "heating",
-    label: "Heating",
-    icon: "🔥",
-    jobTypes: [
-      {
-        label: "Wood Heater",
-        description: "AS/NZS 2918 solid fuel appliances",
-        params: { type: "woodheater" },
-      },
-      {
-        label: "Gas Heater",
-        description: "AS/NZS 5601.1 gas installations",
-        params: { type: "gasheater" },
       },
     ],
   },

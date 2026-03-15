@@ -287,6 +287,7 @@ export default function VisualiserScreen() {
               setShowDropdown(true);
             }}
             onFocus={() => setShowDropdown(true)}
+            onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
             placeholder={`e.g. ${BRANDS[category][0]} FTXM25YVMA`}
             placeholderTextColor="rgba(255,255,255,0.28)"
             returnKeyType="done"
