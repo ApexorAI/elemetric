@@ -5,6 +5,7 @@ import { registerForPushNotifications } from "@/lib/notifications";
 import { ThemeProvider } from "@/lib/theme";
 import { supabase } from "@/lib/supabase";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import * as Notifications from "expo-notifications";
 import * as Linking from "expo-linking";
 
@@ -154,16 +155,18 @@ export default function RootLayout() {
   }, [router]);
 
   return (
-    <ThemeProvider>
-      <View style={{ flex: 1 }}>
-        <OfflineBanner />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            animation: "fade",
-          }}
-        />
-      </View>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <View style={{ flex: 1 }}>
+          <OfflineBanner />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: "fade",
+            }}
+          />
+        </View>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
