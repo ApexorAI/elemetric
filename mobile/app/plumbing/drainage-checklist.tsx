@@ -122,6 +122,17 @@ const [companyName, setCompanyName] = useState("");
 const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
 const [gpsLoading, setGpsLoading] = useState(false);
 
+// Drainage technical data
+const [pipeMaterial,    setPipeMaterial]    = useState("");
+const [pipeDiameter,    setPipeDiameter]    = useState("");
+const [pipeGradient,    setPipeGradient]    = useState("");
+const [testMethod,      setTestMethod]      = useState<"Water" | "Air" | "CCTV" | "">("");
+const [testDuration,    setTestDuration]    = useState("");
+const [testResult,      setTestResult]      = useState<"Pass" | "Fail" | "">("");
+const [cctvOperator,    setCctvOperator]    = useState("");
+const [cctvReportRef,   setCctvReportRef]   = useState("");
+const [drainLength,     setDrainLength]     = useState("");
+
 useFocusEffect(
 useCallback(() => {
 let active = true;
@@ -395,6 +406,39 @@ ${qrHtml}
 </table>
 </div>
 
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+
+<!-- Drainage Test Data -->
+<div style="margin-bottom:16px;">
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:19px;font-weight:bold;margin-bottom:6px;">Drainage Test Data</div>
+<div style="font-family:Helvetica,Arial,sans-serif;font-size:11px;color:#6b7280;margin-bottom:12px;">AS/NZS 3500.2 — Sanitary Plumbing &amp; Drainage</div>
+<table style="width:100%;border-collapse:collapse;margin-bottom:14px;">
+<thead>
+<tr style="background:#f8fafc;">
+<th style="padding:7px 10px;text-align:left;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#374151;">Parameter</th>
+<th style="padding:7px 10px;text-align:left;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#374151;">Recorded Value</th>
+<th style="padding:7px 10px;text-align:left;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#374151;">Reference (AS/NZS 3500.2)</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Pipe Material</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${pipeMaterial || "Not recorded"}</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">AS/NZS 3500.2 Table 1.1</td></tr>
+<tr style="background:#fafafa;"><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Pipe Diameter</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${pipeDiameter ? pipeDiameter + " mm" : "Not recorded"}</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">Min. 100 mm for stormwater</td></tr>
+<tr><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Pipe Gradient</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${pipeGradient ? "1 in " + pipeGradient : "Not recorded"}</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">Min. 1 in 60 (cl. 3.3.2)</td></tr>
+<tr style="background:#fafafa;"><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Drain Length</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${drainLength ? drainLength + " m" : "Not recorded"}</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;"></td></tr>
+<tr style="background:#fafafa;"><td colspan="3" style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#374151;">Pressure / Performance Test</td></tr>
+<tr><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Test Method</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${testMethod || "Not recorded"}</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">Water, Air, or CCTV inspection</td></tr>
+<tr style="background:#fafafa;"><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Test Duration</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;">${testDuration ? testDuration + " min" : "Not recorded"}</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">Min 15 min for water test</td></tr>
+<tr><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Test Result</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:${testResult === "Pass" ? "#16a34a" : testResult === "Fail" ? "#dc2626" : "#374151"};">${testResult || "Not recorded"}</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:11px;">Pass / Fail</td></tr>
+${cctvOperator ? `<tr style="background:#fafafa;"><td colspan="3" style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#374151;">CCTV Inspection</td></tr>
+<tr><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">CCTV Operator</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;" colspan="2">${cctvOperator}</td></tr>` : ""}
+${cctvReportRef ? `<tr style="background:#fafafa;"><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;font-weight:600;">CCTV Report Ref.</td><td style="padding:7px 10px;border:1px solid #e5e7eb;font-family:Helvetica,Arial,sans-serif;" colspan="2">${cctvReportRef}</td></tr>` : ""}
+</tbody>
+</table>
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px 14px;font-family:Helvetica,Arial,sans-serif;font-size:11px;color:#166534;line-height:1.5;">
+  <strong>Test Methodology Note:</strong> Drainage testing conducted per AS/NZS 3500.2 Section 3.8. Water test: system filled and pressure maintained for minimum 15 minutes with no measurable loss. All pipes bedded and supported per cl. 3.5 prior to testing.
+</div>
+</div>
+
 ${aiSection}
 
 <hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
@@ -529,6 +573,54 @@ placeholderTextColor="#555"
 )}
 </View>
 
+{/* ── Drainage Technical Data ── */}
+<View style={styles.section}>
+<Text style={styles.sectionTitle}>Drainage Test Data</Text>
+<Text style={styles.sectionSub}>AS/NZS 3500.2 — Pipe specs and test results</Text>
+<View style={styles.techGrid}>
+  <View style={styles.techCell}>
+    <Text style={styles.fieldLabel}>Pipe Diameter (mm)</Text>
+    <TextInput style={styles.input} value={pipeDiameter} onChangeText={setPipeDiameter} keyboardType="decimal-pad" placeholder="e.g. 100" placeholderTextColor="#555" />
+  </View>
+  <View style={styles.techCell}>
+    <Text style={styles.fieldLabel}>Gradient (1 in X)</Text>
+    <TextInput style={styles.input} value={pipeGradient} onChangeText={setPipeGradient} keyboardType="decimal-pad" placeholder="e.g. 60" placeholderTextColor="#555" />
+  </View>
+  <View style={styles.techCell}>
+    <Text style={styles.fieldLabel}>Drain Length (m)</Text>
+    <TextInput style={styles.input} value={drainLength} onChangeText={setDrainLength} keyboardType="decimal-pad" placeholder="e.g. 12.5" placeholderTextColor="#555" />
+  </View>
+  <View style={styles.techCell}>
+    <Text style={styles.fieldLabel}>Test Duration (min)</Text>
+    <TextInput style={styles.input} value={testDuration} onChangeText={setTestDuration} keyboardType="decimal-pad" placeholder="e.g. 15" placeholderTextColor="#555" />
+  </View>
+</View>
+<Text style={styles.fieldLabel}>Pipe Material</Text>
+<TextInput style={styles.input} value={pipeMaterial} onChangeText={setPipeMaterial} placeholder="e.g. PVC, Ductile Iron, Vitrified Clay" placeholderTextColor="#555" />
+<Text style={styles.fieldLabel}>Test Method</Text>
+<View style={styles.chipRow}>
+{(["Water", "Air", "CCTV"] as const).map((t) => (
+  <Pressable key={t} style={[styles.chip, testMethod === t && styles.chipActive]} onPress={() => setTestMethod(testMethod === t ? "" : t)}>
+    <Text style={[styles.chipText, testMethod === t && styles.chipTextActive]}>{t} Test</Text>
+  </Pressable>
+))}
+</View>
+<Text style={styles.fieldLabel}>Test Result</Text>
+<View style={styles.chipRow}>
+{(["Pass", "Fail"] as const).map((t) => (
+  <Pressable key={t} style={[styles.chip, testResult === t && (t === "Pass" ? styles.chipPass : styles.chipFail)]} onPress={() => setTestResult(testResult === t ? "" : t)}>
+    <Text style={[styles.chipText, testResult === t && (t === "Pass" ? styles.chipPassText : styles.chipFailText)]}>{t}</Text>
+  </Pressable>
+))}
+</View>
+{testMethod === "CCTV" && <>
+  <Text style={styles.fieldLabel}>CCTV Operator</Text>
+  <TextInput style={styles.input} value={cctvOperator} onChangeText={setCctvOperator} placeholder="Operator name or company" placeholderTextColor="#555" />
+  <Text style={styles.fieldLabel}>CCTV Report Reference</Text>
+  <TextInput style={styles.input} value={cctvReportRef} onChangeText={setCctvReportRef} placeholder="Report number / reference" placeholderTextColor="#555" />
+</>}
+</View>
+
 {CHECKS.map((check) => {
 const entry = checks[check.id];
 return (
@@ -655,7 +747,19 @@ padding: 16,
 gap: 10,
 },
 sectionTitle: { color: "white", fontWeight: "900", fontSize: 16 },
+sectionSub:   { color: "rgba(255,255,255,0.45)", fontSize: 12, marginTop: -4 },
 fieldLabel: { color: "rgba(255,255,255,0.7)", fontWeight: "700", fontSize: 13 },
+techGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+techCell: { width: "47%" },
+chipRow: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
+chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.15)", backgroundColor: "rgba(255,255,255,0.05)" },
+chipActive: { borderColor: "#f97316", backgroundColor: "rgba(249,115,22,0.15)" },
+chipPass: { borderColor: "#22c55e", backgroundColor: "rgba(34,197,94,0.12)" },
+chipFail: { borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,0.12)" },
+chipText: { color: "rgba(255,255,255,0.6)", fontWeight: "700", fontSize: 13 },
+chipTextActive: { color: "#f97316" },
+chipPassText: { color: "#22c55e" },
+chipFailText: { color: "#ef4444" },
 input: {
 backgroundColor: "rgba(255,255,255,0.06)",
 borderRadius: 10,
