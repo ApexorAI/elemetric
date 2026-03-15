@@ -75,6 +75,16 @@ setLoading(true);
 try {
 const { error } = await supabase.auth.signUp({ email, password });
 if (error) throw error;
+
+// Send branded welcome email via Railway server (best-effort)
+try {
+await fetch("https://elemetric-ai-production.up.railway.app/send-welcome", {
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify({ email }),
+});
+} catch {}
+
 router.replace({ pathname: "/signup-confirm", params: { email } });
 } catch (e: any) {
 Alert.alert("Sign Up Failed", e?.message ?? "Could not create account.");

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useMemo } from "react";
 import {
 View,
 Text,
@@ -75,14 +75,14 @@ in_progress:{ label: "IN PROGRESS",bg: "rgba(249,115,22,0.12)",  border: "rgba(2
 completed:  { label: "COMPLETED",  bg: "rgba(34,197,94,0.12)",   border: "rgba(34,197,94,0.30)",   text: "#22c55e" },
 };
 
-function StatusBadge({ status }: { status?: string }) {
+const StatusBadge = React.memo(function StatusBadge({ status }: { status?: string }) {
 const cfg = STATUS_CONFIG[status ?? "unassigned"] ?? STATUS_CONFIG.unassigned;
 return (
 <View style={[statusBadgeStyles.badge, { backgroundColor: cfg.bg, borderColor: cfg.border }]}>
 <Text style={[statusBadgeStyles.text, { color: cfg.text }]}>{cfg.label}</Text>
 </View>
 );
-}
+});
 
 const statusBadgeStyles = StyleSheet.create({
 badge: {
@@ -181,12 +181,12 @@ setJobs([]);
 ]);
 };
 
-const openJob = (job: SavedJob) => {
+const openJob = useCallback((job: SavedJob) => {
 router.push({
 pathname: "/plumbing/job-detail",
 params: { job: JSON.stringify(job) },
 });
-};
+}, [router]);
 
 const toggleSelect = (id: string) => {
 setSelectedIds((prev) => {
@@ -343,11 +343,12 @@ setSharingJobId(null);
 };
 
 // Filter counts
-const countFor = (key: FilterKey) =>
-key === "all" ? jobs.length : jobs.filter((j) => j.jobType === key).length;
+const countFor = useCallback((key: FilterKey) =>
+key === "all" ? jobs.length : jobs.filter((j) => j.jobType === key).length,
+[jobs]);
 
 // Apply filter + search + date range
-const filtered = jobs.filter((job) => {
+const filtered = useMemo(() => jobs.filter((job) => {
 const matchesFilter = activeFilter === "all" || job.jobType === activeFilter;
 const q = search.trim().toLowerCase();
 const matchesSearch =
@@ -359,7 +360,7 @@ const jobDate = new Date(job.createdAt);
 const matchesFrom = !dateFrom || jobDate >= dateFrom;
 const matchesTo = !dateTo || jobDate <= new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), 23, 59, 59);
 return matchesFilter && matchesSearch && matchesFrom && matchesTo;
-});
+}), [jobs, activeFilter, search, dateFrom, dateTo]);
 
 return (
 <View style={styles.screen}>

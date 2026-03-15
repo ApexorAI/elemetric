@@ -161,8 +161,6 @@ export default function VisualiserScreen() {
       });
 
       const json = await res.json();
-      console.log("[visualiser] server response status:", res.status);
-      console.log("[visualiser] server response body:", JSON.stringify(json));
 
       if (!res.ok) throw new Error(json?.error ?? json?.details ?? "Visualisation failed.");
 
@@ -171,9 +169,7 @@ export default function VisualiserScreen() {
       if (typeof json.imageUrl === "string" && json.imageUrl.length > 0) {
         imageUrl = json.imageUrl;
       } else if (json.imageUrl && typeof json.imageUrl === "object") {
-        // Replicate FileOutput serialised through JSON
         imageUrl = json.imageUrl.url ?? json.imageUrl.href ?? null;
-        console.log("[visualiser] imageUrl was object, extracted:", imageUrl);
       }
 
       if (json.imageBase64 && typeof json.imageBase64 === "string") {
@@ -181,7 +177,6 @@ export default function VisualiserScreen() {
       } else if (imageUrl) {
         setResultUrl(imageUrl);
       } else {
-        console.warn("[visualiser] No usable image in response:", JSON.stringify(json));
         throw new Error("Generation failed — please try again.");
       }
     } catch (e: any) {

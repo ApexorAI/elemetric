@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -150,12 +150,12 @@ export default function Notifications() {
     }
   };
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-  const filtered = notifications.filter((n) => {
+  const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
+  const filtered = useMemo(() => notifications.filter((n) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return n.title.toLowerCase().includes(q) || (n.body ?? "").toLowerCase().includes(q);
-  });
+  }), [notifications, search]);
 
   // ── Loading ──────────────────────────────────────────────────────────────────
 

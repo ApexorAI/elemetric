@@ -120,6 +120,11 @@ MORE TOOLS
 • Job timer — records time on site from the moment a job starts.
 • Address autocomplete — intelligent Australian address lookup.
 • Push notifications — get notified when a job saves successfully.
+• Bulk PDF export — select multiple jobs and export as a single combined PDF document.
+• Job duplication — duplicate any saved job to reuse address and job type at the same property.
+• Compliance trend chart — see your compliance score improvement or decline over the last 6 months on your profile.
+• Offline mode — clear offline banner, local job queuing, automatic sync when back online.
+• Employer job templates — create reusable job templates with standard notes and checklist reminders.
 
 ──────────────────────────────
 YOUR DATA
@@ -136,14 +141,34 @@ Standards referenced: AS/NZS 3500, AS/NZS 5601, AS/NZS 3000, AS/NZS 1668, AS/NZS
 ## Keywords (100 chars max, comma-separated)
 
 ```
-plumbing,compliance,gas fitter,checklist,PDF report,tradesperson,AS/NZS,certificate,inspection
+plumbing,compliance,gas,checklist,PDF,tradesperson,AS/NZS,certificate,inspection,electrician
 ```
+
+*(91 characters — within 100 char limit)*
 
 ---
 
 ## What's New (latest version — 4000 chars max)
 
 ```
+Version 1.0.1
+
+• PDF cover page — every compliance report now opens with a full navy cover page showing the ELEMETRIC wordmark, job type, property address, plumber name, date, and a colour-coded compliance badge
+• Compliance trend chart — your profile now shows a line chart of your compliance score across the last 6 months, with green (improving) or red (declining) trend indicator
+• Job duplication — tap Duplicate on any saved job to start a new job pre-filled with the same address and job type
+• Bulk PDF export — select multiple jobs and export them all as a single combined PDF
+• Skeleton loading screens — smooth animated placeholder cards replace loading spinners on Jobs, Home, Profile, and Timeline screens
+• Offline mode — a clear banner shows at the top of every screen when you have no internet connection. Actions are queued and synced when reconnected
+• Push notification deep linking — tapping a notification takes you directly to the relevant screen
+• Search on Timeline — find specific jobs in the 7-year liability timeline
+• Search on Notifications — filter your notifications by keyword
+• Search on Employer Dashboard — filter team members by name or licence number
+• Employer job templates — create reusable job templates with default notes and checklist reminders
+• App Store review prompt — shown after your 5th completed job (once only, never repeated)
+• Accessibility — full VoiceOver and TalkBack support with accessibility labels on all interactive elements
+• Dark mode — tab bar now correctly follows the dark theme on all devices
+• Performance — React.memo, useMemo, and useCallback optimisations on list screens
+
 Version 1.0 — Initial Release
 
 • 9 job types across Plumber, Electrician, HVAC, and Carpenter trades

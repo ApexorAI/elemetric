@@ -387,6 +387,27 @@ sendLocalNotification("Job Saved", "Saved locally — will sync when back online
 setToast("Job saved successfully.");
 sendLocalNotification("Job Saved", "Your compliance report has been saved.");
 
+// Send job completion email (best-effort)
+try {
+const { data: { user } } = await supabase.auth.getUser();
+if (user?.email) {
+await fetch("https://elemetric-ai-production.up.railway.app/send-job-complete", {
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify({
+email: user.email,
+jobName: currentJob.jobName,
+jobAddr: currentJob.jobAddr,
+jobType: (JOB_TYPE_META[currentJob.type] ?? JOB_TYPE_META.hotwater).label,
+confidence,
+installerName,
+date: new Date().toLocaleDateString("en-AU"),
+}),
+});
+}
+} catch {}
+
+
 // Check if this is the 5th completed job — show app review prompt
 try {
 const reviewShownKey = "elemetric_review_prompt_shown";
