@@ -86,6 +86,23 @@ const TRADES: Trade[] = [
       },
     ],
   },
+  {
+    id: "heating",
+    label: "Heating",
+    icon: "🔥",
+    jobTypes: [
+      {
+        label: "Wood Heater",
+        description: "AS/NZS 2918 solid fuel appliances",
+        params: { type: "woodheater" },
+      },
+      {
+        label: "Gas Heater",
+        description: "AS/NZS 5601.1 gas installations",
+        params: { type: "gasheater" },
+      },
+    ],
+  },
 ];
 
 export default function TradeScreen() {

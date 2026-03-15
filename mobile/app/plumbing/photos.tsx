@@ -617,6 +617,7 @@ marginTop: 12,
 },
 photoWrap: {
 position: "relative",
+width: 96,
 },
 photo: {
 width: 96,

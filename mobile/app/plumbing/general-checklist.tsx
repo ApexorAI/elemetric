@@ -50,14 +50,40 @@ type AIResult = {
 function tradeLabel(type: string): string {
 if (type === "electrical") return "Electrical";
 if (type === "hvac") return "HVAC";
+if (type === "woodheater") return "Wood Heater";
+if (type === "gasheater") return "Gas Heater";
 return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
 function tradeStandard(type: string): string {
 if (type === "electrical") return "AS/NZS 3000";
 if (type === "hvac") return "AS/NZS 1668";
+if (type === "woodheater") return "AS/NZS 2918";
+if (type === "gasheater") return "AS/NZS 5601.1";
 return "";
 }
+
+const COMPLIANCE_ITEMS_BY_TYPE: Record<string, string[]> = {
+  woodheater: [
+    "Clearances to combustibles correct",
+    "Flue system installed correctly",
+    "Hearth protection adequate",
+    "Air supply adequate",
+    "Installation complies with AS/NZS 2918",
+    "Manufacturer instructions followed",
+    "Smoke test completed",
+    "Carbon monoxide test completed",
+  ],
+  gasheater: [
+    "Gas connection tested and gas tight",
+    "Flue installed correctly",
+    "Clearances adequate",
+    "Ventilation sufficient",
+    "Appliance operating correctly",
+    "Safety devices functional",
+    "Installation complies with AS/NZS 5601.1",
+  ],
+};
 
 export default function GeneralChecklist() {
 const router = useRouter();
@@ -80,6 +106,7 @@ const [licenceNumber, setLicenceNumber] = useState("");
 const [companyName, setCompanyName] = useState("");
 const [aiLoading, setAiLoading] = useState(false);
 const [aiResult, setAiResult] = useState<AIResult | null>(null);
+const [complianceChecked, setComplianceChecked] = useState<Record<string, boolean>>({});
 
 useFocusEffect(
 useCallback(() => {
@@ -320,6 +347,20 @@ ${qrHtml}
 </table>
 </div>
 
+${complianceItems.length > 0 ? `
+<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
+<div style="margin-bottom:16px;">
+<div style="font-size:19px;font-weight:bold;margin-bottom:12px;font-family:Helvetica,Arial,sans-serif;">Compliance Checklist</div>
+<table style="width:100%;border-collapse:collapse;font-family:Helvetica,Arial,sans-serif;">
+${complianceItems.map((item) => `
+<tr style="border-bottom:1px solid #e5e7eb;">
+  <td style="padding:8px 4px;width:32px;text-align:center;font-size:16px;">${complianceChecked[item] ? "☑" : "☐"}</td>
+  <td style="padding:8px;font-size:13px;color:${complianceChecked[item] ? "#111827" : "#6b7280"};">${item}</td>
+  <td style="padding:8px;font-size:12px;color:${complianceChecked[item] ? "#16a34a" : "#d97706"};font-weight:bold;text-align:right;">${complianceChecked[item] ? "PASS" : "PENDING"}</td>
+</tr>`).join("")}
+</table>
+</div>` : ""}
+
 ${aiSection}
 
 ${sectionHtml ? `
@@ -418,6 +459,7 @@ return (
 
 const label = tradeLabel(jobType);
 const standard = tradeStandard(jobType);
+const complianceItems = COMPLIANCE_ITEMS_BY_TYPE[jobType] ?? [];
 
 return (
 <View style={styles.screen}>
@@ -446,6 +488,25 @@ onChangeText={setTradesperson}
 placeholderTextColor="#555"
 />
 </View>
+
+{complianceItems.length > 0 && (
+<View style={styles.section}>
+<Text style={styles.sectionTitle}>Compliance Checklist</Text>
+<Text style={styles.fieldLabel}>{standard}</Text>
+{complianceItems.map((item) => (
+<Pressable
+key={item}
+style={styles.checkRow}
+onPress={() => setComplianceChecked((prev) => ({ ...prev, [item]: !prev[item] }))}
+>
+<View style={[styles.checkbox, complianceChecked[item] && styles.checkboxChecked]}>
+{complianceChecked[item] && <Text style={styles.checkMark}>✓</Text>}
+</View>
+<Text style={styles.checkLabel}>{item}</Text>
+</Pressable>
+))}
+</View>
+)}
 
 {SECTIONS.map((sec) => {
 const entry = sections[sec.id];
@@ -610,6 +671,15 @@ gap: 10,
 },
 sectionTitle: { color: "white", fontWeight: "900", fontSize: 16 },
 fieldLabel: { color: "rgba(255,255,255,0.7)", fontWeight: "700", fontSize: 13 },
+checkRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 6 },
+checkbox: {
+  width: 24, height: 24, borderRadius: 6, borderWidth: 2,
+  borderColor: "rgba(255,255,255,0.25)", backgroundColor: "rgba(255,255,255,0.05)",
+  alignItems: "center", justifyContent: "center",
+},
+checkboxChecked: { borderColor: "#22c55e", backgroundColor: "rgba(34,197,94,0.15)" },
+checkMark: { color: "#22c55e", fontSize: 14, fontWeight: "900" },
+checkLabel: { flex: 1, color: "rgba(255,255,255,0.85)", fontSize: 14, lineHeight: 20 },
 input: {
 backgroundColor: "rgba(255,255,255,0.06)",
 borderRadius: 10,
