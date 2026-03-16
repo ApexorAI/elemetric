@@ -90,6 +90,44 @@ export async function sendExpoPushNotification(
 }
 
 /**
+ * Send a push notification to a specific user by fetching their push_token from Supabase.
+ * Use this from anywhere in the app when you need to notify another user.
+ */
+export async function sendNotificationToUser(
+  userId: string,
+  title: string,
+  body: string,
+  data?: Record<string, any>
+): Promise<void> {
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("push_token, notification_preferences")
+      .eq("user_id", userId)
+      .single();
+
+    if (!profile?.push_token) return;
+
+    // Check preferences
+    const prefs = (profile.notification_preferences as Record<string, boolean>) ?? {};
+    const type = data?.type as string | undefined;
+    if (type && prefs[type] === false) return; // user opted out
+
+    await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: { "Accept": "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: profile.push_token,
+        sound: "default",
+        title,
+        body,
+        data: data ?? {},
+      }),
+    });
+  } catch {}
+}
+
+/**
  * Fire an immediate local notification.
  */
 export async function sendLocalNotification(

@@ -19,6 +19,14 @@ import { useTheme } from "@/lib/theme";
 
 const version = Constants.expoConfig?.version ?? "1.0.0";
 
+const NOTIF_TYPES = [
+{ key: "job_assigned", label: "Job Assigned", desc: "When an employer assigns you a job" },
+{ key: "job_completed", label: "Job Completed", desc: "When a job is saved successfully" },
+{ key: "compliance_alert", label: "Compliance Alerts", desc: "Liability expiry warnings" },
+{ key: "licence_expiry", label: "Licence Expiry", desc: "Reminders before your licence expires" },
+{ key: "near_miss", label: "Near Miss Reports", desc: "Near miss submission confirmations" },
+];
+
 export default function Settings() {
 const router = useRouter();
 const { isDark, toggleTheme } = useTheme();
@@ -34,6 +42,8 @@ const [betaUnlocked, setBetaUnlocked] = useState(false);
 const [activatingBeta, setActivatingBeta] = useState(false);
 const [deletingAccount, setDeletingAccount] = useState(false);
 const [exportingData, setExportingData] = useState(false);
+const [prefs, setPrefs] = useState<Record<string, boolean>>({});
+const [userId, setUserId] = useState<string | null>(null);
 
 useFocusEffect(
 useCallback(() => {
@@ -43,13 +53,17 @@ try {
 const { data: { user } } = await supabase.auth.getUser();
 if (user && active) {
 setEmail(user.email ?? "");
+setUserId(user.id);
 const { data: profile } = await supabase
 .from("profiles")
-.select("role, full_name")
+.select("role, full_name, notification_preferences")
 .eq("user_id", user.id)
 .single();
 if (active && profile?.role) setRole(profile.role as "individual" | "employer");
 if (active && profile?.full_name) setFullName(profile.full_name);
+if (active && profile?.notification_preferences) {
+setPrefs(profile.notification_preferences as Record<string, boolean>);
+}
 }
 } catch {}
 if (active) setLoading(false);
@@ -262,6 +276,14 @@ showToast("Deletion request opened in Mail app.");
 );
 };
 
+const togglePref = async (key: string, value: boolean) => {
+const updated = { ...prefs, [key]: value };
+setPrefs(updated);
+if (userId) {
+await supabase.from("profiles").update({ notification_preferences: updated }).eq("user_id", userId);
+}
+};
+
 const activateBeta = async () => {
 setActivatingBeta(true);
 try {
@@ -409,6 +431,29 @@ ios_backgroundColor="rgba(255,255,255,0.15)"
 <Text style={styles.rowAction}>Notification Centre</Text>
 <Text style={styles.rowChevron}>›</Text>
 </Pressable>
+</View>
+
+{/* Notification Preferences */}
+<Text style={styles.sectionLabel}>NOTIFICATION PREFERENCES</Text>
+<View style={styles.group}>
+{NOTIF_TYPES.map((nt, i) => (
+<React.Fragment key={nt.key}>
+{i > 0 && <View style={styles.divider} />}
+<View style={[styles.row, { alignItems: "flex-start", paddingVertical: 14 }]}>
+<View style={{ flex: 1 }}>
+<Text style={styles.rowAction}>{nt.label}</Text>
+<Text style={{ color: "rgba(255,255,255,0.35)", fontSize: 12, marginTop: 2 }}>{nt.desc}</Text>
+</View>
+<Switch
+value={prefs[nt.key] !== false}
+onValueChange={(v) => togglePref(nt.key, v)}
+trackColor={{ false: "rgba(255,255,255,0.15)", true: "#f97316" }}
+thumbColor="white"
+ios_backgroundColor="rgba(255,255,255,0.15)"
+/>
+</View>
+</React.Fragment>
+))}
 </View>
 
 {/* Privacy & Data */}
