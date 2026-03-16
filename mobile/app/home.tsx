@@ -241,8 +241,8 @@ export default function Home() {
         <Text style={s.newJobArrow}>→</Text>
       </Pressable>
 
-      {/* Secondary actions — 2 focused shortcuts */}
-      <View style={s.secondaryRow}>
+      {/* Secondary actions — 2×2 grid + row */}
+      <View style={s.secondaryGrid}>
         <Pressable
           style={s.secondaryBtn}
           onPress={() => router.push("/near-miss")}
@@ -271,6 +271,26 @@ export default function Home() {
         >
           <Text style={s.secondaryIcon}>✦</Text>
           <Text style={s.visualiserText}>Visualiser</Text>
+        </Pressable>
+        <Pressable
+          style={[s.secondaryBtn, s.trainingBtn]}
+          onPress={() => router.push("/training-mode")}
+          accessibilityRole="button"
+          accessibilityLabel="Training Mode"
+          accessibilityHint="Practice compliance checklists with AI coaching"
+        >
+          <Text style={s.secondaryIcon}>🎓</Text>
+          <Text style={s.trainingBtnText}>Training</Text>
+        </Pressable>
+        <Pressable
+          style={s.secondaryBtn}
+          onPress={() => router.push("/timesheet")}
+          accessibilityRole="button"
+          accessibilityLabel="Timesheet"
+          accessibilityHint="Clock in and out, track hours"
+        >
+          <Text style={s.secondaryIcon}>⏱️</Text>
+          <Text style={s.secondaryBtnText}>Timesheet</Text>
         </Pressable>
       </View>
 
@@ -410,10 +430,10 @@ const s = StyleSheet.create({
   newJobText: { color: "#0b1220", fontWeight: "900", fontSize: 20 },
   newJobArrow: { color: "#0b1220", fontSize: 26, fontWeight: "300" },
 
-  // Secondary row
-  secondaryRow: { flexDirection: "row", gap: 10 },
+  // Secondary grid
+  secondaryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   secondaryBtn: {
-    flex: 1,
+    width: "47%",
     borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 10,
@@ -431,6 +451,11 @@ const s = StyleSheet.create({
     backgroundColor: "rgba(249,115,22,0.06)",
   },
   visualiserText: { color: "#f97316", fontWeight: "700", fontSize: 12, textAlign: "center" },
+  trainingBtn: {
+    borderColor: "rgba(34,197,94,0.20)",
+    backgroundColor: "rgba(34,197,94,0.06)",
+  },
+  trainingBtnText: { color: "#22c55e", fontWeight: "700", fontSize: 12, textAlign: "center" },
 
   // Assigned banner
   assignedBanner: {
