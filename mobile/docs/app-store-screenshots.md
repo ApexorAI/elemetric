@@ -190,6 +190,16 @@ Use **Expo Go** or a **TestFlight build** on a physical **iPhone 15 Pro Max** or
 **Screen:** `app/(tabs)/profile.tsx` with compliance score widget showing 80%+
 **Caption:** *"Your compliance score — built automatically from every job"*
 
+### Screenshot 11 — 360° Room Analysis (NEW)
+**Screen:** `app/plumbing/ai-review.tsx` scrolled to the "360° Room Analysis" card after running `/process-360`
+**Setup:** Add a 360° photo from the photo screen, then run AI analysis. The result shows coverage score, detected items, missing from view, recommended photos.
+**Caption:** *"360° intelligence — one photo, multiple checklist items detected"*
+
+### Screenshot 12 — Floor Plan with Pins (NEW)
+**Screen:** `app/plumbing/floor-plan-pin.tsx` with a floor plan image and 3–4 visible pins from different checklist items
+**Setup:** Upload a floor plan in new-job.tsx, then mark several items. Capture the floor plan with orange pins labelled (e.g. "Hot Water Unit", "PTR Valve", "Tempering Valve").
+**Caption:** *"Pin every item on the floor plan — included in your PDF"*
+
 ---
 
 ## Post-production checklist

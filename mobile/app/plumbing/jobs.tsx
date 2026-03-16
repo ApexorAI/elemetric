@@ -560,7 +560,6 @@ day: "2-digit", month: "short", year: "numeric",
 </View>
 <StatusBadge status={job.status} />
 </View>
-</Pressable>
 
 {!selectMode && (
 <View style={styles.cardActions}>

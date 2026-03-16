@@ -111,10 +111,40 @@ Running a team? Elemetric's employer portal gives you full visibility over your 
 • Track your team's job history and compliance trends
 
 ──────────────────────────────
+360° PHOTO INTELLIGENCE
+──────────────────────────────
+
+• Dedicated 360° photo button on every checklist item — one 360° shot can satisfy multiple checklist items at once
+• 360° Room Analysis — AI analyses the full scene and reports: coverage score, items detected, items missing from view, and recommended photos to take
+• 360° photos appear in every PDF report with a dedicated section and purple framing
+• First-use tooltip guides you through 360° photo workflow
+
+──────────────────────────────
+FLOOR PLAN MAPPING
+──────────────────────────────
+
+• Upload or photograph your floor plan when starting a new job
+• Tap "Mark on Plan" next to any checklist item to place a pin showing exactly where that item is located
+• Pins are saved with coordinates and item labels
+• Every PDF report includes the annotated floor plan with all pins labelled — ideal for large jobs and multi-room installations
+
+──────────────────────────────
+MULTI-DAY JOB TIMELINE
+──────────────────────────────
+
+• Jobs can span multiple days — open the same job each day to add photos and update checklist items
+• Day 1, Day 2, Day 3 timeline displayed on the photo screen — one dot per work day
+• Final PDF groups photos by day, showing the complete build timeline from start to finish
+• Perfect for renovation projects and new installations that take multiple days
+
+──────────────────────────────
 MORE TOOLS
 ──────────────────────────────
 
 • Visualiser — HVAC and heating product reference tool. Search by brand and category, zoom into product specs, and reference installation requirements on site.
+• Invoice generator — create professional GST-compliant invoices with dynamic line items, client details, and instant PDF export. Pre-fills from your saved profile.
+• Job calendar — monthly calendar view with job status dots. Select any day to see what jobs were completed.
+• Data export — export all your jobs as JSON or CSV. Full GDPR-compliant data portability and account deletion request.
 • Compliance score — your personal score averaged across all jobs, shown prominently on your profile.
 • Job notes — add private notes to any job for future reference.
 • Job timer — records time on site from the moment a job starts.
@@ -151,6 +181,19 @@ plumbing,compliance,gas,checklist,PDF,tradesperson,AS/NZS,certificate,inspection
 ## What's New (latest version — 4000 chars max)
 
 ```
+Version 1.1 — Major Feature Update
+
+• 360° Photo Intelligence — new dedicated 360° photo button on every checklist item. One 360° shot can satisfy multiple items at once. AI analyses the full scene and returns a coverage score, detected items, missing items, and recommended photos. 360° photos appear in every PDF report.
+• Floor Plan Mapping — upload your floor plan when starting a job. Tap "Mark on Plan" on any checklist item to pin its exact location. All pins appear labelled on the floor plan in your PDF report.
+• Multi-Day Job Timeline — jobs now track work across multiple days. Photos are grouped by day and the final PDF shows a complete Day 1 → Day 2 → Day 3 build timeline.
+• Invoice Generator — create professional GST-compliant invoices directly in the app. Dynamic line items, client details, ABN, and instant PDF export.
+• Job Calendar — new monthly calendar tab with job status dots (blue = assigned, orange = in progress, green = complete). Tap any day to see jobs for that date.
+• Data Export — export all your data as JSON or CSV from Settings → Privacy & Data. Full GDPR-compliant data portability.
+• Signature improvements — typed full name required before signing, undo last stroke, minimum size validation, save-as-default option.
+• Photo management — tap to zoom any photo, rotate 90°, reorder photos left/right within each checklist item, photo count badge overlay.
+• Onboarding — expanded to 6 illustrated slides with progress bar, skip button, back navigation, and tappable dot pills.
+• Checklist upgrades — gas type selector (Natural Gas / LPG), pressure fields with AS/NZS 5601.1 references; electrical insulation resistance, earth loop impedance, PSCC, and RCD test fields; drainage pipe material, gradient, test method, and CCTV fields.
+
 Version 1.0.1
 
 • PDF cover page — every compliance report now opens with a full navy cover page showing the ELEMETRIC wordmark, job type, property address, plumber name, date, and a colour-coded compliance badge
