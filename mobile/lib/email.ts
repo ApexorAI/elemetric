@@ -23,9 +23,10 @@ const baseHtml = (content: string) => `
           ${content}
         </td></tr>
         <tr><td style="padding:24px 0 0;text-align:center;">
-          <p style="color:rgba(255,255,255,0.30);font-size:12px;margin:0;">
-            Elemetric Pty Ltd · Australia<br>
+          <p style="color:rgba(255,255,255,0.30);font-size:12px;margin:0;line-height:1.8;">
+            Elemetric Pty Ltd &bull; ABN 19 377 661 368 &bull; Australia<br>
             <a href="https://elemetric.com.au" style="color:#f97316;text-decoration:none;">elemetric.com.au</a>
+            &bull; <a href="https://elemetric.com.au/privacy" style="color:rgba(255,255,255,0.40);text-decoration:none;">Privacy Policy</a>
           </p>
         </td></tr>
       </table>
@@ -108,6 +109,75 @@ export async function sendJobCompletedEmail(
     subject: `Job Report: ${jobName}`,
     html,
   });
+}
+
+export async function sendReferralEmail(to: string, referrerName: string, referralCode: string) {
+  const link = `https://elemetric.com.au/ref/${referralCode}`;
+  const html = baseHtml(`
+    <h1 style="color:white;font-size:22px;font-weight:900;margin:0 0 12px;">You've been invited to Elemetric</h1>
+    <p style="color:rgba(255,255,255,0.75);font-size:15px;line-height:1.6;margin:0 0 16px;">
+      ${referrerName} invited you to try Elemetric — the compliance reporting app built for licensed Australian tradespeople.
+    </p>
+    <a href="${link}" style="display:inline-block;background:#f97316;color:#07152B;font-weight:900;font-size:16px;padding:16px 32px;border-radius:12px;text-decoration:none;">
+      Sign Up Free →
+    </a>
+  `);
+  return resend.emails.send({ from: FROM, to, subject: `${referrerName} invited you to Elemetric`, html });
+}
+
+export async function sendInvoiceEmail(
+  to: string,
+  clientName: string,
+  invoiceNumber: string,
+  total: number,
+  dueDate: string
+) {
+  const html = baseHtml(`
+    <h1 style="color:white;font-size:22px;font-weight:900;margin:0 0 12px;">Invoice from Elemetric</h1>
+    <p style="color:rgba(255,255,255,0.75);font-size:15px;line-height:1.6;margin:0 0 16px;">
+      Hi ${clientName}, please find your invoice details below.
+    </p>
+    <div style="background:#07152b;border-radius:12px;padding:20px;margin-bottom:24px;border:1px solid rgba(255,255,255,0.10);">
+      <div style="margin-bottom:12px;">
+        <div style="color:rgba(255,255,255,0.40);font-size:11px;font-weight:800;letter-spacing:1px;margin-bottom:4px;">INVOICE NUMBER</div>
+        <div style="color:white;font-size:16px;font-weight:800;">${invoiceNumber}</div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="color:rgba(255,255,255,0.40);font-size:11px;font-weight:800;letter-spacing:1px;margin-bottom:4px;">AMOUNT DUE</div>
+        <div style="color:#f97316;font-size:28px;font-weight:900;">$${total.toFixed(2)}</div>
+      </div>
+      <div>
+        <div style="color:rgba(255,255,255,0.40);font-size:11px;font-weight:800;letter-spacing:1px;margin-bottom:4px;">DUE DATE</div>
+        <div style="color:rgba(255,255,255,0.80);font-size:15px;">${dueDate}</div>
+      </div>
+    </div>
+    <p style="color:rgba(255,255,255,0.40);font-size:12px;margin:0;line-height:1.6;">
+      Please contact your tradesperson if you have any questions about this invoice.
+    </p>
+  `);
+  return resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Invoice ${invoiceNumber} — $${total.toFixed(2)} due ${dueDate}`,
+    html,
+  });
+}
+
+export async function sendClientPortalCode(to: string, code: string, address: string) {
+  const html = baseHtml(`
+    <h1 style="color:white;font-size:22px;font-weight:900;margin:0 0 12px;">Your verification code</h1>
+    <p style="color:rgba(255,255,255,0.75);font-size:15px;line-height:1.6;margin:0 0 24px;">
+      Use this code to access compliance records for:<br>
+      <strong style="color:white;">${address}</strong>
+    </p>
+    <div style="background:#07152B;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;border:1px solid rgba(249,115,22,0.30);">
+      <div style="font-size:48px;font-weight:900;color:#f97316;letter-spacing:8px;">${code}</div>
+    </div>
+    <p style="color:rgba(255,255,255,0.35);font-size:12px;margin:0;">
+      This code expires in 10 minutes. If you didn't request this, ignore this email.
+    </p>
+  `);
+  return resend.emails.send({ from: FROM, to, subject: "Your Elemetric verification code", html });
 }
 
 export async function sendPasswordResetEmail(to: string) {
