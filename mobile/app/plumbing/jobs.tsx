@@ -582,6 +582,16 @@ accessibilityLabel="Share job as PDF"
 : <Text style={styles.shareBtnText}>Share PDF</Text>
 }
 </Pressable>
+{(job.status === "completed" || !job.status) && (
+<Pressable
+style={styles.clientAccessBtn}
+onPress={() => router.push("/client-portal")}
+accessibilityRole="button"
+accessibilityLabel="Client Access"
+>
+<Text style={styles.clientAccessText}>Client Access</Text>
+</Pressable>
+)}
 </View>
 )}
 </View>
@@ -815,6 +825,15 @@ borderWidth: 1,
 borderColor: "rgba(255,255,255,0.10)",
 },
 shareBtnText: { color: "#f97316", fontWeight: "700", fontSize: 13 },
+clientAccessBtn: {
+paddingHorizontal: 10,
+paddingVertical: 8,
+borderRadius: 10,
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.10)",
+backgroundColor: "rgba(255,255,255,0.04)",
+},
+clientAccessText: { color: "rgba(255,255,255,0.55)", fontWeight: "700", fontSize: 12 },
 
 clearBtn: {
 borderRadius: 14,

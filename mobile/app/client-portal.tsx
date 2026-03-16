@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { sendClientPortalCode } from "@/lib/email";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -64,32 +65,42 @@ function complianceLabel(score: number): string {
 export default function ClientPortal() {
   const router = useRouter();
 
-  const [step, setStep] = useState<"verify" | "results">("verify");
+  const [step, setStep] = useState<"address" | "code" | "results">("address");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
+  const [codeInput, setCodeInput] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [jobs, setJobs] = useState<ComplianceJob[]>([]);
 
-  const verify = async () => {
-    const q = email.trim().toLowerCase();
-    const addr = address.trim();
-    if (!q || !addr) {
+  const sendCode = async () => {
+    const emailTrim = email.trim().toLowerCase();
+    const addrTrim = address.trim();
+    if (!emailTrim || !addrTrim) {
       Alert.alert("Required", "Please enter both your email and property address.");
       return;
     }
     setLoading(true);
     try {
-      // Look up jobs at this address linked to an account with this email
-      // The client provides their email and address — we match against the jobs table
-      // using the address field (partial match) and verifying a profile with that email exists
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("user_id, full_name")
-        .ilike("email", q)
-        .maybeSingle();
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      setVerificationCode(code);
+      await sendClientPortalCode(emailTrim, code, addrTrim);
+      setStep("code");
+    } catch (e: any) {
+      Alert.alert("Error", e?.message ?? "Could not send verification code. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // If no profile, look up auth user by email via jobs at address regardless
-      // Fallback: search by address only (any tradesperson's job)
+  const verifyCode = async () => {
+    if (codeInput.trim() !== verificationCode) {
+      Alert.alert("Incorrect Code", "The code you entered doesn't match. Please check your email and try again.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const addr = address.trim();
       const { data: jobData, error } = await supabase
         .from("jobs")
         .select("id, job_type, job_name, created_at, confidence, status, missing, action")
@@ -142,14 +153,13 @@ export default function ClientPortal() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {step === "verify" ? (
+        {step === "address" && (
           <>
-            {/* ── Verification card ── */}
+            {/* ── Step 1: Address + Email ── */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Verify Your Identity</Text>
               <Text style={styles.cardSub}>
-                Enter your email address and the property address to access your compliance records.
-                Your data is read-only and fully secure.
+                Enter your email address and the property address. We'll send a one-time verification code.
               </Text>
 
               <Text style={styles.fieldLabel}>Email Address</Text>
@@ -176,12 +186,14 @@ export default function ClientPortal() {
 
               <Pressable
                 style={[styles.verifyBtn, (loading || !email || !address) && { opacity: 0.5 }]}
-                onPress={verify}
+                onPress={sendCode}
                 disabled={loading || !email || !address}
+                accessibilityRole="button"
+                accessibilityLabel="Send Verification Code"
               >
                 {loading
                   ? <ActivityIndicator size="small" color="#0b1220" />
-                  : <Text style={styles.verifyBtnText}>View My Compliance Records →</Text>
+                  : <Text style={styles.verifyBtnText}>Send Verification Code →</Text>
                 }
               </Pressable>
             </View>
@@ -200,7 +212,57 @@ export default function ClientPortal() {
               </Text>
             </View>
           </>
-        ) : (
+        )}
+
+        {step === "code" && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Enter Verification Code</Text>
+            <Text style={styles.cardSub}>
+              We sent a 6-digit code to <Text style={styles.emailHighlight}>{email}</Text>.{"\n"}
+              Enter it below to access compliance records for:{"\n"}
+              <Text style={styles.addrHighlight}>{address}</Text>
+            </Text>
+
+            <TextInput
+              style={[styles.input, styles.codeInput]}
+              value={codeInput}
+              onChangeText={setCodeInput}
+              placeholder="000000"
+              placeholderTextColor="rgba(255,255,255,0.30)"
+              keyboardType="number-pad"
+              maxLength={6}
+              autoFocus
+            />
+
+            <Pressable
+              style={[styles.verifyBtn, (loading || codeInput.length !== 6) && { opacity: 0.5 }]}
+              onPress={verifyCode}
+              disabled={loading || codeInput.length !== 6}
+              accessibilityRole="button"
+              accessibilityLabel="Verify Code"
+            >
+              {loading
+                ? <ActivityIndicator size="small" color="#0b1220" />
+                : <Text style={styles.verifyBtnText}>Verify Code →</Text>
+              }
+            </Pressable>
+
+            <Pressable
+              style={styles.resendBtn}
+              onPress={() => { setStep("address"); setCodeInput(""); setVerificationCode(""); }}
+              accessibilityRole="button"
+              accessibilityLabel="Go back and resend code"
+            >
+              <Text style={styles.resendBtnText}>← Change email or address</Text>
+            </Pressable>
+
+            <Text style={styles.codeNote}>
+              Code expires in 10 minutes. Check your spam folder if you don't see it.
+            </Text>
+          </View>
+        )}
+
+        {step === "results" && (
           <>
             {/* ── Overall score ── */}
             <View style={styles.card}>
@@ -216,7 +278,7 @@ export default function ClientPortal() {
               <Text style={styles.cardSub}>
                 {jobs.length} job{jobs.length !== 1 ? "s" : ""} on record at {address}
               </Text>
-              <Pressable style={styles.newSearchBtn} onPress={() => { setStep("verify"); setJobs([]); }}>
+              <Pressable style={styles.newSearchBtn} onPress={() => { setStep("address"); setJobs([]); setCodeInput(""); setVerificationCode(""); }}>
                 <Text style={styles.newSearchBtnText}>Search Different Address</Text>
               </Pressable>
             </View>
@@ -274,7 +336,7 @@ export default function ClientPortal() {
           </>
         )}
 
-        <Pressable style={styles.back} onPress={() => router.back()}>
+        <Pressable style={styles.back} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Back">
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
       </ScrollView>
@@ -287,7 +349,7 @@ export default function ClientPortal() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#07152b" },
 
-  header: { paddingTop: 20, paddingHorizontal: 20, paddingBottom: 12 },
+  header: { paddingTop: 52, paddingHorizontal: 20, paddingBottom: 12 },
   brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
   title: { marginTop: 8, color: "white", fontSize: 22, fontWeight: "900" },
   subtitle: { marginTop: 4, color: "rgba(255,255,255,0.55)", fontSize: 13 },
@@ -305,6 +367,8 @@ const styles = StyleSheet.create({
   cardTitle: { color: "white", fontWeight: "900", fontSize: 15 },
   cardSub: { color: "rgba(255,255,255,0.55)", fontSize: 13, lineHeight: 20 },
   cardLabel: { color: "rgba(255,255,255,0.35)", fontSize: 11, fontWeight: "800", letterSpacing: 1, textTransform: "uppercase" },
+  emailHighlight: { color: "#f97316", fontWeight: "700" },
+  addrHighlight: { color: "white", fontWeight: "700" },
 
   bigScore: { fontSize: 60, fontWeight: "900", lineHeight: 68 },
   badge: {
@@ -319,7 +383,7 @@ const styles = StyleSheet.create({
 
   fieldLabel: { color: "rgba(255,255,255,0.35)", fontWeight: "800", fontSize: 11, letterSpacing: 1, textTransform: "uppercase" },
   input: {
-    backgroundColor: "#0f2035",
+    backgroundColor: "rgba(255,255,255,0.06)",
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
@@ -327,6 +391,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.10)",
+  },
+  codeInput: {
+    fontSize: 32,
+    fontWeight: "900",
+    textAlign: "center",
+    letterSpacing: 8,
   },
 
   verifyBtn: {
@@ -338,6 +408,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   verifyBtnText: { color: "#07152b", fontWeight: "900", fontSize: 15 },
+
+  resendBtn: { alignItems: "center", paddingVertical: 8 },
+  resendBtnText: { color: "#f97316", fontWeight: "700", fontSize: 13 },
+
+  codeNote: { color: "rgba(255,255,255,0.35)", fontSize: 12, textAlign: "center" },
 
   newSearchBtn: {
     height: 52,
