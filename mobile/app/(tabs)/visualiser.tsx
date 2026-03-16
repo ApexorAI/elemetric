@@ -21,6 +21,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
 } from "react-native-reanimated";
+import { supabase } from "@/lib/supabase";
 
 const API_BASE = "https://elemetric-ai-production.up.railway.app";
 const { width: SW, height: SH } = Dimensions.get("window");
@@ -99,10 +100,11 @@ export default function VisualiserScreen() {
   const [category, setCategory] = useState<Category>("Split System");
   const [query, setQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [resultBase64, setResultBase64] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [rating, setRating] = useState<"good" | "poor" | null>(null);
 
   const filteredBrands = BRANDS[category].filter((b) =>
     query.length === 0 || b.toLowerCase().includes(query.toLowerCase())
@@ -135,9 +137,10 @@ export default function VisualiserScreen() {
     if (!query.trim()) { Alert.alert("No product", "Please enter or select a brand and model."); return; }
 
     setShowDropdown(false);
-    setLoading(true);
+    setLoadingStep("Analysing your space...");
     setResultUrl(null);
     setResultBase64(null);
+    setRating(null);
 
     try {
       const r = await ImageManipulator.manipulateAsync(
@@ -146,6 +149,8 @@ export default function VisualiserScreen() {
         { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
       if (!r.base64) throw new Error("Could not read photo.");
+
+      setLoadingStep("Generating product visualisation...");
 
       const res = await fetch(`${API_BASE}/visualise`, {
         method: "POST",
@@ -163,6 +168,8 @@ export default function VisualiserScreen() {
       const json = await res.json();
 
       if (!res.ok) throw new Error(json?.error ?? json?.details ?? "Visualisation failed.");
+
+      setLoadingStep("Rendering result...");
 
       // imageUrl may be a string URL, a FileOutput object, or missing
       let imageUrl: string | null = null;
@@ -182,7 +189,7 @@ export default function VisualiserScreen() {
     } catch (e: any) {
       Alert.alert("Error", e?.message ?? "Unknown error");
     } finally {
-      setLoading(false);
+      setLoadingStep(null);
     }
   };
 
@@ -303,21 +310,24 @@ export default function VisualiserScreen() {
 
         {/* Generate */}
         <Pressable
-          style={[styles.generateBtn, loading && { opacity: 0.6 }]}
+          style={[styles.generateBtn, loadingStep !== null && { opacity: 0.6 }]}
           onPress={generate}
-          disabled={loading}
+          disabled={loadingStep !== null}
         >
-          {loading ? (
+          {loadingStep !== null ? (
             <ActivityIndicator color="#0b1220" />
           ) : (
             <Text style={styles.generateBtnText}>✦ Generate Visualisation</Text>
           )}
         </Pressable>
 
-        {loading && (
-          <Text style={styles.loadingNote}>
-            Compositing product into your space — this can take 30–60 seconds…
-          </Text>
+        {/* Loading progress card */}
+        {loadingStep !== null && (
+          <View style={styles.loadingCard}>
+            <ActivityIndicator color="#f97316" />
+            <Text style={styles.loadingStep}>{loadingStep}</Text>
+            <Text style={styles.loadingHint}>This usually takes 20–40 seconds</Text>
+          </View>
         )}
 
         {/* Result */}
@@ -332,6 +342,43 @@ export default function VisualiserScreen() {
               />
               <Text style={styles.tapToExpand}>Tap to expand · Pinch to zoom</Text>
             </Pressable>
+
+            {/* Retry button */}
+            <Pressable
+              style={styles.retryBtn}
+              onPress={() => { setResultUrl(null); setResultBase64(null); setRating(null); }}
+            >
+              <Text style={styles.retryBtnText}>↺ Try Again</Text>
+            </Pressable>
+
+            {/* Quality rating */}
+            <View style={styles.ratingRow}>
+              <Text style={styles.ratingLabel}>How was the result?</Text>
+              <Pressable
+                style={[styles.ratingBtn, rating === "good" && styles.ratingBtnActive]}
+                onPress={() => setRating("good")}
+              >
+                <Text style={styles.ratingBtnText}>👍 Good</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.ratingBtn, rating === "poor" && styles.ratingBtnActive]}
+                onPress={async () => {
+                  setRating("poor");
+                  try {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    await supabase.from("visualiser_feedback").insert({
+                      user_id: user?.id,
+                      product: query,
+                      category,
+                      rated_at: new Date().toISOString(),
+                    });
+                  } catch {}
+                }}
+              >
+                <Text style={styles.ratingBtnText}>👎 Poor</Text>
+              </Pressable>
+            </View>
+
             <Text style={styles.disclaimer}>
               AI-generated visualisation for reference only. Actual product appearance and
               installation may differ.
@@ -423,7 +470,7 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     position: "absolute",
-    top: 52,       // sits just below the TextInput (14 + 15 + 14 + 2 border ≈ 46, with some slack)
+    top: 52,
     left: 0,
     right: 0,
     zIndex: 999,
@@ -448,14 +495,23 @@ const styles = StyleSheet.create({
   dropdownText: { color: "white", fontSize: 14, fontWeight: "600" },
 
   generateBtn: {
-    borderRadius: 14, paddingVertical: 16, alignItems: "center",
+    borderRadius: 14, height: 56, alignItems: "center", justifyContent: "center",
     backgroundColor: "#f97316", marginTop: 4,
   },
   generateBtnText: { color: "#0b1220", fontWeight: "900", fontSize: 16 },
 
-  loadingNote: {
-    color: "rgba(255,255,255,0.45)", fontSize: 13, textAlign: "center", fontStyle: "italic",
+  // Loading card
+  loadingCard: {
+    backgroundColor: "#0f2035",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.20)",
+    padding: 24,
+    alignItems: "center",
+    gap: 10,
   },
+  loadingStep: { color: "white", fontWeight: "800", fontSize: 15 },
+  loadingHint: { color: "rgba(255,255,255,0.40)", fontSize: 12 },
 
   resultWrap: { gap: 10 },
   resultLabel: { color: "rgba(255,255,255,0.40)", fontSize: 12, fontWeight: "800", letterSpacing: 1 },
@@ -466,6 +522,34 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.35)", fontSize: 11, textAlign: "center",
     marginTop: 6, fontStyle: "italic",
   },
+
+  retryBtn: {
+    height: 48,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  retryBtnText: { color: "rgba(255,255,255,0.70)", fontWeight: "700", fontSize: 14 },
+
+  ratingRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  ratingLabel: { flex: 1, color: "rgba(255,255,255,0.55)", fontSize: 13 },
+  ratingBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  ratingBtnActive: {
+    borderColor: "#f97316",
+    backgroundColor: "rgba(249,115,22,0.12)",
+  },
+  ratingBtnText: { color: "white", fontWeight: "700", fontSize: 13 },
+
   disclaimer: {
     color: "rgba(255,255,255,0.35)", fontSize: 11, lineHeight: 16,
     textAlign: "center", fontStyle: "italic",
