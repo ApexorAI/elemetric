@@ -258,14 +258,28 @@ ${tradies.length > 0 ? `
     }
   };
 
+  const getShareUrl = (addr: string): string => {
+    const addrHash = btoa(addr.toLowerCase().trim()).replace(/[^a-z0-9]/gi, "").substring(0, 12);
+    return `https://elemetric.com.au/property/${addrHash}`;
+  };
+
   const sharePassport = async () => {
     const q = address.trim();
-    const url = `${API_BASE}/property-passport?address=${encodeURIComponent(q)}`;
+    const shareUrl = getShareUrl(q);
     try {
+      // Copy to clipboard if available
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const Clipboard = require("expo-clipboard");
+        await Clipboard.setStringAsync(shareUrl);
+        Alert.alert("Link copied", "Share this link with your client to show their property compliance history.");
+        return;
+      } catch {}
+      // Fallback to native share
       await Share.share({
         title: `Property Compliance Passport — ${q}`,
-        message: `Compliance history for ${q}: ${url}`,
-        url,
+        message: `Compliance history for ${q}: ${shareUrl}`,
+        url: shareUrl,
       });
     } catch {}
   };
@@ -363,23 +377,32 @@ ${tradies.length > 0 ? `
               </Pressable>
             </View>
 
-            {/* ── QR code + share ───────────────────────────────────────── */}
-            {qrDataUrl && (
-              <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Shareable Compliance QR</Text>
-                <Text style={styles.sectionSub}>
-                  Anyone can scan this code to view the live compliance record for this property
-                </Text>
-                <Image
-                  source={{ uri: qrDataUrl }}
-                  style={styles.qrImage}
-                  resizeMode="contain"
-                />
-                <Pressable style={styles.shareBtn} onPress={sharePassport}>
-                  <Text style={styles.shareBtnText}>Share Link</Text>
-                </Pressable>
-              </View>
-            )}
+            {/* ── Share & QR ───────────────────────────────────────── */}
+            {(() => {
+              const shareUrl = getShareUrl(passport.address);
+              return (
+                <View style={styles.card}>
+                  <Text style={styles.sectionTitle}>Share Property Report</Text>
+                  <Text style={styles.sectionSub}>
+                    Share a compliance summary link with your client
+                  </Text>
+                  <View style={styles.shareUrlBox}>
+                    <Text style={styles.shareUrlText} numberOfLines={1}>{shareUrl}</Text>
+                  </View>
+                  <Image
+                    source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareUrl)}` }}
+                    style={styles.qrImage}
+                    resizeMode="contain"
+                  />
+                  <Pressable style={styles.shareBtn} onPress={sharePassport} accessibilityRole="button" accessibilityLabel="Share Property Report Link">
+                    <Text style={styles.shareBtnText}>Copy & Share Link →</Text>
+                  </Pressable>
+                  <Text style={styles.privacyNote}>
+                    🔒 Plumber names and personal details are not visible in the public view.
+                  </Text>
+                </View>
+              );
+            })()}
 
             {/* ── Tradies on record ─────────────────────────────────────── */}
             {(() => {
@@ -621,6 +644,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   shareBtnText: { color: "#f97316", fontWeight: "900" },
+  shareUrlBox: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.20)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  shareUrlText: { color: "#f97316", fontSize: 12, fontWeight: "600" },
+  privacyNote: {
+    color: "rgba(255,255,255,0.40)",
+    fontSize: 12,
+    textAlign: "center",
+    lineHeight: 18,
+  },
 
   // Job history
   jobRow: {
