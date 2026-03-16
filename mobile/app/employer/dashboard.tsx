@@ -482,6 +482,15 @@ export default function EmployerDashboard() {
           <Text style={styles.templatesBtnText}>📋 Job Templates</Text>
         </Pressable>
 
+        <Pressable
+          style={styles.templatesBtn}
+          onPress={() => router.push("/employer/subcontractors")}
+          accessibilityRole="button"
+          accessibilityLabel="Subcontractors"
+        >
+          <Text style={styles.templatesBtnText}>👷 Subcontractors</Text>
+        </Pressable>
+
         <Pressable onPress={() => router.back()} style={styles.back}>
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
