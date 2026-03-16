@@ -7,9 +7,13 @@ import {
   ScrollView,
   ActivityIndicator,
   TextInput,
+  Alert,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system/legacy";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,6 +65,9 @@ export default function EmployerDashboard() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState<Period>("month");
+  const [topFailures, setTopFailures] = useState<[string, number][]>([]);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [allJobs, setAllJobs] = useState<any[]>([]);
 
   // ── Load data ────────────────────────────────────────────────────────────────
 
@@ -180,6 +187,27 @@ export default function EmployerDashboard() {
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .slice(0, 10)
             );
+
+            // Compute top failures from all team jobs
+            const allJobsFlat: any[] = [];
+            for (const m of hydrated) {
+              const { data: mJobs } = await supabase
+                .from("jobs")
+                .select("missing, created_at")
+                .eq("user_id", m.userId);
+              if (mJobs) allJobsFlat.push(...mJobs);
+            }
+            setAllJobs(allJobsFlat);
+            const failureCounts: Record<string, number> = {};
+            allJobsFlat.forEach((j: any) => {
+              (j.missing ?? []).forEach((mItem: string) => {
+                failureCounts[mItem] = (failureCounts[mItem] ?? 0) + 1;
+              });
+            });
+            const sorted = Object.entries(failureCounts)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 5);
+            if (active) setTopFailures(sorted);
           }
         } catch (e: any) {
           if (active)
@@ -223,6 +251,50 @@ export default function EmployerDashboard() {
       withScore.reduce((sum, m) => sum + (m.complianceScore ?? 0), 0) /
       withScore.length;
     return `${Math.round(avg)}%`;
+  };
+
+  const exportAnalyticsPdf = async () => {
+    setExportingPdf(true);
+    try {
+      const dateStr = new Date().toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" });
+      const avgComp = members.filter((m) => m.complianceScore != null).length > 0
+        ? Math.round(members.filter((m) => m.complianceScore != null).reduce((s, m) => s + (m.complianceScore ?? 0), 0) / members.filter((m) => m.complianceScore != null).length)
+        : null;
+      const failureRows = topFailures.map(([item, count]) =>
+        `<tr><td style="padding:6px 10px;border:1px solid #e5e7eb;">${item}</td><td style="padding:6px 10px;border:1px solid #e5e7eb;text-align:center;font-weight:bold;">${count}</td></tr>`
+      ).join("");
+      const memberRows = members.slice().sort((a, b) => (b.complianceScore ?? -1) - (a.complianceScore ?? -1)).map((m, i) =>
+        `<tr><td style="padding:6px 10px;border:1px solid #e5e7eb;">#${i + 1}</td><td style="padding:6px 10px;border:1px solid #e5e7eb;font-weight:bold;">${m.fullName}</td><td style="padding:6px 10px;border:1px solid #e5e7eb;text-align:center;">${m.jobCount}</td><td style="padding:6px 10px;border:1px solid #e5e7eb;text-align:center;font-weight:bold;color:${complianceColor(m.complianceScore)};">${m.complianceScore != null ? m.complianceScore + "%" : "—"}</td></tr>`
+      ).join("");
+      const html = `<html><head><style>body{margin:0;padding:0;font-family:Helvetica,Arial,sans-serif;color:#111827;}</style></head><body>
+<div style="background:#07152b;color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
+  <div><div style="font-size:28px;font-weight:900;letter-spacing:3px;color:#f97316;">ELEMETRIC</div><div style="font-size:11px;opacity:0.6;">Team Analytics Report</div></div>
+  <div style="text-align:right;font-size:12px;opacity:0.7;">${dateStr}</div>
+</div>
+<div style="background:#f97316;height:4px;"></div>
+<div style="padding:24px;">
+<h2 style="font-size:20px;margin:0 0 16px;">${teamName} — Compliance Summary</h2>
+<table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+<tr><td style="padding:8px;background:#f3f4f6;font-weight:bold;">Team Members</td><td style="padding:8px;">${members.length}</td></tr>
+<tr><td style="padding:8px;background:#f3f4f6;font-weight:bold;">Avg Compliance Score</td><td style="padding:8px;font-weight:bold;">${avgComp != null ? avgComp + "%" : "—"}</td></tr>
+<tr><td style="padding:8px;background:#f3f4f6;font-weight:bold;">Total Jobs Recorded</td><td style="padding:8px;">${allJobs.length}</td></tr>
+</table>
+${topFailures.length > 0 ? `<h3 style="font-size:16px;margin:0 0 10px;">Most Common Failures</h3><table style="width:100%;border-collapse:collapse;margin-bottom:20px;"><thead><tr style="background:#f3f4f6;"><th style="padding:6px 10px;border:1px solid #e5e7eb;text-align:left;">Item</th><th style="padding:6px 10px;border:1px solid #e5e7eb;text-align:center;">Occurrences</th></tr></thead><tbody>${failureRows}</tbody></table>` : ""}
+${members.length > 0 ? `<h3 style="font-size:16px;margin:0 0 10px;">Team Leaderboard</h3><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f3f4f6;"><th style="padding:6px 10px;border:1px solid #e5e7eb;">Rank</th><th style="padding:6px 10px;border:1px solid #e5e7eb;text-align:left;">Name</th><th style="padding:6px 10px;border:1px solid #e5e7eb;text-align:center;">Jobs</th><th style="padding:6px 10px;border:1px solid #e5e7eb;text-align:center;">Compliance</th></tr></thead><tbody>${memberRows}</tbody></table>` : ""}
+<p style="margin-top:24px;font-size:11px;color:#6b7280;">Generated by Elemetric · elemetric.com.au · ABN 19 377 661 368</p>
+</div></body></html>`;
+      const { uri } = await Print.printToFileAsync({ html });
+      const dest = `${FileSystem.cacheDirectory}elemetric-analytics-${Date.now()}.pdf`;
+      await FileSystem.copyAsync({ from: uri, to: dest });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(dest, { mimeType: "application/pdf", dialogTitle: "Share Analytics PDF", UTI: "com.adobe.pdf" });
+      }
+    } catch (e: any) {
+      Alert.alert("PDF Error", e?.message ?? "Could not generate PDF.");
+    } finally {
+      setExportingPdf(false);
+    }
   };
 
   // ── Loading state ─────────────────────────────────────────────────────────────
@@ -333,7 +405,13 @@ export default function EmployerDashboard() {
           .sort((a, b) => (b.complianceScore ?? -1) - (a.complianceScore ?? -1))
           .map((m, rank) => (
             <View key={m.userId} style={[styles.leagueRow, rank === 0 && styles.leagueRowFirst]}>
-              <Text style={[styles.leagueRank, rank === 0 && { color: "#f97316" }]}>#{rank + 1}</Text>
+              <View style={styles.leagueRankWrap}>
+                {rank === 0 ? (
+                  <Text style={styles.leagueGold}>🥇</Text>
+                ) : (
+                  <Text style={[styles.leagueRank, rank === 0 && { color: "#f97316" }]}>#{rank + 1}</Text>
+                )}
+              </View>
               <View style={styles.leagueInfo}>
                 <Text style={styles.leagueName}>{m.fullName}</Text>
                 <Text style={styles.leagueMeta}>{m.periodJobCount} job{m.periodJobCount !== 1 ? "s" : ""} this {period} · {m.jobCount} total</Text>
@@ -344,6 +422,24 @@ export default function EmployerDashboard() {
             </View>
           ))
         }
+
+        {/* ── Most common failures ── */}
+        {topFailures.length > 0 && (
+          <>
+            <Text style={styles.sectionLabel}>MOST COMMON FAILURES</Text>
+            <View style={styles.failureCard}>
+              {topFailures.map(([item, count], i) => (
+                <View key={item} style={[styles.failureRow, i < topFailures.length - 1 && styles.failureRowBorder]}>
+                  <Text style={styles.failureRank}>{i + 1}</Text>
+                  <Text style={styles.failureItem} numberOfLines={2}>{item}</Text>
+                  <View style={styles.failureCountBadge}>
+                    <Text style={styles.failureCount}>{count}×</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
 
         {/* ── Activity feed ── */}
         {activity.length > 0 && (
@@ -438,6 +534,21 @@ export default function EmployerDashboard() {
             </View>
           ))
         )}
+
+        {/* ── Export Analytics PDF ── */}
+        <Pressable
+          style={[styles.exportBtn, exportingPdf && { opacity: 0.6 }]}
+          onPress={exportAnalyticsPdf}
+          disabled={exportingPdf}
+          accessibilityRole="button"
+          accessibilityLabel="Export Analytics PDF"
+        >
+          {exportingPdf ? (
+            <ActivityIndicator color="#f97316" size="small" />
+          ) : (
+            <Text style={styles.exportBtnText}>📊 Export Analytics PDF</Text>
+          )}
+        </Pressable>
 
         {/* ── Action buttons ── */}
         <View style={styles.actionRow}>
@@ -564,11 +675,50 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.03)",
   },
   leagueRowFirst: { borderColor: "rgba(249,115,22,0.25)", backgroundColor: "rgba(249,115,22,0.05)" },
-  leagueRank: { color: "rgba(255,255,255,0.35)", fontWeight: "900", fontSize: 15, width: 28 },
+  leagueRankWrap: { width: 28, alignItems: "center" },
+  leagueRank: { color: "rgba(255,255,255,0.35)", fontWeight: "900", fontSize: 15 },
+  leagueGold: { fontSize: 20 },
   leagueInfo: { flex: 1 },
   leagueName: { color: "white", fontWeight: "700", fontSize: 15 },
   leagueMeta: { color: "rgba(255,255,255,0.55)", fontSize: 13, marginTop: 1 },
   leagueScore: { fontWeight: "900", fontSize: 18 },
+
+  failureCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "#0f2035",
+    overflow: "hidden",
+  },
+  failureRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  failureRowBorder: { borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.07)" },
+  failureRank: { color: "#f97316", fontWeight: "900", fontSize: 14, width: 20 },
+  failureItem: { flex: 1, color: "white", fontSize: 14, fontWeight: "600" },
+  failureCountBadge: {
+    backgroundColor: "rgba(249,115,22,0.15)",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  failureCount: { color: "#f97316", fontWeight: "900", fontSize: 13 },
+
+  exportBtn: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderRadius: 14,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.30)",
+    marginTop: 4,
+  },
+  exportBtnText: { color: "#f97316", fontWeight: "800", fontSize: 15 },
 
   activityRow: {
     flexDirection: "row",
