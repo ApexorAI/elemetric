@@ -142,6 +142,8 @@ export default function Profile() {
   const [complianceScore, setComplianceScore] = useState<number | null>(null);
   const [jobCount, setJobCount]             = useState(0);
   const [trendData, setTrendData]           = useState<MonthlyScore[]>([]);
+  const [percentile, setPercentile]         = useState<number | null>(null);
+  const [benchBadge, setBenchBadge]         = useState<string | null>(null);
 
   // Licence verification
   const [licenceVerified, setLicenceVerified]     = useState(false);
@@ -216,6 +218,29 @@ export default function Profile() {
                 score: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
               }));
               if (active && trend.length >= 2) setTrendData(trend);
+
+              // Benchmarking: fetch all compliance scores from profiles
+              try {
+                const { data: allProfiles } = await supabase
+                  .from("profiles")
+                  .select("compliance_score")
+                  .not("compliance_score", "is", null);
+                if (allProfiles && allProfiles.length > 1 && active) {
+                  const scores = allProfiles
+                    .map((p: any) => p.compliance_score as number)
+                    .filter((s: number) => typeof s === "number");
+                  const below = scores.filter((s: number) => s < avg).length;
+                  const pct = Math.round((below / scores.length) * 100);
+                  setPercentile(pct);
+                  let badge: string;
+                  if (pct >= 90) badge = "🏆 Top 10%";
+                  else if (pct >= 75) badge = "⭐ Top 25%";
+                  else if (pct >= 50) badge = "👍 Above Average";
+                  else if (pct >= 25) badge = "📈 Below Average";
+                  else badge = "🔧 Needs Improvement";
+                  setBenchBadge(badge);
+                }
+              } catch {}
             } else if (active) {
               setComplianceScore(null);
               setJobCount(0);
@@ -373,6 +398,25 @@ export default function Profile() {
 
         {/* Compliance trend chart */}
         {trendData.length >= 2 && <ComplianceTrendChart data={trendData} />}
+
+        {/* Benchmarking card */}
+        {percentile !== null && benchBadge !== null && (
+          <View style={styles.benchCard}>
+            <View style={styles.benchRow}>
+              <View style={styles.benchLeft}>
+                <Text style={styles.benchTitle}>Industry Benchmark</Text>
+                <Text style={styles.benchSub}>You score higher than {percentile}% of plumbers on Elemetric</Text>
+              </View>
+              <View style={styles.benchBadgeWrap}>
+                <Text style={styles.benchBadgeText}>{benchBadge}</Text>
+              </View>
+            </View>
+            <View style={styles.benchBarWrap}>
+              <View style={[styles.benchBar, { width: `${percentile}%` as any }]} />
+            </View>
+            <Text style={styles.benchPercentile}>{percentile}th percentile</Text>
+          </View>
+        )}
 
         {/* Profile fields */}
         <Text style={styles.label}>Full Name</Text>
@@ -676,4 +720,36 @@ const styles = StyleSheet.create({
     borderRadius: 20, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4,
   },
   trendBadgeText: { fontWeight: "700", fontSize: 12 },
+
+  benchCard: {
+    backgroundColor: "#0f2035",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.07)",
+    padding: 16,
+    marginBottom: 12,
+    gap: 10,
+  },
+  benchRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  benchLeft: { flex: 1, gap: 4 },
+  benchTitle: { color: "white", fontWeight: "700", fontSize: 15 },
+  benchSub: { color: "rgba(255,255,255,0.55)", fontSize: 13, lineHeight: 18 },
+  benchBadgeWrap: {
+    backgroundColor: "rgba(249,115,22,0.15)",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.30)",
+    alignSelf: "flex-start",
+  },
+  benchBadgeText: { color: "#f97316", fontWeight: "800", fontSize: 13 },
+  benchBarWrap: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    overflow: "hidden",
+  },
+  benchBar: { height: 6, borderRadius: 3, backgroundColor: "#f97316" },
+  benchPercentile: { color: "rgba(255,255,255,0.35)", fontSize: 11, fontWeight: "700", textAlign: "right" },
 });
