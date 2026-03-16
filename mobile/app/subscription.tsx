@@ -236,7 +236,7 @@ export default function Subscription() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#07152b" },
   header: {
-    paddingTop: 18,
+    paddingTop: 52,
     paddingHorizontal: 18,
     paddingBottom: 8,
   },

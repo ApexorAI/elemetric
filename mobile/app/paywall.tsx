@@ -230,7 +230,7 @@ export default function Paywall() {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#07152b" },
-  header: { paddingTop: 18, paddingHorizontal: 20, paddingBottom: 8 },
+  header: { paddingTop: 52, paddingHorizontal: 20, paddingBottom: 8 },
   brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
   title: { marginTop: 6, color: "white", fontSize: 28, fontWeight: "900" },
   subtitle: { marginTop: 6, color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 20 },
