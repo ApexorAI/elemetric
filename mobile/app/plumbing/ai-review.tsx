@@ -13,7 +13,7 @@ Modal,
 Share,
 Linking,
 } from "react-native";
-import Svg, { Circle } from "react-native-svg";
+import Svg, { Circle, G } from "react-native-svg";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Print from "expo-print";
@@ -74,6 +74,30 @@ const JOB_TYPE_META: Record<string, { label: string; standard: string }> = {
   hvac:       { label: "HVAC Compliance Report",              standard: "AS/NZS 1668" },
   carpentry:  { label: "Carpentry Documentation Report",      standard: "AS 1684" },
 };
+
+// ── Coverage Ring ─────────────────────────────────────────────────────────────
+
+function CoverageRing({ score }: { score: number }) {
+  const SIZE = 80;
+  const SW_RING = 7;
+  const R = (SIZE - SW_RING) / 2;
+  const CIRC = 2 * Math.PI * R;
+  const offset = CIRC - (score / 100) * CIRC;
+  return (
+    <View style={{ width: SIZE, height: SIZE }}>
+      <Svg width={SIZE} height={SIZE}>
+        <G rotation="-90" origin={`${SIZE / 2},${SIZE / 2}`}>
+          <Circle cx={SIZE / 2} cy={SIZE / 2} r={R} stroke="rgba(255,255,255,0.08)" strokeWidth={SW_RING} fill="none" />
+          <Circle cx={SIZE / 2} cy={SIZE / 2} r={R} stroke="#f97316" strokeWidth={SW_RING} fill="none"
+            strokeDasharray={`${CIRC}`} strokeDashoffset={offset} strokeLinecap="round" />
+        </G>
+      </Svg>
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ color: "#f97316", fontWeight: "900", fontSize: 16 }}>{score}%</Text>
+      </View>
+    </View>
+  );
+}
 
 export default function AIReview() {
 const router = useRouter();
@@ -1292,10 +1316,13 @@ return (
     {result360 ? (
       <>
         <View style={styles.coverageRow}>
-          <Text style={styles.coverageLabel}>Coverage Score</Text>
-          <Text style={[styles.coverageScore, { color: result360.coverageScore >= 80 ? "#22c55e" : result360.coverageScore >= 50 ? "#f97316" : "#ef4444" }]}>
-            {result360.coverageScore}%
-          </Text>
+          <CoverageRing score={result360.coverageScore} />
+          <View style={{ flex: 1, marginLeft: 14 }}>
+            <Text style={styles.coverageLabel}>Coverage Score</Text>
+            <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, marginTop: 4 }}>
+              Your 360° photo covered {result360.detected.length} of {result360.detected.length + result360.missingFromView.length} checklist items
+            </Text>
+          </View>
         </View>
         {result360.detected.length > 0 && (
           <View style={styles.analysis360Section}>
@@ -1307,9 +1334,9 @@ return (
         )}
         {result360.missingFromView.length > 0 && (
           <View style={styles.analysis360Section}>
-            <Text style={[styles.analysis360SectionLabel, { color: "#ef4444" }]}>Not visible in 360°</Text>
+            <Text style={[styles.analysis360SectionLabel, { color: "#f97316" }]}>Not visible — needs individual photo</Text>
             {result360.missingFromView.map((x, i) => (
-              <Text key={i} style={[styles.analysis360Item, { color: "rgba(255,255,255,0.55)" }]}>✗ {x}</Text>
+              <Text key={i} style={[styles.analysis360Item, { color: "rgba(255,255,255,0.55)" }]}>⚠ {x}</Text>
             ))}
           </View>
         )}
