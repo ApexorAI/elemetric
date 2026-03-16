@@ -320,6 +320,11 @@ return (
 <Text style={styles.rowAction}>Change Password</Text>
 <Text style={styles.rowChevron}>›</Text>
 </Pressable>
+<View style={styles.divider} />
+<Pressable style={styles.row} onPress={() => router.push("/referral")}>
+<Text style={styles.rowAction}>Refer a Friend →</Text>
+<Text style={styles.rowChevron}>›</Text>
+</Pressable>
 </View>
 
 {/* View / Role */}

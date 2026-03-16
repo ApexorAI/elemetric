@@ -47,6 +47,23 @@ The following must be run before the app goes live — without them, core featur
 
 ---
 
+## Task 1 — Referral System
+
+```sql
+-- referrals table
+CREATE TABLE referrals (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  referrer_id uuid REFERENCES auth.users NOT NULL,
+  referred_email text,
+  status text DEFAULT 'pending', -- pending | accepted | paid
+  commission_amount numeric DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS referral_code text UNIQUE;
+```
+
+---
+
 ## Optional Migrations (can run post-launch)
 
 - `property_passport.sql` — Property compliance history feature
