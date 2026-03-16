@@ -16,6 +16,7 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import { supabase } from "@/lib/supabase";
 import * as Haptics from "expo-haptics";
+import { sendInvoiceEmail } from "@/lib/email";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -78,8 +79,14 @@ export default function InvoiceScreen() {
     { id: "1", description: "", qty: "1", unitPrice: "" },
   ]);
 
+  // Invoice status
+  const [invoiceStatus, setInvoiceStatus] = useState<"Unpaid" | "Paid" | "Overdue">("Unpaid");
+
   // State
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [lastTotal, setLastTotal] = useState(0);
+  const [userId, setUserId] = useState<string | null>(null);
 
   // ── Pre-fill from profile ─────────────────────────────────────────────────
 
@@ -90,6 +97,7 @@ export default function InvoiceScreen() {
         try {
           const { data: { user } } = await supabase.auth.getUser();
           if (user && active) {
+            setUserId(user.id);
             const { data } = await supabase
               .from("profiles")
               .select("full_name, licence_number, company_name")
@@ -99,6 +107,14 @@ export default function InvoiceScreen() {
               if (data.company_name) setBusinessName(data.company_name);
               if (data.licence_number) setLicenceNumber(data.licence_number);
             }
+            // Auto-increment invoice number
+            try {
+              const { count } = await supabase
+                .from("invoices")
+                .select("id", { count: "exact", head: true })
+                .eq("user_id", user.id);
+              setInvoiceNumber(`INV-${String((count ?? 0) + 1).padStart(4, "0")}`);
+            } catch {}
           }
         } catch {}
         // Pre-fill job reference from current job
@@ -272,6 +288,26 @@ body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: 
       const { uri } = await Print.printToFileAsync({ html });
       const dest = `${FileSystem.cacheDirectory}elemetric-invoice-${invoiceNumber}.pdf`;
       await FileSystem.copyAsync({ from: uri, to: dest });
+
+      // Save to Supabase
+      if (userId) {
+        try {
+          await supabase.from("invoices").insert({
+            user_id: userId,
+            invoice_number: invoiceNumber,
+            client_name: clientName,
+            client_email: clientEmail || null,
+            subtotal,
+            gst_amount: gstIncluded ? gstAmount : 0,
+            total,
+            status: invoiceStatus,
+            due_date: dueDate,
+            created_at: new Date().toISOString(),
+          });
+        } catch {}
+      }
+      setLastTotal(total);
+
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
         await Sharing.shareAsync(dest, {
@@ -289,14 +325,36 @@ body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: 
     }
   };
 
+  const emailInvoice = async () => {
+    if (!clientEmail.trim()) {
+      Alert.alert("No email", "Please enter the client's email address.");
+      return;
+    }
+    setEmailLoading(true);
+    try {
+      await sendInvoiceEmail(clientEmail.trim(), clientName, invoiceNumber, lastTotal || total, dueDate);
+      Alert.alert("Email Sent", `Invoice sent to ${clientEmail}`);
+    } catch (e: any) {
+      Alert.alert("Email Error", e?.message ?? "Could not send email.");
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back">
+          <Text style={styles.backText}>← Back</Text>
+        </Pressable>
         <Text style={styles.brand}>ELEMETRIC</Text>
         <Text style={styles.title}>Invoice Generator</Text>
         <Text style={styles.subtitle}>Create professional ATO-compliant invoices</Text>
+        <Pressable style={styles.historyLink} onPress={() => router.push("/invoice-history")} accessibilityRole="button" accessibilityLabel="View Invoice History">
+          <Text style={styles.historyLinkText}>View Invoice History →</Text>
+        </Pressable>
       </View>
 
       <ScrollView
@@ -360,6 +418,28 @@ body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: 
               <Text style={styles.fieldLabel}>Due Date</Text>
               <TextInput style={styles.input} value={dueDate} onChangeText={setDueDate} placeholder="DD/MM/YYYY" placeholderTextColor="rgba(255,255,255,0.3)" keyboardType="numbers-and-punctuation" />
             </View>
+          </View>
+
+          {/* Status selector */}
+          <Text style={styles.fieldLabel}>Status</Text>
+          <View style={styles.statusRow}>
+            {(["Unpaid", "Paid", "Overdue"] as const).map((s) => (
+              <Pressable
+                key={s}
+                style={[
+                  styles.statusBtn,
+                  invoiceStatus === s && styles.statusBtnActive,
+                  s === "Paid" && invoiceStatus === s && { borderColor: "#22c55e", backgroundColor: "rgba(34,197,94,0.12)" },
+                  s === "Overdue" && invoiceStatus === s && { borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,0.12)" },
+                ]}
+                onPress={() => setInvoiceStatus(s)}
+              >
+                <Text style={[
+                  styles.statusBtnText,
+                  invoiceStatus === s && { color: s === "Paid" ? "#22c55e" : s === "Overdue" ? "#ef4444" : "#f97316" },
+                ]}>{s}</Text>
+              </Pressable>
+            ))}
           </View>
 
           <Pressable style={styles.gstToggle} onPress={() => setGstIncluded((v) => !v)}>
@@ -470,8 +550,18 @@ body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: 
           }
         </Pressable>
 
-        <Pressable style={styles.back} onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+        {/* Email to client */}
+        <Pressable
+          style={[styles.emailBtn, emailLoading && { opacity: 0.6 }]}
+          onPress={emailInvoice}
+          disabled={emailLoading}
+          accessibilityRole="button"
+          accessibilityLabel="Email invoice to client"
+        >
+          {emailLoading
+            ? <ActivityIndicator color="white" size="small" />
+            : <Text style={styles.emailBtnText}>📧 Email Invoice to Client</Text>
+          }
         </Pressable>
       </ScrollView>
     </View>
@@ -482,10 +572,36 @@ body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: 
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#07152b" },
-  header: { paddingTop: 20, paddingHorizontal: 20, paddingBottom: 12 },
+  header: { paddingTop: 52, paddingHorizontal: 20, paddingBottom: 12 },
+  backBtn: { marginBottom: 10 },
+  backText: { color: "#f97316", fontWeight: "700", fontSize: 15 },
   brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
   title: { marginTop: 8, color: "white", fontSize: 22, fontWeight: "900" },
   subtitle: { marginTop: 4, color: "rgba(255,255,255,0.55)", fontSize: 13 },
+  historyLink: { marginTop: 8 },
+  historyLinkText: { color: "#f97316", fontWeight: "700", fontSize: 13 },
+  statusRow: { flexDirection: "row", gap: 8 },
+  statusBtn: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  statusBtnActive: { borderColor: "#f97316", backgroundColor: "rgba(249,115,22,0.10)" },
+  statusBtnText: { color: "rgba(255,255,255,0.55)", fontWeight: "700", fontSize: 13 },
+  emailBtn: {
+    height: 52,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "#0f2035",
+  },
+  emailBtnText: { color: "rgba(255,255,255,0.80)", fontWeight: "700", fontSize: 15 },
 
   body: { padding: 20, gap: 12, paddingBottom: 48 },
 
