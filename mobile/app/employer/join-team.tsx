@@ -157,36 +157,36 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#07152b" },
 
   header: {
-    paddingTop: 18,
-    paddingHorizontal: 18,
+    paddingTop: 20,
+    paddingHorizontal: 20,
     paddingBottom: 8,
   },
   brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
-  title: { marginTop: 6, color: "white", fontSize: 28, fontWeight: "900" },
-  subtitle: { marginTop: 4, color: "rgba(255,255,255,0.45)", fontSize: 13 },
+  title: { marginTop: 8, color: "white", fontSize: 22, fontWeight: "900" },
+  subtitle: { marginTop: 4, color: "rgba(255,255,255,0.55)", fontSize: 13 },
 
-  body: { padding: 18, gap: 14, paddingBottom: 60 },
+  body: { padding: 20, gap: 14, paddingBottom: 60 },
 
   card: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.04)",
-    padding: 18,
+    borderColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "#0f2035",
+    padding: 16,
     gap: 12,
   },
-  cardTitle: { color: "white", fontWeight: "900", fontSize: 17 },
+  cardTitle: { color: "white", fontWeight: "700", fontSize: 15 },
   cardDesc: {
     color: "rgba(255,255,255,0.55)",
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 20,
   },
 
-  label: { color: "rgba(255,255,255,0.7)", fontWeight: "700", fontSize: 14 },
+  label: { color: "rgba(255,255,255,0.35)", fontWeight: "800", fontSize: 11, letterSpacing: 1, textTransform: "uppercase" },
   input: {
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderRadius: 10,
-    padding: 13,
+    backgroundColor: "#0f2035",
+    borderRadius: 12,
+    padding: 14,
     color: "white",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.10)",
@@ -195,12 +195,13 @@ const styles = StyleSheet.create({
 
   joinBtn: {
     backgroundColor: "#f97316",
-    borderRadius: 12,
-    paddingVertical: 15,
+    borderRadius: 14,
+    height: 56,
     alignItems: "center",
+    justifyContent: "center",
     marginTop: 4,
   },
-  joinBtnText: { color: "#0b1220", fontWeight: "900", fontSize: 15 },
+  joinBtnText: { color: "#07152b", fontWeight: "900", fontSize: 15 },
 
   loadingRow: {
     flexDirection: "row",
@@ -209,18 +210,18 @@ const styles = StyleSheet.create({
   },
 
   infoCard: {
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(249,115,22,0.20)",
-    backgroundColor: "rgba(249,115,22,0.06)",
+    borderColor: "rgba(249,115,22,0.25)",
+    backgroundColor: "#0f2035",
     padding: 16,
     gap: 8,
   },
-  infoTitle: { color: "#f97316", fontWeight: "900", fontSize: 14, marginBottom: 2 },
+  infoTitle: { color: "#f97316", fontWeight: "900", fontSize: 15, marginBottom: 2 },
   infoItem: {
-    color: "rgba(255,255,255,0.65)",
+    color: "rgba(255,255,255,0.55)",
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 20,
   },
 
   back: { alignItems: "center", marginTop: 4 },
@@ -232,7 +233,7 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     backgroundColor: "#22c55e",
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 14,
     alignItems: "center",
   },

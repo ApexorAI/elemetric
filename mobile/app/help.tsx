@@ -211,18 +211,18 @@ export default function Help() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#07152b" },
-  header: { paddingTop: 18, paddingHorizontal: 18, paddingBottom: 8 },
+  header: { paddingTop: 20, paddingHorizontal: 20, paddingBottom: 8 },
   brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
-  title: { marginTop: 6, color: "white", fontSize: 28, fontWeight: "900" },
-  subtitle: { marginTop: 4, color: "rgba(255,255,255,0.5)", fontSize: 13 },
+  title: { marginTop: 8, color: "white", fontSize: 22, fontWeight: "900" },
+  subtitle: { marginTop: 4, color: "rgba(255,255,255,0.55)", fontSize: 13 },
 
-  body: { padding: 16, gap: 12, paddingBottom: 50 },
+  body: { padding: 20, gap: 12, paddingBottom: 50 },
 
   section: {
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "#0f2035",
     overflow: "hidden",
   },
   sectionHeader: {
@@ -232,10 +232,9 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.07)",
-    backgroundColor: "rgba(255,255,255,0.03)",
   },
   sectionIcon: { fontSize: 20 },
-  sectionTitle: { color: "white", fontWeight: "900", fontSize: 16 },
+  sectionTitle: { color: "white", fontWeight: "700", fontSize: 15 },
 
   faqItem: { padding: 16 },
   faqItemBorder: {
@@ -243,26 +242,26 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(255,255,255,0.07)",
   },
   faqQ: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
-  faqQText: { flex: 1, color: "rgba(255,255,255,0.9)", fontWeight: "700", fontSize: 14, lineHeight: 20 },
+  faqQText: { flex: 1, color: "rgba(255,255,255,0.85)", fontWeight: "700", fontSize: 15, lineHeight: 22 },
   faqChevron: { color: "#f97316", fontSize: 20, fontWeight: "700", lineHeight: 22, marginTop: -1 },
   faqChevronOpen: { color: "#f97316" },
   faqA: {
     marginTop: 10,
-    color: "rgba(255,255,255,0.65)",
-    fontSize: 14,
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 13,
     lineHeight: 22,
   },
 
   supportCard: {
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "rgba(249,115,22,0.25)",
-    backgroundColor: "rgba(249,115,22,0.06)",
+    backgroundColor: "#0f2035",
     padding: 20,
     alignItems: "center",
     gap: 10,
   },
-  supportTitle: { color: "white", fontWeight: "900", fontSize: 18 },
+  supportTitle: { color: "white", fontWeight: "900", fontSize: 15 },
   supportSubtitle: {
     color: "rgba(255,255,255,0.55)",
     fontSize: 13,
@@ -272,12 +271,14 @@ const styles = StyleSheet.create({
   supportBtn: {
     backgroundColor: "#f97316",
     borderRadius: 14,
-    paddingVertical: 14,
+    height: 56,
     paddingHorizontal: 28,
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 4,
   },
-  supportBtnText: { color: "#0b1220", fontWeight: "900", fontSize: 15 },
-  supportEmail: { color: "rgba(249,115,22,0.7)", fontSize: 12, marginTop: -4 },
+  supportBtnText: { color: "#07152b", fontWeight: "900", fontSize: 15 },
+  supportEmail: { color: "#f97316", fontSize: 12, marginTop: -4 },
 
   back: { marginTop: 4, alignItems: "center" },
   backText: { color: "rgba(255,255,255,0.55)", fontWeight: "700" },

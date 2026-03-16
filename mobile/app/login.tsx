@@ -175,82 +175,89 @@ router.replace("/onboarding");
 const styles = StyleSheet.create({
 
 container:{
-flex:1,
-backgroundColor:"#07152b",
-justifyContent:"center",
-padding:30
+  flex: 1,
+  backgroundColor: "#07152b",
+  justifyContent: "center",
+  padding: 20,
 },
 
 logo:{
-fontSize:32,
-fontWeight:"900",
-color:"#f97316",
-marginBottom:30
+  fontSize: 18,
+  fontWeight: "900",
+  color: "#f97316",
+  letterSpacing: 2,
+  marginBottom: 24,
 },
 
 title:{
-fontSize:28,
-fontWeight:"800",
-color:"white",
-marginBottom:20
+  fontSize: 22,
+  fontWeight: "900",
+  color: "white",
+  marginBottom: 20,
 },
 
 input:{
-backgroundColor:"#0d1f3d",
-padding:16,
-borderRadius:10,
-marginBottom:16,
-color:"white"
+  backgroundColor: "#0f2035",
+  paddingHorizontal: 14,
+  paddingVertical: 14,
+  borderRadius: 12,
+  marginBottom: 12,
+  color: "white",
+  fontSize: 15,
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.10)",
 },
 
 button:{
-backgroundColor:"#f97316",
-padding:16,
-borderRadius:10,
-alignItems:"center"
+  backgroundColor: "#f97316",
+  height: 56,
+  borderRadius: 14,
+  alignItems: "center",
+  justifyContent: "center",
 },
 
 buttonText:{
-fontSize:18,
-fontWeight:"800",
-color:"#07152b"
+  fontSize: 15,
+  fontWeight: "900",
+  color: "#07152b",
 },
 
 signUpButton:{
-marginTop:12,
-padding:16,
-borderRadius:10,
-alignItems:"center",
-borderWidth:1,
-borderColor:"rgba(255,255,255,0.18)",
-backgroundColor:"rgba(255,255,255,0.06)",
+  marginTop: 12,
+  height: 52,
+  borderRadius: 14,
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.10)",
+  backgroundColor: "rgba(255,255,255,0.06)",
 },
 
 signUpText:{
-fontSize:16,
-fontWeight:"800",
-color:"white",
+  fontSize: 15,
+  fontWeight: "700",
+  color: "white",
 },
 
 forgotBtn:{
-marginTop:18,
-alignItems:"center",
+  marginTop: 18,
+  alignItems: "center",
 },
 
 forgotText:{
-fontSize:14,
-color:"rgba(255,255,255,0.45)",
-fontWeight:"600",
+  fontSize: 13,
+  color: "rgba(255,255,255,0.55)",
+  fontWeight: "600",
 },
 
 resetBtn:{
-marginTop:40,
-alignItems:"center",
+  marginTop: 40,
+  alignItems: "center",
 },
 
 resetText:{
-fontSize:13,
-color:"#444e60",
+  fontSize: 13,
+  color: "rgba(255,255,255,0.35)",
 },
 
 });

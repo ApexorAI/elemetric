@@ -484,26 +484,26 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#07152b" },
 
   header: {
-    paddingTop: 18,
-    paddingHorizontal: 18,
+    paddingTop: 20,
+    paddingHorizontal: 20,
     paddingBottom: 12,
   },
   brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
-  title: { marginTop: 6, color: "white", fontSize: 28, fontWeight: "900" },
+  title: { marginTop: 8, color: "white", fontSize: 22, fontWeight: "900" },
   subtitle: { marginTop: 4, color: "rgba(255,255,255,0.55)", fontSize: 13 },
 
   searchWrap: {
     flexDirection: "row",
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
     paddingBottom: 14,
     gap: 10,
   },
   input: {
     flex: 1,
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "#0f2035",
     borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingVertical: 14,
     color: "white",
     fontSize: 15,
     borderWidth: 1,
@@ -517,44 +517,46 @@ const styles = StyleSheet.create({
     minWidth: 80,
     alignItems: "center",
   },
-  searchBtnText: { color: "#0b1220", fontWeight: "900", fontSize: 14 },
+  searchBtnText: { color: "#07152b", fontWeight: "900", fontSize: 14 },
 
-  body: { padding: 18, gap: 14, paddingBottom: 48 },
+  body: { padding: 20, gap: 14, paddingBottom: 48 },
 
   actionsRow: { flexDirection: "row", gap: 10 },
   actionBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
+    height: 52,
+    borderRadius: 14,
     alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(255,255,255,0.10)",
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
   actionBtnOrange: { backgroundColor: "#f97316", borderColor: "#f97316" },
   actionBtnText: { color: "white", fontWeight: "800", fontSize: 14 },
 
-  tradieRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" },
+  tradieRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.07)" },
   tradieIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.07)", alignItems: "center", justifyContent: "center" },
   tradieIconText: { fontSize: 18 },
-  tradieName: { color: "white", fontWeight: "700", fontSize: 14 },
-  tradieMeta: { color: "rgba(255,255,255,0.5)", fontSize: 12, marginTop: 1 },
+  tradieName: { color: "white", fontWeight: "700", fontSize: 15 },
+  tradieMeta: { color: "rgba(255,255,255,0.55)", fontSize: 13, marginTop: 1 },
 
   card: {
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.04)",
-    padding: 18,
+    borderColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "#0f2035",
+    padding: 16,
     gap: 6,
   },
 
   // Score card
   cardLabel: {
-    color: "rgba(255,255,255,0.45)",
+    color: "rgba(255,255,255,0.35)",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "800",
     letterSpacing: 1,
+    textTransform: "uppercase",
   },
   bigScore: { fontSize: 60, fontWeight: "900", lineHeight: 68 },
   statusBadge: {
@@ -562,16 +564,17 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingVertical: 4,
     marginTop: 4,
+    backgroundColor: "transparent",
   },
-  statusBadgeText: { fontSize: 12, fontWeight: "900" },
+  statusBadgeText: { fontSize: 12, fontWeight: "700" },
   cardSub: { color: "rgba(255,255,255,0.55)", fontSize: 13, marginTop: 6 },
   cardAddr: { color: "rgba(255,255,255,0.85)", fontSize: 15, fontWeight: "700" },
 
   // Section headings
-  sectionTitle: { color: "white", fontWeight: "900", fontSize: 16 },
-  sectionSub: { color: "rgba(255,255,255,0.45)", fontSize: 12, marginBottom: 8 },
+  sectionTitle: { color: "white", fontWeight: "900", fontSize: 15 },
+  sectionSub: { color: "rgba(255,255,255,0.55)", fontSize: 13, marginBottom: 8 },
 
   // Trend bars
   trendRow: {
@@ -591,7 +594,7 @@ const styles = StyleSheet.create({
   trendBar: { height: 10, borderRadius: 5 },
   trendScore: { fontSize: 13, fontWeight: "800", width: 38, textAlign: "right" },
   trendJobCount: {
-    color: "rgba(255,255,255,0.30)",
+    color: "rgba(255,255,255,0.35)",
     fontSize: 11,
     width: 22,
     textAlign: "right",
@@ -609,12 +612,13 @@ const styles = StyleSheet.create({
   },
   shareBtn: {
     marginTop: 6,
-    backgroundColor: "rgba(249,115,22,0.15)",
+    backgroundColor: "rgba(255,255,255,0.06)",
     borderWidth: 1,
-    borderColor: "rgba(249,115,22,0.35)",
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderColor: "rgba(249,115,22,0.40)",
+    borderRadius: 14,
+    height: 52,
     alignItems: "center",
+    justifyContent: "center",
   },
   shareBtnText: { color: "#f97316", fontWeight: "900" },
 
@@ -624,7 +628,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.06)",
+    borderTopColor: "rgba(255,255,255,0.07)",
     gap: 10,
   },
   jobIconWrap: {
@@ -640,17 +644,17 @@ const styles = StyleSheet.create({
   },
   jobIcon: { fontSize: 18 },
   jobInfo: { flex: 1 },
-  jobName: { color: "white", fontWeight: "800", fontSize: 14 },
-  jobMeta: { color: "rgba(255,255,255,0.45)", fontSize: 12, marginTop: 2 },
+  jobName: { color: "white", fontWeight: "700", fontSize: 15 },
+  jobMeta: { color: "rgba(255,255,255,0.55)", fontSize: 13, marginTop: 2 },
   jobInstaller: { color: "rgba(255,255,255,0.35)", fontSize: 11, marginTop: 2 },
   jobScore: { fontSize: 18, fontWeight: "900" },
 
   // Empty state
   emptyCard: {
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "#0f2035",
     padding: 32,
     alignItems: "center",
     gap: 8,
@@ -658,7 +662,7 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 36, marginBottom: 4 },
   emptyTitle: { color: "white", fontSize: 18, fontWeight: "900" },
   emptySub: {
-    color: "rgba(255,255,255,0.45)",
+    color: "rgba(255,255,255,0.55)",
     fontSize: 13,
     textAlign: "center",
     lineHeight: 20,
@@ -666,22 +670,22 @@ const styles = StyleSheet.create({
 
   // Hint
   hint: {
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
-    backgroundColor: "rgba(255,255,255,0.03)",
+    borderColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "#0f2035",
     padding: 28,
     alignItems: "center",
     gap: 12,
   },
   hintIcon: { fontSize: 32 },
   hintText: {
-    color: "rgba(255,255,255,0.45)",
-    fontSize: 14,
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 13,
     textAlign: "center",
     lineHeight: 22,
   },
 
   back: { marginTop: 8, alignItems: "center" },
-  backText: { color: "rgba(255,255,255,0.45)", fontWeight: "700" },
+  backText: { color: "rgba(255,255,255,0.55)", fontWeight: "700" },
 });
