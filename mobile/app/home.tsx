@@ -241,7 +241,7 @@ export default function Home() {
         <Text style={s.newJobArrow}>→</Text>
       </Pressable>
 
-      {/* Secondary actions */}
+      {/* Secondary actions — 2 focused shortcuts */}
       <View style={s.secondaryRow}>
         <Pressable
           style={s.secondaryBtn}
@@ -250,16 +250,17 @@ export default function Home() {
           accessibilityLabel="Near Miss Report"
           accessibilityHint="Document a pre-existing non-compliance issue"
         >
+          <Text style={s.secondaryIcon}>⚠️</Text>
           <Text style={s.secondaryBtnText}>Near Miss</Text>
         </Pressable>
         <Pressable
           style={s.secondaryBtn}
-          onPress={() => router.push("/client-portal")}
+          onPress={() => router.push("/invoice")}
           accessibilityRole="button"
-          accessibilityLabel="Client Portal"
-          accessibilityHint="Share compliance records with a client"
+          accessibilityLabel="Invoice Generator"
         >
-          <Text style={s.secondaryBtnText}>Client Portal</Text>
+          <Text style={s.secondaryIcon}>🧾</Text>
+          <Text style={s.secondaryBtnText}>Invoice</Text>
         </Pressable>
         <Pressable
           style={[s.secondaryBtn, s.visualiserBtn]}
@@ -268,26 +269,8 @@ export default function Home() {
           accessibilityLabel="AI Visualiser, beta feature"
           accessibilityHint="Opens the HVAC product reference visualiser"
         >
-          <Text style={s.visualiserText}>✦ AI Visualiser</Text>
-          <View style={s.betaBadge}>
-            <Text style={s.betaText}>BETA</Text>
-          </View>
-        </Pressable>
-        <Pressable
-          style={s.secondaryBtn}
-          onPress={() => router.push("/invoice")}
-          accessibilityRole="button"
-          accessibilityLabel="Invoice Generator"
-        >
-          <Text style={s.secondaryBtnText}>Invoice</Text>
-        </Pressable>
-        <Pressable
-          style={s.secondaryBtn}
-          onPress={() => router.push("/data-export")}
-          accessibilityRole="button"
-          accessibilityLabel="Data Export"
-        >
-          <Text style={s.secondaryBtnText}>Data Export</Text>
+          <Text style={s.secondaryIcon}>✦</Text>
+          <Text style={s.visualiserText}>Visualiser</Text>
         </Pressable>
       </View>
 
@@ -431,31 +414,23 @@ const s = StyleSheet.create({
   secondaryRow: { flexDirection: "row", gap: 10 },
   secondaryBtn: {
     flex: 1,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "#0f2035",
     alignItems: "center",
     justifyContent: "center",
+    gap: 6,
   },
-  secondaryBtnText: { color: "white", fontWeight: "800", fontSize: 14 },
+  secondaryIcon: { fontSize: 20 },
+  secondaryBtnText: { color: "rgba(255,255,255,0.80)", fontWeight: "700", fontSize: 12, textAlign: "center" },
   visualiserBtn: {
-    flexDirection: "row",
-    gap: 8,
-    borderColor: "rgba(249,115,22,0.25)",
+    borderColor: "rgba(249,115,22,0.20)",
     backgroundColor: "rgba(249,115,22,0.06)",
   },
-  visualiserText: { color: "#f97316", fontWeight: "800", fontSize: 14 },
-  betaBadge: {
-    backgroundColor: "#f97316",
-    borderRadius: 5,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    alignSelf: "center",
-  },
-  betaText: { color: "#0b1220", fontSize: 8, fontWeight: "900", letterSpacing: 0.3 },
+  visualiserText: { color: "#f97316", fontWeight: "700", fontSize: 12, textAlign: "center" },
 
   // Assigned banner
   assignedBanner: {
@@ -528,11 +503,11 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.04)",
-    padding: 13,
+    borderColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "#0f2035",
+    padding: 16,
   },
   jobCardLeft: { flex: 1 },
   jobName: { color: "white", fontWeight: "800", fontSize: 15 },

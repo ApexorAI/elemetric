@@ -267,7 +267,7 @@ justifyContent: "center",
 gap: 10,
 },
 loadingText: {
-color: "rgba(255,255,255,0.7)",
+color: "rgba(255,255,255,0.55)",
 },
 
 screen: {
@@ -276,8 +276,8 @@ backgroundColor: "#07152b",
 },
 
 header: {
-paddingTop: 18,
-paddingHorizontal: 18,
+paddingTop: 20,
+paddingHorizontal: 20,
 },
 
 brand: {
@@ -289,27 +289,29 @@ letterSpacing: 2,
 
 title: {
 color: "white",
-fontSize: 28,
+fontSize: 22,
 fontWeight: "900",
 marginTop: 8,
 },
 
 job: {
-color: "rgba(255,255,255,0.7)",
+color: "rgba(255,255,255,0.55)",
 marginTop: 6,
+fontSize: 13,
 },
 
 progress: {
-color: "rgba(255,255,255,0.7)",
+color: "rgba(255,255,255,0.55)",
 marginTop: 4,
-fontWeight: "700",
+fontWeight: "500",
+fontSize: 13,
 },
 
 timer: {
 color: "#f97316",
 marginTop: 4,
-fontWeight: "900",
-fontSize: 14,
+fontWeight: "700",
+fontSize: 13,
 letterSpacing: 0.5,
 },
 
@@ -318,16 +320,16 @@ flex: 1,
 },
 
 bodyContent: {
-padding: 18,
+padding: 20,
 },
 
 card: {
-backgroundColor: "rgba(255,255,255,0.04)",
+backgroundColor: "#0f2035",
 borderRadius: 16,
 padding: 16,
 marginBottom: 12,
 borderWidth: 1,
-borderColor: "rgba(255,255,255,0.06)",
+borderColor: "rgba(255,255,255,0.07)",
 },
 
 row: {
@@ -340,15 +342,15 @@ width: 28,
 height: 28,
 borderRadius: 6,
 borderWidth: 1,
-borderColor: "rgba(255,255,255,0.2)",
+borderColor: "rgba(255,255,255,0.20)",
 marginRight: 12,
 alignItems: "center",
 justifyContent: "center",
 },
 
 checkboxOn: {
-backgroundColor: "rgba(34,197,94,0.25)",
-borderColor: "rgba(34,197,94,0.45)",
+backgroundColor: "#22c55e",
+borderColor: "#22c55e",
 },
 
 tick: {
@@ -364,53 +366,57 @@ paddingRight: 10,
 
 item: {
 color: "white",
-fontWeight: "800",
+fontWeight: "700",
 fontSize: 15,
 },
 
 sub: {
-color: "rgba(255,255,255,0.6)",
-fontSize: 12,
+color: "rgba(255,255,255,0.55)",
+fontSize: 13,
 marginTop: 2,
 },
 
 badgeBase: {
-paddingHorizontal: 12,
-paddingVertical: 6,
+paddingHorizontal: 10,
+paddingVertical: 4,
 borderRadius: 20,
 minWidth: 58,
 alignItems: "center",
+borderWidth: 1,
 },
 
 badgeReq: {
-backgroundColor: "rgba(249,115,22,0.25)",
+borderColor: "#f97316",
 },
 
 badgeOk: {
-backgroundColor: "rgba(34,197,94,0.25)",
+borderColor: "#22c55e",
 },
 
 infoBadge: {
-backgroundColor: "rgba(255,255,255,0.15)",
+borderColor: "rgba(255,255,255,0.20)",
 },
 
 badgeText: {
 color: "white",
-fontWeight: "900",
+fontWeight: "700",
+fontSize: 12,
 },
 
 next: {
 backgroundColor: "#f97316",
-padding: 18,
-borderRadius: 18,
+borderRadius: 14,
+height: 56,
 marginTop: 8,
 alignItems: "center",
+justifyContent: "center",
+paddingHorizontal: 20,
 },
 
 nextText: {
 fontWeight: "900",
-fontSize: 16,
-color: "#0b1220",
+fontSize: 15,
+color: "#07152b",
 },
 
 back: {
@@ -419,6 +425,6 @@ alignItems: "center",
 },
 
 backText: {
-color: "rgba(255,255,255,0.7)",
+color: "rgba(255,255,255,0.55)",
 },
 });

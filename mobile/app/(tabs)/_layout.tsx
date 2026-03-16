@@ -40,11 +40,7 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="calendar"
-        options={{
-          title: 'Calendar',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="calendar.badge.clock" color={color} />,
-          tabBarAccessibilityLabel: 'Job calendar',
-        }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="liability-timeline"

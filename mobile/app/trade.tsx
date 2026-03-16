@@ -255,17 +255,17 @@ export default function TradeScreen() {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#07152b" },
 
-  header: { paddingTop: 18, paddingHorizontal: 20, paddingBottom: 8 },
+  header: { paddingTop: 20, paddingHorizontal: 20, paddingBottom: 8 },
   brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
-  title: { marginTop: 6, color: "white", fontSize: 28, fontWeight: "900" },
-  subtitle: { marginTop: 4, color: "rgba(255,255,255,0.45)", fontSize: 13 },
+  title: { marginTop: 8, color: "white", fontSize: 22, fontWeight: "900" },
+  subtitle: { marginTop: 4, color: "rgba(255,255,255,0.55)", fontSize: 13 },
 
-  searchWrap: { paddingHorizontal: 20, paddingBottom: 4 },
+  searchWrap: { paddingHorizontal: 20, paddingBottom: 8 },
   searchInput: {
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "#0f2035",
     borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingVertical: 14,
     color: "white",
     fontSize: 15,
     borderWidth: 1,
@@ -275,24 +275,24 @@ const s = StyleSheet.create({
   body: { paddingHorizontal: 20, paddingBottom: 60 },
 
   sectionLabel: {
-    color: "rgba(255,255,255,0.38)",
+    color: "rgba(255,255,255,0.35)",
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 1,
-    marginTop: 22,
+    marginTop: 20,
     marginBottom: 10,
+    textTransform: "uppercase",
   },
 
-  // Recently used
   recentCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
+    backgroundColor: "#0f2035",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(249,115,22,0.25)",
-    backgroundColor: "rgba(249,115,22,0.07)",
-    padding: 14,
+    borderColor: "rgba(249,115,22,0.20)",
+    padding: 16,
   },
   recentIconWrap: {
     width: 44,
@@ -305,11 +305,10 @@ const s = StyleSheet.create({
   },
   recentIcon: { fontSize: 22 },
   recentInfo: { flex: 1 },
-  recentLabel: { color: "white", fontWeight: "800", fontSize: 15 },
-  recentMeta: { color: "rgba(255,255,255,0.45)", fontSize: 12, marginTop: 2 },
+  recentLabel: { color: "white", fontWeight: "700", fontSize: 15 },
+  recentMeta: { color: "rgba(255,255,255,0.55)", fontSize: 12, marginTop: 2 },
   recentChevron: { color: "rgba(255,255,255,0.35)", fontSize: 26, fontWeight: "300" },
 
-  // Trade grid — 2-column cards
   tradeGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -317,26 +316,26 @@ const s = StyleSheet.create({
   },
   tradeCard: {
     width: "47%",
+    backgroundColor: "#0f2035",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(255,255,255,0.07)",
     padding: 16,
     gap: 6,
     position: "relative",
   },
   tradeCardIcon: { fontSize: 28 },
-  tradeCardLabel: { color: "rgba(255,255,255,0.65)", fontWeight: "800", fontSize: 15 },
+  tradeCardLabel: { color: "rgba(255,255,255,0.55)", fontWeight: "700", fontSize: 15 },
   tradeCardBadge: {
     alignSelf: "flex-start",
-    borderRadius: 8,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(255,255,255,0.05)",
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
-  tradeCardBadgeText: { color: "rgba(255,255,255,0.40)", fontSize: 11, fontWeight: "700" },
+  tradeCardBadgeText: { color: "rgba(255,255,255,0.35)", fontSize: 11, fontWeight: "500" },
   tradeCardCheck: {
     position: "absolute",
     top: 10,
@@ -349,17 +348,16 @@ const s = StyleSheet.create({
   },
   tradeCardCheckText: { color: "#07152b", fontWeight: "900", fontSize: 12 },
 
-  // Job list
   jobList: {
+    backgroundColor: "#0f2035",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(255,255,255,0.07)",
     overflow: "hidden",
   },
   divider: {
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "rgba(255,255,255,0.07)",
     marginHorizontal: 16,
   },
   jobRow: {
@@ -378,13 +376,13 @@ const s = StyleSheet.create({
   jobTypeTradeIcon: { fontSize: 20, width: 28, textAlign: "center" },
   jobInfo: { flex: 1 },
   jobLabel: { color: "white", fontSize: 15, fontWeight: "700" },
-  jobDesc: { color: "rgba(255,255,255,0.40)", fontSize: 13, marginTop: 2 },
-  jobStandard: { color: "rgba(255,255,255,0.25)", fontSize: 11, marginTop: 2 },
-  jobChevron: { color: "rgba(255,255,255,0.25)", fontSize: 26, fontWeight: "300", marginTop: -2 },
+  jobDesc: { color: "rgba(255,255,255,0.55)", fontSize: 13, marginTop: 2 },
+  jobStandard: { color: "rgba(255,255,255,0.35)", fontSize: 12, marginTop: 2 },
+  jobChevron: { color: "rgba(255,255,255,0.35)", fontSize: 26, fontWeight: "300", marginTop: -2 },
 
   emptyState: { padding: 24, alignItems: "center" },
   emptyText: { color: "rgba(255,255,255,0.35)", fontSize: 14 },
 
   back: { marginTop: 32, alignItems: "center" },
-  backText: { color: "rgba(255,255,255,0.45)", fontWeight: "700", fontSize: 15 },
+  backText: { color: "rgba(255,255,255,0.55)", fontWeight: "700", fontSize: 15 },
 });
