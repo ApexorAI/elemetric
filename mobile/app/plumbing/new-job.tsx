@@ -49,7 +49,6 @@ export default function NewJob() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [suggLoading, setSuggLoading] = useState(false);
   const [checking,   setChecking]   = useState(false);
-  const [weather, setWeather] = useState<"Clear" | "Overcast" | "Rain" | "Indoor">("Clear");
   // Floor plan upload hidden until post-launch
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -149,7 +148,6 @@ export default function NewJob() {
         jobName: jobName.trim() || "Untitled Job",
         jobAddr: jobAddr.trim() || "No address",
         startTime: new Date().toISOString(),
-        weather: weather,
       };
       await AsyncStorage.setItem("elemetric_current_job", JSON.stringify(currentJob));
 
@@ -219,21 +217,6 @@ export default function NewJob() {
               <Text style={styles.suggAttrib}>© OpenStreetMap contributors</Text>
             </View>
           )}
-        </View>
-
-        <Text style={styles.label}>Weather Conditions</Text>
-        <View style={styles.weatherRow}>
-          {(["Clear", "Overcast", "Rain", "Indoor"] as const).map((w) => (
-            <Pressable
-              key={w}
-              style={[styles.weatherBtn, weather === w && styles.weatherBtnActive]}
-              onPress={() => setWeather(w)}
-            >
-              <Text style={[styles.weatherBtnText, weather === w && styles.weatherBtnTextActive]}>
-                {w === "Clear" ? "☀️ Clear" : w === "Overcast" ? "☁️ Overcast" : w === "Rain" ? "🌧️ Rain" : "🏠 Indoor"}
-              </Text>
-            </Pressable>
-          ))}
         </View>
 
         {/* Floor plan upload hidden until post-launch */}
@@ -320,33 +303,6 @@ const styles = StyleSheet.create({
 
   back: { marginTop: 20, alignItems: "center" },
   backText: { color: "rgba(255,255,255,0.55)", fontWeight: "700", fontSize: 15 },
-  weatherRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 10,
-  },
-  weatherBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(255,255,255,0.06)",
-  },
-  weatherBtnActive: {
-    backgroundColor: "#f97316",
-    borderColor: "#f97316",
-  },
-  weatherBtnText: {
-    color: "rgba(255,255,255,0.55)",
-    fontWeight: "500",
-    fontSize: 13,
-  },
-  weatherBtnTextActive: {
-    color: "#07152b",
-    fontWeight: "700",
-  },
   floorPlanBtn: {
     marginTop: 8,
     borderRadius: 14,

@@ -39,7 +39,6 @@ type: string;
 jobName: string;
 jobAddr: string;
 startTime?: string;
-weather?: string;
 };
 
 type ReviewPhoto = {
@@ -728,8 +727,7 @@ ${qrHtml}
     <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Address</td><td style="font-family:Helvetica,Arial,sans-serif;">${currentJob.jobAddr}</td></tr>
     <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Plumber</td><td style="font-family:Helvetica,Arial,sans-serif;">${installerName || "Not entered"}</td></tr>
     <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">AI Confidence</td><td style="font-family:Helvetica,Arial,sans-serif;">${confidence}%</td></tr>
-    ${currentJob.weather ? `<tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Weather</td><td style="font-family:Helvetica,Arial,sans-serif;">${currentJob.weather}</td></tr>` : ""}
-    ${currentJob.startTime ? `<tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Time on Site</td><td style="font-family:Helvetica,Arial,sans-serif;">${(() => { const diff = Math.floor((Date.now() - new Date(currentJob.startTime).getTime()) / 1000); const h = Math.floor(diff/3600); const m = Math.floor((diff%3600)/60); const s = diff%60; return h > 0 ? `${h}h ${m}m` : `${m}m ${s}s`; })()}</td></tr>` : ""}
+${currentJob.startTime ? `<tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Time on Site</td><td style="font-family:Helvetica,Arial,sans-serif;">${(() => { const diff = Math.floor((Date.now() - new Date(currentJob.startTime).getTime()) / 1000); const h = Math.floor(diff/3600); const m = Math.floor((diff%3600)/60); const s = diff%60; return h > 0 ? `${h}h ${m}m` : `${m}m ${s}s`; })()}</td></tr>` : ""}
     <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Overall Status</td><td style="font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:${relevant ? "#16a34a" : "#d97706"};">${relevant ? "RELEVANT PHOTO SET" : "REVIEW REQUIRED"}</td></tr>
   </table>
 </div>
