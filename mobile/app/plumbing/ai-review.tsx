@@ -99,6 +99,19 @@ const [profile, setProfile] = useState<{ licenceNumber: string; companyName: str
 licenceNumber: "",
 companyName: "",
 });
+const LOADING_STEPS = [
+  "Uploading your photos",
+  "Checking compliance standards",
+  "Analysing each photo",
+  "Calculating risk rating",
+  "Generating your report",
+];
+const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
+const [loadingStepIndex, setLoadingStepIndex] = useState(0);
+const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+const loadingDoneRef = useRef(false);
+const pdfReadyRef = useRef(false);
+const pdfResultRef = useRef<string | null>(null);
 const [toast, setToast] = useState<string | null>(null);
 const [showShareModal, setShowShareModal] = useState(false);
 const [generatedPdfUri, setGeneratedPdfUri] = useState<string | null>(null);
@@ -503,6 +516,29 @@ return `<tr style="${bg}"><td style="border:1px solid #d1d5db; padding:8px; font
 `;
 };
 
+const startLoadingSteps = (onAllDone: () => void) => {
+  loadingDoneRef.current = false;
+  setShowLoadingOverlay(true);
+  setLoadingStepIndex(0);
+  setCompletedSteps([]);
+
+  let step = 0;
+  const advance = () => {
+    setCompletedSteps((prev) => [...prev, step]);
+    step += 1;
+    setLoadingStepIndex(step);
+    if (step < LOADING_STEPS.length) {
+      setTimeout(advance, 3000);
+    } else {
+      loadingDoneRef.current = true;
+      if (pdfReadyRef.current) {
+        onAllDone();
+      }
+    }
+  };
+  setTimeout(advance, 3000);
+};
+
 const generateReport = async () => {
 if (!decoded) {
 Alert.alert("No AI result", "There is no AI result to turn into a report.");
@@ -510,6 +546,20 @@ return;
 }
 
 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+pdfReadyRef.current = false;
+pdfResultRef.current = null;
+
+const showShareWhenReady = () => {
+  setShowLoadingOverlay(false);
+  const uri = pdfResultRef.current;
+  if (uri) {
+    setGeneratedPdfUri(uri);
+    setShowShareModal(true);
+  }
+  setGeneratingPdf(false);
+};
+
+startLoadingSteps(showShareWhenReady);
 try {
 setGeneratingPdf(true);
 
@@ -944,12 +994,15 @@ await supabase
 }
 } catch {}
 
-setGeneratedPdfUri(uri);
-setShowShareModal(true);
+pdfResultRef.current = uri;
+pdfReadyRef.current = true;
+if (loadingDoneRef.current) {
+  showShareWhenReady();
+}
 } catch (e: any) {
-Alert.alert("Report Generation Failed", e?.message ?? "Could not generate the PDF report. Ensure all photos are loaded and try again. If this persists, restart the app and regenerate.");
-} finally {
+setShowLoadingOverlay(false);
 setGeneratingPdf(false);
+Alert.alert("Report Generation Failed", e?.message ?? "Could not generate the PDF report. Ensure all photos are loaded and try again. If this persists, restart the app and regenerate.");
 }
 };
 
@@ -1428,6 +1481,44 @@ disabled={generatingCert}
 <Text style={styles.toastText}>{toast}</Text>
 </View>
 )}
+
+{/* ── AI loading overlay ── */}
+<Modal
+  visible={showLoadingOverlay}
+  transparent
+  animationType="fade"
+  onRequestClose={() => {}}
+>
+  <View style={loadingStyles.overlay}>
+    <View style={loadingStyles.card}>
+      <Text style={loadingStyles.title}>Generating Your Report</Text>
+      <Text style={loadingStyles.sub}>Our AI is reviewing your photos against Australian Standards…</Text>
+      <View style={loadingStyles.steps}>
+        {LOADING_STEPS.map((step, i) => {
+          const done = completedSteps.includes(i);
+          const active = loadingStepIndex === i;
+          return (
+            <View key={step} style={loadingStyles.stepRow}>
+              <View style={[loadingStyles.stepIcon, done && loadingStyles.stepIconDone, active && loadingStyles.stepIconActive]}>
+                {done ? (
+                  <Text style={loadingStyles.stepCheck}>✓</Text>
+                ) : active ? (
+                  <ActivityIndicator size="small" color="#f97316" />
+                ) : (
+                  <View style={loadingStyles.stepDot} />
+                )}
+              </View>
+              <Text style={[loadingStyles.stepLabel, done && loadingStyles.stepLabelDone, active && loadingStyles.stepLabelActive]}>
+                {step}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+      <Text style={loadingStyles.hint}>This usually takes 15–30 seconds</Text>
+    </View>
+  </View>
+</Modal>
 
 {/* ── Share options modal ── */}
 <Modal
@@ -2077,6 +2168,54 @@ toastText: { color: "white", fontWeight: "900", fontSize: 15 },
   dayTimelineDotLast: { backgroundColor: "#f97316", borderColor: "#f97316" },
   dayTimelineLabel: { color: "rgba(255,255,255,0.55)", fontSize: 11, fontWeight: "800", marginTop: 4 },
   dayTimelineDate: { color: "rgba(255,255,255,0.30)", fontSize: 9 },
+});
+
+const loadingStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(7,21,43,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  card: {
+    backgroundColor: "#0f2035",
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.30)",
+    padding: 28,
+    width: "100%",
+    gap: 16,
+  },
+  title: { color: "white", fontSize: 20, fontWeight: "900", textAlign: "center" },
+  sub: { color: "rgba(255,255,255,0.55)", fontSize: 13, textAlign: "center", lineHeight: 20 },
+  steps: { gap: 14, marginTop: 8 },
+  stepRow: { flexDirection: "row", alignItems: "center", gap: 14 },
+  stepIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  stepIconDone: {
+    borderColor: "#22c55e",
+    backgroundColor: "rgba(34,197,94,0.15)",
+  },
+  stepIconActive: {
+    borderColor: "#f97316",
+    backgroundColor: "rgba(249,115,22,0.10)",
+  },
+  stepCheck: { color: "#22c55e", fontWeight: "900", fontSize: 16 },
+  stepDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.20)" },
+  stepLabel: { color: "rgba(255,255,255,0.40)", fontSize: 15, flex: 1 },
+  stepLabelDone: { color: "#22c55e", fontWeight: "700" },
+  stepLabelActive: { color: "white", fontWeight: "700" },
+  hint: { color: "rgba(255,255,255,0.30)", fontSize: 12, textAlign: "center", marginTop: 4 },
 });
 
 const shareStyles = StyleSheet.create({
