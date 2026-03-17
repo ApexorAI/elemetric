@@ -13,7 +13,7 @@ Modal,
 Share,
 Linking,
 } from "react-native";
-import Svg, { Circle, G } from "react-native-svg";
+import Svg, { Circle } from "react-native-svg";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Print from "expo-print";
@@ -76,29 +76,6 @@ const JOB_TYPE_META: Record<string, { label: string; standard: string }> = {
   carpentry:  { label: "Carpentry Documentation Report",      standard: "AS 1684" },
 };
 
-// ── Coverage Ring ─────────────────────────────────────────────────────────────
-
-function CoverageRing({ score }: { score: number }) {
-  const SIZE = 80;
-  const SW_RING = 7;
-  const R = (SIZE - SW_RING) / 2;
-  const CIRC = 2 * Math.PI * R;
-  const offset = CIRC - (score / 100) * CIRC;
-  return (
-    <View style={{ width: SIZE, height: SIZE }}>
-      <Svg width={SIZE} height={SIZE}>
-        <G rotation="-90" origin={`${SIZE / 2},${SIZE / 2}`}>
-          <Circle cx={SIZE / 2} cy={SIZE / 2} r={R} stroke="rgba(255,255,255,0.08)" strokeWidth={SW_RING} fill="none" />
-          <Circle cx={SIZE / 2} cy={SIZE / 2} r={R} stroke="#f97316" strokeWidth={SW_RING} fill="none"
-            strokeDasharray={`${CIRC}`} strokeDashoffset={offset} strokeLinecap="round" />
-        </G>
-      </Svg>
-      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ color: "#f97316", fontWeight: "900", fontSize: 16 }}>{score}%</Text>
-      </View>
-    </View>
-  );
-}
 
 export default function AIReview() {
 const router = useRouter();
@@ -133,15 +110,7 @@ const [feedbackRating, setFeedbackRating] = useState<"up" | "down" | null>(null)
 const [feedbackComment, setFeedbackComment] = useState("");
 const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
 const [feedbackDone, setFeedbackDone] = useState(false);
-const [result360, setResult360] = useState<{
-  coverageScore: number;
-  detected: string[];
-  missingFromView: string[];
-  recommendedPhotos: string[];
-} | null>(null);
-const [loading360, setLoading360] = useState(false);
 const [floorPlanData, setFloorPlanData] = useState<{ uri: string; pins: any[] } | null>(null);
-const [reviewPhotos360, setReviewPhotos360] = useState<ReviewPhoto[]>([]);
 const [jobDays, setJobDays] = useState<string[]>([]);
 
 // Plumbing technical data (hotwater/newinstall)
@@ -242,16 +211,6 @@ try {
 
 const savedClientSig = await AsyncStorage.getItem("elemetric_client_signature_svg");
 if (savedClientSig && active) setClientSignatureSvg(savedClientSig);
-
-// Load 360° review photos
-try {
-  const info360 = await FileSystem.getInfoAsync(`${FileSystem.documentDirectory}review-photos-360.json`);
-  if (info360.exists && active) {
-    const raw360 = await FileSystem.readAsStringAsync(`${FileSystem.documentDirectory}review-photos-360.json`, { encoding: FileSystem.EncodingType.UTF8 });
-    const parsed360 = JSON.parse(raw360);
-    setReviewPhotos360(Array.isArray(parsed360) ? parsed360 : []);
-  }
-} catch {}
 
 // Load floor plan + pins
 try {
@@ -517,39 +476,6 @@ setSignatureSvg("");
 Alert.alert("Removed", "Saved signature removed.");
 };
 
-const analyze360 = async () => {
-  if (reviewPhotos360.length === 0) {
-    Alert.alert("No 360° Photos", "Add 360° photos in the photo step first.");
-    return;
-  }
-  setLoading360(true);
-  try {
-    const images = reviewPhotos360.map((p) => ({ mime: p.mime, data: p.base64, label: p.label }));
-    const res = await fetch("https://elemetric-ai-production.up.railway.app/process-360", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Elemetric-Key": process.env.EXPO_PUBLIC_ELEMETRIC_API_KEY ?? "",
-      },
-      body: JSON.stringify({ type: currentJob.type, images }),
-    });
-    const text = await res.text();
-    let json: any;
-    try { json = JSON.parse(text); } catch { throw new Error(`Invalid response: ${text.slice(0, 100)}`); }
-    if (!res.ok) throw new Error(json?.error ?? "360° analysis failed");
-    setResult360({
-      coverageScore: json.coverageScore ?? json.coverage_score ?? 0,
-      detected: json.detected ?? [],
-      missingFromView: json.missing_from_view ?? json.missingFromView ?? [],
-      recommendedPhotos: json.recommended_photos ?? json.recommendedPhotos ?? [],
-    });
-  } catch (e: any) {
-    Alert.alert("360° Analysis Failed", e?.message ?? "Could not analyse 360° photo.");
-  } finally {
-    setLoading360(false);
-  }
-};
-
 const listToHtml = (items: string[]) => {
 if (!items.length) return `<p style="margin: 0; color: #6b7280;">None</p>`;
 return `<ul style="margin-top: 8px; margin-bottom: 0;">${items
@@ -643,31 +569,6 @@ ${otherPhotos.map((photo) => `
 
 if (!photoHtml) {
   photoHtml = `<div style="color:#6b7280;">No photos available for report.</div>`;
-}
-
-// 360° photos section
-let photo360Html = "";
-if (reviewPhotos360.length > 0) {
-  photo360Html = `
-<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
-<div style="margin-bottom:18px;">
-<div style="font-family:Helvetica,Arial,sans-serif;font-size:19px;font-weight:bold;margin-bottom:6px;">360° Room Documentation</div>
-<div style="font-size:11px;color:#6b7280;margin-bottom:12px;">Full-room panoramic photos captured for spatial context</div>
-${result360 ? `
-<div style="background:#fffbf5;border:1px solid #fed7aa;border-radius:8px;padding:14px;margin-bottom:12px;">
-  <div style="font-size:13px;font-weight:bold;color:#92400e;margin-bottom:6px;">360° Coverage Score: ${result360.coverageScore}%</div>
-  ${result360.detected.length > 0 ? `<div style="font-size:12px;color:#166534;margin-bottom:4px;"><strong>Detected in 360°:</strong> ${result360.detected.join(", ")}</div>` : ""}
-  ${result360.missingFromView.length > 0 ? `<div style="font-size:12px;color:#991b1b;margin-bottom:4px;"><strong>Not visible in 360°:</strong> ${result360.missingFromView.join(", ")}</div>` : ""}
-  ${result360.recommendedPhotos.length > 0 ? `<div style="font-size:12px;color:#1e40af;"><strong>Recommend additional photos of:</strong> ${result360.recommendedPhotos.join(", ")}</div>` : ""}
-</div>` : ""}
-<div style="display:flex;flex-wrap:wrap;gap:12px;">
-${reviewPhotos360.map((p) => `
-  <div style="width:48%;box-sizing:border-box;">
-    <div style="font-weight:bold;font-size:11px;margin-bottom:5px;color:#7c3aed;">${p.label}</div>
-    <img src="data:${p.mime};base64,${p.base64}" style="width:100%;height:160px;object-fit:cover;border:2px solid #7c3aed;border-radius:6px;"/>
-  </div>`).join("")}
-</div>
-</div>`;
 }
 
 // Floor plan section
@@ -963,7 +864,7 @@ decoded.analysis
 ${photoHtml}
 </div>
 
-${photo360Html}${floorPlanHtml}${timelineHtml}
+${floorPlanHtml}${timelineHtml}
 
 <div style="margin-top: 18px; border-top: 1px solid #d1d5db; padding-top: 18px; page-break-inside: avoid;">
 <div style="font-size: 18px; font-weight: bold; margin-bottom: 14px;">Installer Sign-Off</div>
@@ -1307,64 +1208,6 @@ return (
   <View style={styles.card}>
     <Text style={styles.section}>Analysis</Text>
     <Text style={styles.item}>{decoded!.analysis}</Text>
-  </View>
-)}
-
-{/* ── 360° Analysis ── */}
-{reviewPhotos360.length > 0 && (
-  <View style={styles.analysis360Card}>
-    <Text style={styles.analysis360Title}>360° Room Analysis</Text>
-    {result360 ? (
-      <>
-        <View style={styles.coverageRow}>
-          <CoverageRing score={result360.coverageScore} />
-          <View style={{ flex: 1, marginLeft: 14 }}>
-            <Text style={styles.coverageLabel}>Coverage Score</Text>
-            <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, marginTop: 4 }}>
-              Your 360° photo covered {result360.detected.length} of {result360.detected.length + result360.missingFromView.length} checklist items
-            </Text>
-          </View>
-        </View>
-        {result360.detected.length > 0 && (
-          <View style={styles.analysis360Section}>
-            <Text style={styles.analysis360SectionLabel}>Detected in 360° shot</Text>
-            {result360.detected.map((x, i) => (
-              <Text key={i} style={styles.analysis360Item}>✓ {x}</Text>
-            ))}
-          </View>
-        )}
-        {result360.missingFromView.length > 0 && (
-          <View style={styles.analysis360Section}>
-            <Text style={[styles.analysis360SectionLabel, { color: "#f97316" }]}>Not visible — needs individual photo</Text>
-            {result360.missingFromView.map((x, i) => (
-              <Text key={i} style={[styles.analysis360Item, { color: "rgba(255,255,255,0.55)" }]}>⚠ {x}</Text>
-            ))}
-          </View>
-        )}
-        {result360.recommendedPhotos.length > 0 && (
-          <View style={styles.analysis360Section}>
-            <Text style={[styles.analysis360SectionLabel, { color: "#f97316" }]}>Recommend additional photos of</Text>
-            {result360.recommendedPhotos.map((x, i) => (
-              <Text key={i} style={[styles.analysis360Item, { color: "#f97316" }]}>→ {x}</Text>
-            ))}
-          </View>
-        )}
-      </>
-    ) : (
-      <Pressable
-        style={[styles.analyze360Btn, loading360 && { opacity: 0.6 }]}
-        onPress={analyze360}
-        disabled={loading360}
-      >
-        {loading360
-          ? <ActivityIndicator color="#7c3aed" size="small" />
-          : <Text style={styles.analyze360BtnText}>Analyse 360° Photos ({reviewPhotos360.length})</Text>
-        }
-      </Pressable>
-    )}
-    <Text style={styles.analysis360Hint}>
-      360° photos are analysed separately for spatial coverage
-    </Text>
   </View>
 )}
 
@@ -2208,31 +2051,6 @@ padding: 14,
 alignItems: "center",
 },
 toastText: { color: "white", fontWeight: "900", fontSize: 15 },
-  analysis360Card: {
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "rgba(124,58,237,0.30)",
-    backgroundColor: "rgba(124,58,237,0.08)",
-    padding: 18,
-    gap: 12,
-  },
-  analysis360Title: { color: "white", fontWeight: "900", fontSize: 17 },
-  coverageRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  coverageLabel: { color: "rgba(255,255,255,0.65)", fontWeight: "700", fontSize: 14 },
-  coverageScore: { fontSize: 28, fontWeight: "900" },
-  analysis360Section: { gap: 4 },
-  analysis360SectionLabel: { color: "#22c55e", fontWeight: "800", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: 0.5 },
-  analysis360Item: { color: "rgba(255,255,255,0.70)", fontSize: 13 },
-  analyze360Btn: {
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(124,58,237,0.40)",
-    backgroundColor: "rgba(124,58,237,0.12)",
-  },
-  analyze360BtnText: { color: "#a78bfa", fontWeight: "900", fontSize: 14 },
-  analysis360Hint: { color: "rgba(255,255,255,0.30)", fontSize: 11 },
   dayTimelineCard: {
     borderRadius: 16,
     borderWidth: 1,
