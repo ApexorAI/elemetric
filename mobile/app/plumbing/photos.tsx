@@ -654,40 +654,7 @@ return (
 </View>
 </View>
 
-{/* Multi-day timeline */}
-{allWorkDays.length > 0 && (
-  <View style={styles.timelineWrap}>
-    <Text style={styles.timelineHeading}>PROJECT TIMELINE</Text>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.timelineRow}>
-      {allWorkDays.map((dateStr, i) => {
-        const isToday = dateStr === todayStr;
-        const d = new Date(dateStr);
-        return (
-          <View key={dateStr} style={[styles.timelineItem, { marginHorizontal: 20 }]}>
-            {i > 0 && <View style={styles.timelineConnector} />}
-            <View style={[styles.timelineDot, isToday && styles.timelineDotActive]} />
-            <Text style={[styles.timelineDayLabel, isToday && styles.timelineDayLabelActive]}>
-              Day {i + 1}
-            </Text>
-            <Text style={styles.timelineDateLabel}>
-              {d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
-            </Text>
-          </View>
-        );
-      })}
-      {!allWorkDays.includes(todayStr) && (
-        <View style={[styles.timelineItem, { marginHorizontal: 20 }]}>
-          {allWorkDays.length > 0 && <View style={styles.timelineConnector} />}
-          <View style={[styles.timelineDot, styles.timelineDotActive]} />
-          <Text style={[styles.timelineDayLabel, styles.timelineDayLabelActive]}>
-            Day {allWorkDays.length + 1}
-          </Text>
-          <Text style={styles.timelineDateLabel}>Today</Text>
-        </View>
-      )}
-    </ScrollView>
-  </View>
-)}
+{/* Multi-day timeline — hidden until post-launch */}
 
 <ScrollView ref={scrollRef} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
 {HOTWATER_ITEMS.map((item) => {
@@ -840,39 +807,7 @@ disabled={loading || i === itemPhotos.length - 1}
 );
 })}
 
-{/* ── Wide Shot — Optional ─────────────────────────────── */}
-<View style={styles.wideShotSection}>
-  <Text style={styles.wideShotTitle}>Wide Shot — Optional</Text>
-  <Text style={styles.wideShotSub}>One wide photo can cover multiple checklist items</Text>
-  <Pressable
-    style={styles.wideShotBtn}
-    onPress={() => addPhoto360ForItem("wide_shot")}
-    disabled={loading}
-  >
-    <Text style={styles.wideShotBtnText}>📷  Add Wide Shot</Text>
-  </Pressable>
-  {(photo360Map["wide_shot"] || []).length > 0 && (
-    <View style={styles.photoGrid}>
-      {(photo360Map["wide_shot"] || []).map((uri, i) => (
-        <View key={`wide-${i}`} style={styles.photoWrap}>
-          <Pressable onPress={() => setPreviewUri(uri)} disabled={loading}>
-            <Image source={{ uri }} style={styles.photo} />
-          </Pressable>
-          <View style={styles.badge360}>
-            <Text style={styles.badge360Text}>WIDE</Text>
-          </View>
-          <Pressable
-            style={styles.remove}
-            onPress={() => remove360Photo("wide_shot", uri)}
-            disabled={loading}
-          >
-            <Text style={styles.removeText}>×</Text>
-          </Pressable>
-        </View>
-      ))}
-    </View>
-  )}
-</View>
+{/* Wide Shot — hidden until post-launch */}
 
 <Pressable
 style={[styles.aiBtn, (loading || totalRequiredPhotosAdded < 2) && { opacity: 0.6 }]}

@@ -1189,22 +1189,7 @@ return (
 </View>
 ) : (
 <>
-{/* Multi-day timeline display */}
-{jobDays.length > 0 && (
-  <View style={styles.dayTimelineCard}>
-    <Text style={styles.dayTimelineTitle}>PROJECT TIMELINE</Text>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dayTimelineRow}>
-      {jobDays.map((d, i) => (
-        <View key={d} style={[styles.dayTimelineItem, { marginHorizontal: 20 }]}>
-          {i > 0 && <View style={styles.dayTimelineConnector} />}
-          <View style={[styles.dayTimelineDot, i === jobDays.length - 1 && styles.dayTimelineDotLast]} />
-          <Text style={styles.dayTimelineLabel}>Day {i + 1}</Text>
-          <Text style={styles.dayTimelineDate}>{new Date(d).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}</Text>
-        </View>
-      ))}
-    </ScrollView>
-  </View>
-)}
+{/* Multi-day timeline — hidden until post-launch */}
 
 {/* ── Confidence Gauge ── */}
 <View style={styles.gaugeCard}>
