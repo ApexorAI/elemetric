@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -27,15 +27,31 @@ export default function Referral() {
   const [totalReferrals, setTotalReferrals] = useState(0);
   const [pending, setPending] = useState(0);
   const [earned, setEarned] = useState(0);
-  const [leaderboard, setLeaderboard] = useState<{ label: string; count: number }[]>([]);
   const [copied, setCopied] = useState(false);
 
-  const shareUrl = `https://elemetric.com.au/ref/${referralCode}`;
-  const shareMsg = `I've been using Elemetric for compliance reports on-site — it's 🔧. Sign up free: ${shareUrl}`;
+  // Timeout ref for cleanup on unmount — prevents state update on unmounted component
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Derive shareUrl and shareMsg from referralCode — memoised to avoid recreation every render
+  const shareUrl = useMemo(
+    () => `https://elemetric.com.au/ref/${referralCode}`,
+    [referralCode]
+  );
+  const shareMsg = useMemo(
+    () => `I've been using Elemetric for compliance reports on-site — it's 🔧. Sign up free: ${shareUrl}`,
+    [shareUrl]
+  );
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
+
+      // Clear any pending copied timer on re-focus
+      if (copiedTimerRef.current) {
+        clearTimeout(copiedTimerRef.current);
+        copiedTimerRef.current = null;
+      }
+
       (async () => {
         try {
           const { data: { user } } = await supabase.auth.getUser();
@@ -50,7 +66,10 @@ export default function Referral() {
           let code = profile?.referral_code;
           if (!code) {
             code = Math.random().toString(36).substring(2, 10).toUpperCase();
-            await supabase.from("profiles").update({ referral_code: code }).eq("user_id", user.id);
+            await supabase
+              .from("profiles")
+              .update({ referral_code: code })
+              .eq("user_id", user.id);
           }
           if (active) setReferralCode(code);
 
@@ -69,52 +88,38 @@ export default function Referral() {
                 .reduce((s: number, r: any) => s + (r.commission_amount ?? 0), 0)
             );
           }
-
-          // Leaderboard
-          const { data: lb } = await supabase
-            .from("referrals")
-            .select("referrer_id")
-            .eq("status", "accepted");
-
-          if (active && lb) {
-            const counts: Record<string, number> = {};
-            lb.forEach((r: any) => {
-              counts[r.referrer_id] = (counts[r.referrer_id] ?? 0) + 1;
-            });
-            const sorted = Object.entries(counts)
-              .sort((a, b) => b[1] - a[1])
-              .slice(0, 5);
-            setLeaderboard(
-              sorted.map(([, count], i) => ({
-                label: `Plumber #${i + 1}`,
-                count,
-              }))
-            );
-          }
         } catch {}
         if (active) setLoading(false);
       })();
-      return () => { active = false; };
+
+      return () => {
+        active = false;
+        // Cancel any pending copied reset timer
+        if (copiedTimerRef.current) {
+          clearTimeout(copiedTimerRef.current);
+          copiedTimerRef.current = null;
+        }
+      };
     }, [])
   );
 
-  const shareWhatsApp = async () => {
+  const shareWhatsApp = useCallback(async () => {
     try {
       await Linking.openURL(`whatsapp://send?text=${encodeURIComponent(shareMsg)}`);
     } catch {
       Alert.alert("WhatsApp not found", "Please install WhatsApp to share via WhatsApp.");
     }
-  };
+  }, [shareMsg]);
 
-  const shareSMS = async () => {
+  const shareSMS = useCallback(async () => {
     try {
       await Linking.openURL(`sms:?body=${encodeURIComponent(shareMsg)}`);
     } catch {
       Alert.alert("Cannot open SMS", "Please copy the link and share manually.");
     }
-  };
+  }, [shareMsg]);
 
-  const copyLink = async () => {
+  const copyLink = useCallback(async () => {
     try {
       if (Clipboard) {
         await Clipboard.setStringAsync(shareUrl);
@@ -122,9 +127,13 @@ export default function Referral() {
         await Share.share({ message: shareMsg, url: shareUrl });
       }
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = setTimeout(() => {
+        setCopied(false);
+        copiedTimerRef.current = null;
+      }, 2000);
     } catch {}
-  };
+  }, [shareUrl, shareMsg]);
 
   if (loading) {
     return (
@@ -288,19 +297,6 @@ const styles = StyleSheet.create({
   statValue: { color: "white", fontSize: 28, fontWeight: "900" },
   statLabel: { color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: "700" },
   statDivider: { width: 1, height: 40, backgroundColor: "rgba(255,255,255,0.07)" },
-
-  lbRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
-  lbDivider: { borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.07)" },
-  lbRank: {
-    width: 28, height: 28, borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    alignItems: "center", justifyContent: "center",
-  },
-  lbRankGold: { backgroundColor: "rgba(251,191,36,0.15)", borderWidth: 1, borderColor: "rgba(251,191,36,0.40)" },
-  lbRankText: { color: "rgba(255,255,255,0.55)", fontWeight: "900", fontSize: 13 },
-  lbRankTextGold: { color: "#fbbf24" },
-  lbLabel: { flex: 1, color: "white", fontWeight: "700", fontSize: 14 },
-  lbCount: { color: "rgba(255,255,255,0.45)", fontSize: 12 },
 
   emptyCard: {
     backgroundColor: "#0f2035",
