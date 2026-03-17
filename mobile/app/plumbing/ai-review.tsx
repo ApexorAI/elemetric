@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useEffect, useRef } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import * as StoreReview from "expo-store-review";
 import {
 View,
@@ -14,7 +14,7 @@ Share,
 Linking,
 } from "react-native";
 import Svg, { Circle, G } from "react-native-svg";
-import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -61,6 +61,7 @@ type Material = {
 };
 
 const REVIEW_PHOTOS_FILE = `${FileSystem.documentDirectory}review-photos.json`;
+const AI_RESULT_FILE = `${FileSystem.documentDirectory}ai-result.json`;
 const CHECKLIST_KEY = "elemetric_current_checklist";
 const SIGNATURE_KEY = "elemetric_signature_svg";
 const INSTALLER_NAME_KEY = "elemetric_installer_name";
@@ -101,21 +102,8 @@ function CoverageRing({ score }: { score: number }) {
 
 export default function AIReview() {
 const router = useRouter();
-const params = useLocalSearchParams();
 
-const decoded: AIResult | null = useMemo(() => {
-try {
-if (!params.result || typeof params.result !== "string") return null;
-return JSON.parse(params.result);
-} catch {
-try {
-if (!params.result || typeof params.result !== "string") return null;
-return JSON.parse(decodeURIComponent(params.result));
-} catch {
-return null;
-}
-}
-}, [params.result]);
+const [decoded, setDecoded] = useState<AIResult | null>(null);
 
 const [jobLoaded, setJobLoaded] = useState(false);
 const [currentJob, setCurrentJob] = useState<CurrentJob>({
@@ -189,6 +177,17 @@ startTime: parsed.startTime,
 weather: parsed.weather,
 });
 }
+
+// Load AI result from file (written by photos.tsx runAI)
+try {
+  const resultInfo = await FileSystem.getInfoAsync(AI_RESULT_FILE);
+  if (resultInfo.exists && active) {
+    const rawResult = await FileSystem.readAsStringAsync(AI_RESULT_FILE, {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+    setDecoded(JSON.parse(rawResult));
+  }
+} catch {}
 
 const info = await FileSystem.getInfoAsync(REVIEW_PHOTOS_FILE);
 if (info.exists && active) {

@@ -25,6 +25,7 @@ const CHECKLIST_KEY = "elemetric_current_checklist";
 const REVIEW_PHOTOS_FILE = `${FileSystem.documentDirectory}review-photos.json`;
 const PHOTO_360_TOOLTIP_KEY = "elemetric_360_tooltip_shown";
 const REVIEW_PHOTOS_360_FILE = `${FileSystem.documentDirectory}review-photos-360.json`;
+const AI_RESULT_FILE = `${FileSystem.documentDirectory}ai-result.json`;
 const FLOOR_PLAN_PINS_KEY = "elemetric_floor_plan_pins";
 
 type CurrentJob = {
@@ -527,6 +528,23 @@ for (const item of HOTWATER_ITEMS) {
     } catch {}
   }
 }
+// Also collect wide_shot photos
+const wideUris = photo360Map["wide_shot"] || [];
+const wideMeta = photo360Meta["wide_shot"] || [];
+for (const uri of wideUris) {
+  try {
+    const converted = await convertToJpeg(uri);
+    const meta = wideMeta.find((m) => m.uri === uri);
+    all360Photos.push({
+      label: "Wide Shot",
+      uri: converted.uri,
+      base64: converted.base64,
+      mime: converted.mime,
+      capturedAt: meta?.capturedAt,
+      hash: meta?.hash,
+    });
+  } catch {}
+}
 if (all360Photos.length > 0) {
   await FileSystem.writeAsStringAsync(REVIEW_PHOTOS_360_FILE, JSON.stringify(all360Photos), {
     encoding: FileSystem.EncodingType.UTF8,
@@ -576,12 +594,10 @@ if (!res.ok) {
 throw new Error(json?.error || json?.details || "AI request failed");
 }
 
-router.push({
-pathname: "/plumbing/ai-review",
-params: {
-result: JSON.stringify(json),
-},
+await FileSystem.writeAsStringAsync(AI_RESULT_FILE, JSON.stringify(json), {
+  encoding: FileSystem.EncodingType.UTF8,
 });
+router.push({ pathname: "/plumbing/ai-review" });
 } catch (e: any) {
 Alert.alert("AI Analysis Failed", e?.message ?? "Could not analyse your photos. Check your internet connection and try again. If the problem persists, try retaking photos with better lighting.");
 } finally {
@@ -614,10 +630,10 @@ return (
 <Modal visible={showTooltip360} transparent animationType="fade" onRequestClose={() => setShowTooltip360(false)}>
   <Pressable style={styles.tooltipOverlay} onPress={() => setShowTooltip360(false)}>
     <View style={styles.tooltipCard}>
-      <Text style={styles.tooltipEmoji}>🔮</Text>
-      <Text style={styles.tooltipTitle}>360° Photo Tip</Text>
+      <Text style={styles.tooltipEmoji}>📷</Text>
+      <Text style={styles.tooltipTitle}>Wide Shot Tip</Text>
       <Text style={styles.tooltipBody}>
-        One 360° photo can satisfy multiple checklist items at once! The AI scans the entire room and detects all visible compliance items in a single shot.{"\n\n"}Take your 360° photo from the centre of the room for best coverage.
+        Take a wide photo of the entire work area. Our AI will identify which compliance items are visible and tell you what else you need.{"\n\n"}Works best from the centre of the room or a corner with a good view.
       </Text>
       <Pressable style={styles.tooltipBtn} onPress={() => setShowTooltip360(false)}>
         <Text style={styles.tooltipBtnText}>Got it →</Text>
@@ -700,18 +716,6 @@ onPress={() => addPhotoForItem(item.id)}
 disabled={loading}
 >
 <Text style={styles.addBtnText}>+ Add Photo</Text>
-</Pressable>
-
-{/* 360° Photo button */}
-<Pressable
-  style={styles.btn360}
-  onPress={() => addPhoto360ForItem(item.id)}
-  disabled={loading}
->
-  <View style={styles.btn360Ring}>
-    <Text style={styles.btn360Text}>360°</Text>
-  </View>
-  <Text style={styles.btn360Label}>Add 360° Photo</Text>
 </Pressable>
 
 {/* Mark on Floor Plan button (if floor plan exists) */}
@@ -835,6 +839,40 @@ disabled={loading || i === itemPhotos.length - 1}
 </View>
 );
 })}
+
+{/* ── Wide Shot — Optional ─────────────────────────────── */}
+<View style={styles.wideShotSection}>
+  <Text style={styles.wideShotTitle}>Wide Shot — Optional</Text>
+  <Text style={styles.wideShotSub}>One wide photo can cover multiple checklist items</Text>
+  <Pressable
+    style={styles.wideShotBtn}
+    onPress={() => addPhoto360ForItem("wide_shot")}
+    disabled={loading}
+  >
+    <Text style={styles.wideShotBtnText}>📷  Add Wide Shot</Text>
+  </Pressable>
+  {(photo360Map["wide_shot"] || []).length > 0 && (
+    <View style={styles.photoGrid}>
+      {(photo360Map["wide_shot"] || []).map((uri, i) => (
+        <View key={`wide-${i}`} style={styles.photoWrap}>
+          <Pressable onPress={() => setPreviewUri(uri)} disabled={loading}>
+            <Image source={{ uri }} style={styles.photo} />
+          </Pressable>
+          <View style={styles.badge360}>
+            <Text style={styles.badge360Text}>WIDE</Text>
+          </View>
+          <Pressable
+            style={styles.remove}
+            onPress={() => remove360Photo("wide_shot", uri)}
+            disabled={loading}
+          >
+            <Text style={styles.removeText}>×</Text>
+          </Pressable>
+        </View>
+      ))}
+    </View>
+  )}
+</View>
 
 <Pressable
 style={[styles.aiBtn, (loading || totalRequiredPhotosAdded < 2) && { opacity: 0.6 }]}
@@ -1222,4 +1260,25 @@ fontSize: 11,
     marginTop: 4,
   },
   tooltipBtnText: { color: "#0b1220", fontWeight: "900", fontSize: 15 },
+
+  // Wide Shot section
+  wideShotSection: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.25)",
+    backgroundColor: "rgba(249,115,22,0.06)",
+    padding: 16,
+    gap: 10,
+  },
+  wideShotTitle: { color: "#f97316", fontWeight: "900", fontSize: 15 },
+  wideShotSub: { color: "rgba(255,255,255,0.45)", fontSize: 12, marginTop: -4 },
+  wideShotBtn: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.35)",
+    backgroundColor: "rgba(249,115,22,0.10)",
+    alignItems: "center",
+  },
+  wideShotBtnText: { color: "#f97316", fontWeight: "800", fontSize: 14 },
 });
