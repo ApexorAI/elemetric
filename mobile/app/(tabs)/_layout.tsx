@@ -7,7 +7,6 @@ import { supabase } from '@/lib/supabase';
 export default function TabLayout() {
   const [isEmployer, setIsEmployer] = useState(false);
 
-  // Re-check role on every focus so tabs update as soon as role changes.
   useFocusEffect(
     useCallback(() => {
       (async () => {
@@ -77,11 +76,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="more"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="person.fill" color={color} />,
-          tabBarAccessibilityLabel: 'Your profile',
+          title: 'More',
+          tabBarIcon: ({ color }) => <IconSymbol size={26} name="ellipsis.circle.fill" color={color} />,
+          tabBarAccessibilityLabel: 'More options',
         }}
       />
 
@@ -109,6 +108,7 @@ export default function TabLayout() {
 
       {/* ── Hidden screens (accessible via push, not tab bar) ── */}
       <Tabs.Screen name="visualiser" options={{ href: null }} />
+      <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
   );
 }
