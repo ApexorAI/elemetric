@@ -9,11 +9,11 @@ import {
   Alert,
   FlatList,
   ActivityIndicator,
-  Image,
+
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as ImagePicker from "expo-image-picker";
+
 import { supabase } from "@/lib/supabase";
 
 type Suggestion = { display: string; short: string };
@@ -50,7 +50,7 @@ export default function NewJob() {
   const [suggLoading, setSuggLoading] = useState(false);
   const [checking,   setChecking]   = useState(false);
   const [weather, setWeather] = useState<"Clear" | "Overcast" | "Rain" | "Indoor">("Clear");
-  const [floorPlanUri, setFloorPlanUri] = useState<string | null>(null);
+  // Floor plan upload hidden until post-launch
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -130,21 +130,6 @@ export default function NewJob() {
     return true;
   };
 
-  const pickFloorPlan = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert("Permission Required", "Enable photo access in Settings to upload a floor plan.");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets?.[0]?.uri) {
-      setFloorPlanUri(result.assets[0].uri);
-    }
-  };
-
   // ── Continue ───────────────────────────────────────────────────────────────
 
   const onContinue = async () => {
@@ -165,7 +150,6 @@ export default function NewJob() {
         jobAddr: jobAddr.trim() || "No address",
         startTime: new Date().toISOString(),
         weather: weather,
-        floorPlanUri: floorPlanUri ?? null,
       };
       await AsyncStorage.setItem("elemetric_current_job", JSON.stringify(currentJob));
 
@@ -252,26 +236,7 @@ export default function NewJob() {
           ))}
         </View>
 
-        <Text style={styles.label}>Floor Plan (Optional)</Text>
-        <Pressable style={styles.floorPlanBtn} onPress={pickFloorPlan}>
-          {floorPlanUri ? (
-            <View style={styles.floorPlanPreviewRow}>
-              <Image source={{ uri: floorPlanUri }} style={styles.floorPlanThumb} resizeMode="cover" />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.floorPlanSelected}>Floor plan uploaded ✓</Text>
-                <Text style={styles.floorPlanSub}>Tap to change</Text>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.floorPlanEmptyRow}>
-              <Text style={styles.floorPlanIcon}>🗺️</Text>
-              <View>
-                <Text style={styles.floorPlanEmptyText}>Upload Floor Plan</Text>
-                <Text style={styles.floorPlanSub}>Optional · Enables pin mapping on checklist items</Text>
-              </View>
-            </View>
-          )}
-        </Pressable>
+        {/* Floor plan upload hidden until post-launch */}
 
         <Pressable
           style={[styles.button, checking && { opacity: 0.6 }]}
