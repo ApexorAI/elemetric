@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import Svg, { Circle, Text as SvgText } from "react-native-svg";
 import { supabase } from "@/lib/supabase";
 
 // ── Greeting ──────────────────────────────────────────────────────────────────
@@ -11,6 +11,42 @@ function greeting(): string {
   if (h < 12) return "Good morning";
   if (h < 17) return "Good afternoon";
   return "Good evening";
+}
+
+// ── Compliance score ring ─────────────────────────────────────────────────────
+
+const RING_R = 34;
+const RING_SW = 8;
+const RING_SIZE = (RING_R + RING_SW) * 2 + 4;
+const RING_CIRC = 2 * Math.PI * RING_R;
+
+function scoreColor(score: number): string {
+  if (score >= 80) return "#22c55e";
+  if (score >= 50) return "#f97316";
+  return "#ef4444";
+}
+
+function ComplianceRing({ score }: { score: number }) {
+  const pct = Math.max(0, Math.min(100, Math.round(score)));
+  const offset = RING_CIRC * (1 - pct / 100);
+  const color = scoreColor(pct);
+  const cx = RING_SIZE / 2;
+  const cy = RING_SIZE / 2;
+  return (
+    <Svg width={RING_SIZE} height={RING_SIZE} viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}>
+      <Circle cx={cx} cy={cy} r={RING_R} stroke="rgba(255,255,255,0.10)" strokeWidth={RING_SW} fill="none" />
+      <Circle
+        cx={cx} cy={cy} r={RING_R}
+        stroke={color} strokeWidth={RING_SW} fill="none"
+        strokeDasharray={`${RING_CIRC}`} strokeDashoffset={`${offset}`}
+        strokeLinecap="round"
+        transform={`rotate(-90, ${cx}, ${cy})`}
+      />
+      <SvgText x={cx} y={cy + 7} textAnchor="middle" fontSize="19" fontWeight="900" fill={color}>
+        {pct}
+      </SvgText>
+    </Svg>
+  );
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -49,11 +85,11 @@ const TYPE_LABEL: Record<string, string> = {
 export default function Home() {
   const router = useRouter();
 
-  const [firstName,      setFirstName]      = useState<string | null>(null);
-  const [recentJobs,     setRecentJobs]     = useState<RecentJob[]>([]);
-  const [jobCount,       setJobCount]       = useState(0);
-  const [isProtected,    setIsProtected]    = useState(false);
-  const [loading,        setLoading]        = useState(true);
+  const [firstName,       setFirstName]       = useState<string | null>(null);
+  const [recentJobs,      setRecentJobs]      = useState<RecentJob[]>([]);
+  const [jobCount,        setJobCount]        = useState(0);
+  const [complianceScore, setComplianceScore] = useState<number | null>(null);
+  const [loading,         setLoading]         = useState(true);
 
   useFocusEffect(
     useCallback(() => {
@@ -71,22 +107,21 @@ export default function Home() {
             .single();
 
           if (active && profile?.full_name) {
-            const first = profile.full_name.trim().split(" ")[0];
-            setFirstName(first);
+            setFirstName(profile.full_name.trim().split(" ")[0]);
           }
 
-          // Load recent jobs (last 2 only)
+          // Load recent jobs (last 3)
           const { data: jobs } = await supabase
             .from("jobs")
             .select("id, job_name, job_addr, job_type, confidence, created_at")
             .eq("user_id", user.id)
             .order("created_at", { ascending: false })
-            .limit(2);
+            .limit(3);
 
-          // Total job count
-          const { count } = await supabase
+          // Total job count + compliance score
+          const { data: allJobs } = await supabase
             .from("jobs")
-            .select("id", { count: "exact", head: true })
+            .select("confidence")
             .eq("user_id", user.id);
 
           if (active) {
@@ -99,8 +134,13 @@ export default function Home() {
               createdAt: j.created_at,
             }));
             setRecentJobs(jobList);
-            setJobCount(count ?? 0);
-            setIsProtected((count ?? 0) > 0);
+            setJobCount(allJobs?.length ?? 0);
+            if (allJobs && allJobs.length > 0) {
+              const avg = Math.round(
+                allJobs.reduce((s: number, j: any) => s + (j.confidence ?? 0), 0) / allJobs.length
+              );
+              setComplianceScore(avg);
+            }
           }
         } catch {}
         if (active) setLoading(false);
@@ -108,8 +148,6 @@ export default function Home() {
       return () => { active = false; };
     }, [])
   );
-
-  const hasJobs = jobCount > 0;
 
   return (
     <ScrollView
@@ -125,39 +163,77 @@ export default function Home() {
         {greeting()}{firstName ? `, ${firstName}` : ""}
       </Text>
 
+      {/* ── Compliance score ring ── */}
+      <View style={s.scoreCard}>
+        <View style={s.scoreLeft}>
+          <Text style={s.scoreTitle}>Compliance Score</Text>
+          <Text style={s.scoreSub}>
+            {complianceScore === null
+              ? "Complete a job to generate your score"
+              : `Based on ${jobCount} job${jobCount === 1 ? "" : "s"}`}
+          </Text>
+          {complianceScore !== null && (
+            <View style={[s.scoreBadge, {
+              borderColor: scoreColor(complianceScore) + "50",
+              backgroundColor: scoreColor(complianceScore) + "18",
+            }]}>
+              <Text style={[s.scoreBadgeText, { color: scoreColor(complianceScore) }]}>
+                {complianceScore >= 80 ? "Excellent" : complianceScore >= 50 ? "Good" : "Needs Attention"}
+              </Text>
+            </View>
+          )}
+        </View>
+        <View style={s.scoreRight}>
+          {complianceScore !== null ? (
+            <ComplianceRing score={complianceScore} />
+          ) : (
+            <View style={[s.scorePlaceholder, { width: RING_SIZE, height: RING_SIZE }]}>
+              <Text style={s.scorePlaceholderText}>—</Text>
+            </View>
+          )}
+        </View>
+      </View>
+
       {/* ── Primary CTA ── */}
       <Pressable
         style={s.startBtn}
         onPress={() => router.push("/trade")}
         accessibilityRole="button"
         accessibilityLabel="Start a New Job"
-        accessibilityHint="Opens the trade selector to begin a new compliance job"
       >
         <Text style={s.startBtnText}>Start a New Job</Text>
         <Text style={s.startBtnSub}>Takes under 60 seconds</Text>
       </Pressable>
 
-      {/* ── Stat pills ── */}
-      <View style={s.pillRow}>
-        <View style={s.pill}>
-          <Text style={s.pillValue}>{loading ? "—" : jobCount}</Text>
-          <Text style={s.pillLabel}>{jobCount === 1 ? "Job" : "Jobs"}</Text>
-        </View>
-        <View style={[s.pill, isProtected && s.pillProtected]}>
-          <Text style={[s.pillValue, isProtected && s.pillValueProtected]}>
-            {isProtected ? "✓" : "○"}
-          </Text>
-          <Text style={[s.pillLabel, isProtected && s.pillLabelProtected]}>
-            {isProtected ? "Protected" : "Not yet"}
-          </Text>
-        </View>
+      {/* ── Quick actions ── */}
+      <View style={s.quickRow}>
+        <Pressable
+          style={s.quickCard}
+          onPress={() => router.push("/near-miss")}
+          accessibilityRole="button"
+          accessibilityLabel="Report a Problem"
+        >
+          <Text style={s.quickIcon}>⚠️</Text>
+          <Text style={s.quickLabel}>Near Miss</Text>
+          <Text style={s.quickSub}>Report a problem found</Text>
+        </Pressable>
+        <Pressable
+          style={s.quickCard}
+          onPress={() => router.push("/referral")}
+          accessibilityRole="button"
+          accessibilityLabel="Refer a Friend"
+        >
+          <Text style={s.quickIcon}>🎁</Text>
+          <Text style={s.quickLabel}>Refer</Text>
+          <Text style={s.quickSub}>Earn rewards</Text>
+        </Pressable>
       </View>
 
       {/* ── Recent jobs ── */}
       <View style={s.section}>
         <Text style={s.sectionLabel}>RECENT JOBS</Text>
 
-        {loading ? null : hasJobs ? (
+        {loading ? null : recentJobs.length > 0 ? (
           recentJobs.map((job) => (
             <View key={job.id} style={s.jobCard}>
               <View style={s.jobIcon}>
@@ -191,13 +267,6 @@ export default function Home() {
         )}
       </View>
 
-      {/* ── Unlock prompt (only shown when no jobs) ── */}
-      {!loading && !hasJobs && (
-        <Text style={s.unlockHint}>
-          Document your first job to unlock more tools
-        </Text>
-      )}
-
     </ScrollView>
   );
 }
@@ -223,6 +292,33 @@ const s = StyleSheet.create({
     lineHeight: 32,
   },
 
+  // Compliance score ring card
+  scoreCard: {
+    backgroundColor: "#0f2035",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.07)",
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  scoreLeft: { flex: 1, paddingRight: 12 },
+  scoreTitle: { color: "white", fontWeight: "700", fontSize: 15 },
+  scoreSub: { color: "rgba(255,255,255,0.55)", fontSize: 13, marginTop: 4, lineHeight: 18 },
+  scoreBadge: {
+    marginTop: 10, borderRadius: 20, borderWidth: 1,
+    paddingHorizontal: 10, paddingVertical: 4, alignSelf: "flex-start",
+  },
+  scoreBadgeText: { fontWeight: "700", fontSize: 12 },
+  scoreRight: {},
+  scorePlaceholder: {
+    borderRadius: RING_SIZE / 2, borderWidth: 3,
+    borderColor: "rgba(255,255,255,0.10)",
+    alignItems: "center", justifyContent: "center",
+  },
+  scorePlaceholderText: { color: "rgba(255,255,255,0.35)", fontSize: 20, fontWeight: "900" },
+
   // Primary CTA
   startBtn: {
     backgroundColor: "#f97316",
@@ -231,7 +327,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 24,
     alignItems: "center",
     gap: 6,
-    marginTop: 4,
   },
   startBtnText: {
     color: "#07152b",
@@ -244,41 +339,21 @@ const s = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // Stat pills
-  pillRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  pill: {
+  // Quick actions
+  quickRow: { flexDirection: "row", gap: 12 },
+  quickCard: {
     flex: 1,
     backgroundColor: "#0f2035",
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.07)",
-    paddingVertical: 14,
-    alignItems: "center",
+    padding: 14,
     gap: 4,
+    alignItems: "flex-start",
   },
-  pillProtected: {
-    borderColor: "rgba(34,197,94,0.30)",
-    backgroundColor: "rgba(34,197,94,0.07)",
-  },
-  pillValue: {
-    color: "#ffffff",
-    fontSize: 24,
-    fontWeight: "900",
-  },
-  pillValueProtected: {
-    color: "#22c55e",
-  },
-  pillLabel: {
-    color: "rgba(255,255,255,0.45)",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  pillLabelProtected: {
-    color: "rgba(34,197,94,0.70)",
-  },
+  quickIcon: { fontSize: 22, marginBottom: 2 },
+  quickLabel: { color: "#ffffff", fontSize: 14, fontWeight: "700" },
+  quickSub: { color: "rgba(255,255,255,0.40)", fontSize: 11 },
 
   // Section
   section: { gap: 10 },
@@ -330,14 +405,5 @@ const s = StyleSheet.create({
     color: "rgba(255,255,255,0.30)",
     fontSize: 14,
     fontWeight: "500",
-  },
-
-  // Unlock hint
-  unlockHint: {
-    color: "rgba(255,255,255,0.25)",
-    fontSize: 13,
-    textAlign: "center",
-    fontStyle: "italic",
-    paddingHorizontal: 20,
   },
 });
