@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Image,
   ActivityIndicator,
 } from "react-native";
-import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import * as FileSystem from "expo-file-system/legacy";
 import Svg, { Circle } from "react-native-svg";
 
@@ -32,25 +32,12 @@ type ReviewPhoto = {
 };
 
 const REVIEW_PHOTOS_FILE = `${FileSystem.documentDirectory}review-photos.json`;
+const AI_RESULT_FILE = `${FileSystem.documentDirectory}ai-result.json`;
 
 export default function JobSummary() {
   const router = useRouter();
-  const params = useLocalSearchParams();
 
-  const decoded: AIResult | null = useMemo(() => {
-    try {
-      if (!params.result || typeof params.result !== "string") return null;
-      return JSON.parse(params.result);
-    } catch {
-      try {
-        if (!params.result || typeof params.result !== "string") return null;
-        return JSON.parse(decodeURIComponent(params.result));
-      } catch {
-        return null;
-      }
-    }
-  }, [params.result]);
-
+  const [decoded, setDecoded] = useState<AIResult | null>(null);
   const [photos, setPhotos] = useState<ReviewPhoto[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -59,6 +46,13 @@ export default function JobSummary() {
       let active = true;
       const load = async () => {
         try {
+          const resultInfo = await FileSystem.getInfoAsync(AI_RESULT_FILE);
+          if (resultInfo.exists && active) {
+            const rawResult = await FileSystem.readAsStringAsync(AI_RESULT_FILE, {
+              encoding: FileSystem.EncodingType.UTF8,
+            });
+            if (active) setDecoded(JSON.parse(rawResult));
+          }
           const info = await FileSystem.getInfoAsync(REVIEW_PHOTOS_FILE);
           if (info.exists && active) {
             const raw = await FileSystem.readAsStringAsync(REVIEW_PHOTOS_FILE, {

@@ -1535,7 +1535,7 @@ style={styles.input}
 <Text style={styles.saveText}>{saving ? "Saving..." : "Save Job"}</Text>
 </Pressable>
 
-<Pressable style={styles.signatureBtn} onPress={() => router.push({ pathname: "/plumbing/job-summary", params: { result: typeof params.result === "string" ? params.result : "" } })}>
+<Pressable style={styles.signatureBtn} onPress={() => router.push({ pathname: "/plumbing/job-summary" })}>
 <Text style={styles.signatureText}>Review Summary & Sign →</Text>
 </Pressable>
 
