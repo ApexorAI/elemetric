@@ -196,30 +196,11 @@ export default function Referral() {
           </View>
         </View>
 
-        {/* Leaderboard */}
-        {leaderboard.length > 0 && (
-          <>
-            <Text style={styles.sectionLabel}>TOP REFERRERS</Text>
-            <View style={styles.card}>
-              {leaderboard.map((item, i) => (
-                <View key={i} style={[styles.lbRow, i < leaderboard.length - 1 && styles.lbDivider]}>
-                  <View style={[styles.lbRank, i === 0 && styles.lbRankGold]}>
-                    <Text style={[styles.lbRankText, i === 0 && styles.lbRankTextGold]}>{i + 1}</Text>
-                  </View>
-                  <Text style={styles.lbLabel}>{item.label}</Text>
-                  <Text style={styles.lbCount}>{item.count} referrals</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
-
-        {leaderboard.length === 0 && (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No referrals accepted yet.</Text>
-            <Text style={styles.emptySubText}>Be the first to earn rewards!</Text>
-          </View>
-        )}
+        {/* Leaderboard coming soon */}
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyText}>Leaderboard coming soon</Text>
+          <Text style={styles.emptySubText}>Rankings will appear once more plumbers join.</Text>
+        </View>
 
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>How it works</Text>
