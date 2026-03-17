@@ -48,19 +48,36 @@ type AIResult = {
 };
 
 function tradeLabel(type: string): string {
-if (type === "electrical") return "Electrical";
-if (type === "hvac") return "HVAC";
-if (type === "woodheater") return "Wood Heater";
-if (type === "gasheater") return "Gas Heater";
-return type.charAt(0).toUpperCase() + type.slice(1);
+  const labels: Record<string, string> = {
+    electrical: "Electrical", hvac: "HVAC", woodheater: "Wood Heater", gasheater: "Gas Heater",
+    powerpoint: "Power Point Installation", lighting: "Lighting Installation",
+    switchboard: "Switchboard Upgrade", circuit: "Circuit Installation",
+    faultfinding: "Fault Finding", appliance: "Appliance Installation",
+    smokealarm: "Smoke Alarm Installation",
+    splitsystem: "Split System Installation", ducted: "Ducted System",
+    refrigerant: "Refrigerant Piping", hvacservice: "HVAC Maintenance",
+    ventilation: "Ventilation Installation",
+    framing: "Structural Framing", decking: "Decking",
+    pergola: "Pergola / Outdoor Structure", door: "Door Installation",
+    window: "Window Installation", flooring: "Flooring", fixing: "Fixing and Finishing",
+    carpentry: "Carpentry Documentation",
+  };
+  return labels[type] ?? (type.charAt(0).toUpperCase() + type.slice(1));
 }
 
 function tradeStandard(type: string): string {
-if (type === "electrical") return "AS/NZS 3000";
-if (type === "hvac") return "AS/NZS 1668";
-if (type === "woodheater") return "AS/NZS 2918";
-if (type === "gasheater") return "AS/NZS 5601.1";
-return "";
+  const standards: Record<string, string> = {
+    electrical: "AS/NZS 3000", powerpoint: "AS/NZS 3000", lighting: "AS/NZS 3000",
+    switchboard: "AS/NZS 3000", circuit: "AS/NZS 3000", faultfinding: "AS/NZS 3000",
+    appliance: "AS/NZS 3000", smokealarm: "AS 3786",
+    hvac: "AS/NZS 1668", splitsystem: "AS/NZS 5149", ducted: "AS/NZS 1668",
+    refrigerant: "AS/NZS 5149", hvacservice: "AS/NZS 1668", ventilation: "AS 1668.2",
+    woodheater: "AS/NZS 2918", gasheater: "AS/NZS 5601.1",
+    carpentry: "AS 1684", framing: "AS 1684", decking: "AS 1684",
+    pergola: "AS 1684", door: "AS 1684", window: "AS 1684",
+    flooring: "AS 1684", fixing: "AS 1684",
+  };
+  return standards[type] ?? "";
 }
 
 const SECTION_HINTS: Record<string, string> = {
@@ -73,23 +90,223 @@ const SECTION_HINTS: Record<string, string> = {
 
 const COMPLIANCE_ITEMS_BY_TYPE: Record<string, string[]> = {
   woodheater: [
-    "Clearances to combustibles correct",
-    "Flue system installed correctly",
-    "Hearth protection adequate",
-    "Air supply adequate",
-    "Installation complies with AS/NZS 2918",
-    "Manufacturer instructions followed",
-    "Smoke test completed",
+    "Clearances to combustibles correct per AS/NZS 2918",
+    "Flue system installed correctly — joints sealed",
+    "Hearth protection adequate — non-combustible material",
+    "Air supply adequate for combustion",
+    "Manufacturer installation instructions followed",
+    "Smoke test completed — no visible leaks",
     "Carbon monoxide test completed",
   ],
   gasheater: [
-    "Gas connection tested and gas tight",
-    "Flue installed correctly",
-    "Clearances adequate",
-    "Ventilation sufficient",
-    "Appliance operating correctly",
-    "Safety devices functional",
+    "Gas connection tested and gas tight — no leaks",
+    "Flue installed correctly — correct diameter and fall",
+    "Clearances adequate to combustibles",
+    "Ventilation sufficient for appliance rating",
+    "Appliance operating correctly — all burners",
+    "Safety devices functional — flame failure, thermostat",
     "Installation complies with AS/NZS 5601.1",
+  ],
+  electrical: [
+    "RCD protection installed and tested — all circuits",
+    "All circuit breakers correctly rated",
+    "Earth continuity verified on all circuits",
+    "Insulation resistance test completed — >1MΩ",
+    "Polarity correct on all outlets",
+    "Switchboard labelling complete — all circuits identified",
+    "Cable support and protection adequate",
+  ],
+  hvac: [
+    "Unit installed per manufacturer specifications",
+    "Refrigerant charge documented — weight recorded",
+    "Condensate drain falls minimum 1:50 to waste",
+    "Electrical disconnect within sight of unit",
+    "Commissioning data sheet completed",
+    "Airflow measured and recorded",
+    "All diffusers and grilles fitted correctly",
+  ],
+  // ── Electrical subtypes ──────────────────────────────────────────────────────
+  powerpoint: [
+    "GPO installed at correct height — AS/NZS 3000",
+    "RCD protection on final sub-circuit",
+    "Earth wire connected at GPO — green/yellow",
+    "Correct polarity — Active, Neutral, Earth",
+    "Cable secured at correct intervals — max 1m",
+    "Plate flush to wall — no gaps",
+    "Circuit tested — insulation resistance >1MΩ",
+  ],
+  lighting: [
+    "Lighting circuit correctly wired and switched",
+    "RCD protection on lighting circuit",
+    "Correct switching arrangement — 2-way where required",
+    "Downlight heat clearance maintained — 50mm min",
+    "Downlight IC rating matches installation",
+    "All fittings earthed where required",
+    "Circuit tested — continuity and polarity verified",
+  ],
+  switchboard: [
+    "All existing circuits correctly identified and labelled",
+    "RCD protection on all required circuits",
+    "All circuit breakers correctly rated for cable size",
+    "Neutral bar insulated from chassis — not bonded",
+    "Main earth bond completed and tested",
+    "Switchboard enclosure sealed — no open knockouts",
+    "Full board photo with cover off and cover on",
+  ],
+  circuit: [
+    "New circuit correctly rated for load",
+    "RCD protection installed on new circuit",
+    "Cable size appropriate for circuit rating",
+    "Cable support at correct intervals",
+    "Correct terminations at both ends — no strands missed",
+    "Circuit labelled at switchboard",
+    "Insulation resistance test — >1MΩ",
+  ],
+  faultfinding: [
+    "Fault correctly diagnosed — documented in notes",
+    "Isolation confirmed before work commenced",
+    "Repair carried out — faulty components replaced",
+    "All connections remade correctly — no loose terminations",
+    "Test after repair — circuit operates correctly",
+    "Insulation resistance test post-repair — >1MΩ",
+    "RCD tested after repair",
+  ],
+  appliance: [
+    "Appliance correctly rated for supply — voltage and current",
+    "Dedicated circuit installed if required",
+    "Correct isolation — switch or isolator within sight",
+    "Earth connection confirmed — green/yellow wire",
+    "Cable correctly supported and protected",
+    "Appliance tested and operating correctly",
+    "Compliance plate visible and legible",
+  ],
+  smokealarm: [
+    "Smoke alarm placed within 300mm of ceiling — flat mounting",
+    "Minimum 300mm from wall and corner",
+    "Not placed in dead air space or near AC vents",
+    "Minimum 300mm from bathroom door",
+    "Interconnected to all other smoke alarms in dwelling",
+    "Powered from mains — not battery-only in new install",
+    "Test button tested — all alarms activate together",
+  ],
+  // ── HVAC subtypes ────────────────────────────────────────────────────────────
+  splitsystem: [
+    "Indoor unit mounted level with correct fall for condensate",
+    "Outdoor unit on pad — minimum 150mm clearances all sides",
+    "Refrigerant lines correctly insulated — no gaps",
+    "Condensate drain — minimum 1:50 fall to waste",
+    "Electrical disconnect within sight of outdoor unit",
+    "Refrigerant charge documented — type and weight recorded",
+    "Commissioning completed — heating and cooling modes tested",
+  ],
+  ducted: [
+    "Supply ducts installed at correct size for airflow",
+    "Return air grille adequately sized",
+    "All duct joints sealed — no air leaks",
+    "Diffusers and grilles correctly installed — all clips fitted",
+    "Condensate drain — minimum 1:50 fall, correct termination",
+    "Refrigerant charge documented",
+    "Airflow balanced — each zone measured",
+  ],
+  refrigerant: [
+    "Pipe sized correctly for refrigerant circuit",
+    "Insulation complete — no gaps, joints taped",
+    "Pipe support at correct intervals — max 1.2m horizontal",
+    "Leak test completed — pressure held for 30 minutes",
+    "Triple evacuation completed before charge",
+    "Refrigerant type and charge weight documented",
+    "No visible damage to pipe or insulation",
+  ],
+  hvacservice: [
+    "Filters cleaned or replaced",
+    "Evaporator and condenser coils inspected",
+    "Refrigerant pressures checked — operating range confirmed",
+    "Electrical connections checked — no loose terminals",
+    "Condensate drain clear and flowing",
+    "Airflow measured — matched to commissioning data",
+    "Service report completed with readings",
+  ],
+  ventilation: [
+    "Exhaust fan rated for room volume — min 25 L/s for bathrooms",
+    "Duct connected — no loose joints",
+    "Duct terminates outside building — not into roof space",
+    "Backdraft damper installed at exterior termination",
+    "Electrical connection and switch correct",
+    "Fan tested — correct airflow confirmed",
+    "Noise level acceptable in adjacent spaces",
+  ],
+  // ── Carpentry subtypes ───────────────────────────────────────────────────────
+  framing: [
+    "Studs at correct centres — 450mm or 600mm per engineer",
+    "Double studs at all openings — doors and windows",
+    "Noggings installed at mid-height — 1350mm max centres",
+    "Bracing installed per bracing plan — nailed at both ends",
+    "Lintels correct size and bearing length at each end",
+    "Top plates lapped at corners and intersections",
+    "All structural connections — nails and bolts per fixing schedule",
+  ],
+  decking: [
+    "Decking boards at correct spacing — 3-5mm gap for drainage",
+    "Boards fixed with 2 fixings per joist — no single nail",
+    "End joints staggered — no aligned joints across width",
+    "Joists at correct span and spacing",
+    "Ledger connection to structure correct — flashing behind",
+    "Bearers on posts — correct notching and bolting",
+    "All timber treated — correct H rating for exposure class",
+  ],
+  pergola: [
+    "Post footings at correct depth — minimum 450mm or engineer spec",
+    "Posts plumb and set correctly in footings",
+    "Beam to post connections — bolted, not just nailed",
+    "Rafters at correct spacing — notched and nailed to beam",
+    "Bracing in both directions where required by engineer",
+    "All structural connections correct — no skew nails only",
+    "All timber treated — correct H rating for outdoor exposure",
+  ],
+  door: [
+    "Frame plumb, level and square — check diagonal measurements",
+    "Frame correctly fixed to structure — noggins at each fixing",
+    "Head height correct — 2040mm or per plans",
+    "Door hanging correctly — equal margin all around (3mm top, sides)",
+    "All hinges fitted correctly — 3 hinges on heavy doors",
+    "Latch and handle operate correctly",
+    "Weather seals fitted where external — sill, jambs, head",
+  ],
+  window: [
+    "Window frame plumb, level and square",
+    "Sill flashing installed — fall outward minimum 5 degrees",
+    "Head flashing installed correctly — overlaps sill flashing",
+    "Jamb flashing installed — no gaps at corners",
+    "Frame fixed to structure at correct centres",
+    "Reveals and architraves fitted correctly",
+    "Window operates correctly — opens, locks, seals",
+  ],
+  flooring: [
+    "Substrate clean, dry, and level — max 3mm in 1800mm",
+    "Expansion gap left at perimeter — min 10mm from walls",
+    "Layout started correctly — first board parallel to longest wall",
+    "Boards at correct staggered joint pattern — min 300mm",
+    "Fixings at correct intervals — nailed or glued per spec",
+    "Transitions fitted at doorways and floor changes",
+    "Skirting or beading covers expansion gap",
+  ],
+  fixing: [
+    "All architraves fitted correctly — mitred corners tight",
+    "Skirting boards fitted — mitred at internal corners",
+    "All fixing nails punched and filled",
+    "Splitter or quad fitted where required",
+    "Staircase handrail fitted at correct height — 900mm",
+    "All visible gaps filled — no daylight through joints",
+    "Finishing quality acceptable — no hammer marks or gaps",
+  ],
+  carpentry: [
+    "Wall framing plumb, square and true",
+    "Stud spacing correct per engineer / plans",
+    "Structural connections and fixings correct",
+    "Blocking and nogging installed as required",
+    "Bracing adequate and compliant — AS 1684",
+    "Roof framing / truss installation correct",
+    "Lintels correct size and bearing length",
   ],
 };
 

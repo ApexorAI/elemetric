@@ -58,6 +58,13 @@ const TRADES: Trade[] = [
     color: "#fbbf24",
     jobTypes: [
       { label: "Electrical Documentation", description: "RCD, insulation, earth loop, switchboard", standard: "AS/NZS 3000", params: { type: "electrical" } },
+      { label: "Power Point Installation", description: "GPO installation, RCD, correct wiring", standard: "AS/NZS 3000", params: { type: "powerpoint" } },
+      { label: "Lighting Installation", description: "Lighting circuit, switching arrangement", standard: "AS/NZS 3000", params: { type: "lighting" } },
+      { label: "Switchboard Upgrade", description: "Board replacement, labelling, RCD protection", standard: "AS/NZS 3000", params: { type: "switchboard" } },
+      { label: "Circuit Installation", description: "New circuit, isolation, test results", standard: "AS/NZS 3000", params: { type: "circuit" } },
+      { label: "Fault Finding", description: "Fault diagnosis, repair, test after", standard: "AS/NZS 3000", params: { type: "faultfinding" } },
+      { label: "Appliance Installation", description: "Fixed appliance, isolation, earth", standard: "AS/NZS 3000", params: { type: "appliance" } },
+      { label: "Smoke Alarm Installation", description: "Placement, interconnection, test", standard: "AS 3786", params: { type: "smokealarm" } },
     ],
   },
   {
@@ -67,6 +74,11 @@ const TRADES: Trade[] = [
     color: "#a78bfa",
     jobTypes: [
       { label: "HVAC Documentation", description: "Mechanical services commissioning", standard: "AS/NZS 1668", params: { type: "hvac" } },
+      { label: "Split System Installation", description: "Indoor/outdoor unit, refrigerant piping, drain", standard: "AS/NZS 5149", params: { type: "splitsystem" } },
+      { label: "Ducted System Installation", description: "Ducts, diffusers, return air, commissioning", standard: "AS/NZS 1668", params: { type: "ducted" } },
+      { label: "Refrigerant Piping", description: "Pipe insulation, leak test, pressure test", standard: "AS/NZS 5149", params: { type: "refrigerant" } },
+      { label: "Maintenance and Servicing", description: "Filter clean, coil inspect, performance check", standard: "AS/NZS 1668", params: { type: "hvacservice" } },
+      { label: "Ventilation Installation", description: "Exhaust fan, ductwork, airflow rates", standard: "AS 1668.2", params: { type: "ventilation" } },
     ],
   },
   {
@@ -76,6 +88,13 @@ const TRADES: Trade[] = [
     color: "#f97316",
     jobTypes: [
       { label: "Carpentry Documentation", description: "Timber framing, fixings, bracing", standard: "AS 1684", params: { type: "carpentry" } },
+      { label: "Structural Framing", description: "Wall framing, stud spacing, bracing, lintels", standard: "AS 1684", params: { type: "framing" } },
+      { label: "Decking", description: "Decking boards, fixing pattern, correct gap", standard: "AS 1684", params: { type: "decking" } },
+      { label: "Pergola / Outdoor Structure", description: "Post footings, connections, bracing", standard: "AS 1684", params: { type: "pergola" } },
+      { label: "Door Installation", description: "Frame plumb, clearances, hardware", standard: "AS 1684", params: { type: "door" } },
+      { label: "Window Installation", description: "Flashing, sill, head detail, squareness", standard: "AS 1684", params: { type: "window" } },
+      { label: "Flooring", description: "Substrate prep, layout, fixing pattern", standard: "AS 1684", params: { type: "flooring" } },
+      { label: "Fixing and Finishing", description: "Trim, architraves, fixings to schedule", standard: "AS 1684", params: { type: "fixing" } },
     ],
   },
 ];
