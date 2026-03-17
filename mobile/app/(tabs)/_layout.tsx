@@ -92,7 +92,16 @@ export default function TabLayout() {
           title: 'Calendar',
           tabBarIcon: ({ color }) => <IconSymbol size={26} name="calendar" color={color} />,
           tabBarAccessibilityLabel: 'Job calendar',
-          // Only show tab bar button for employers
+          tabBarButton: isEmployer ? undefined : () => null,
+          tabBarStyle: isEmployer ? undefined : { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
+        name="dashboard"
+        options={{
+          title: 'Dashboard',
+          tabBarIcon: ({ color }) => <IconSymbol size={26} name="chart.bar.fill" color={color} />,
+          tabBarAccessibilityLabel: 'Employer dashboard',
           tabBarButton: isEmployer ? undefined : () => null,
           tabBarStyle: isEmployer ? undefined : { display: 'none' },
         }}
