@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -20,29 +20,6 @@ import { supabase } from "@/lib/supabase";
 import * as Haptics from "expo-haptics";
 import QRCode from "qrcode";
 
-// ── Constants ──────────────────────────────────────────────────────────────────
-
-const TRADE_TYPES = ["Gas", "Plumbing", "Electrical", "HVAC", "Drainage", "Other"] as const;
-type TradeType = (typeof TRADE_TYPES)[number];
-
-const SEVERITY_LEVELS = ["Low", "Medium", "High", "Critical"] as const;
-type SeverityLevel = (typeof SEVERITY_LEVELS)[number];
-
-const SEVERITY_COLORS: Record<SeverityLevel, string> = {
-  Low: "#22c55e",
-  Medium: "#f97316",
-  High: "#ef4444",
-  Critical: "#7c3aed",
-};
-
-const getTodayDDMMYYYY = (): string => {
-  const now = new Date();
-  const dd = String(now.getDate()).padStart(2, "0");
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const yyyy = now.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
-};
-
 // ── Main screen ────────────────────────────────────────────────────────────────
 
 export default function NearMiss() {
@@ -54,19 +31,10 @@ export default function NearMiss() {
   const [licenceNumber, setLicenceNumber] = useState("");
   const [companyName, setCompanyName] = useState("");
 
-  // Form fields
+  // Form fields — 3 fields only
   const [propertyAddress, setPropertyAddress] = useState("");
-  const [dateDiscovered, setDateDiscovered] = useState(getTodayDDMMYYYY());
-  const [tradeType, setTradeType] = useState<TradeType>("Plumbing");
   const [description, setDescription] = useState("");
-  const [severity, setSeverity] = useState<SeverityLevel>("Medium");
   const [immediateAction, setImmediateAction] = useState("");
-  const [personsAtRisk, setPersonsAtRisk] = useState("");
-  const [contributingFactors, setContributingFactors] = useState("");
-  const [correctiveActions, setCorrectiveActions] = useState("");
-  const [followUpDate, setFollowUpDate] = useState("");
-  const [supervisorName, setSupervisorName] = useState("");
-  const [supervisorContact, setSupervisorContact] = useState("");
 
   // Photos
   const [photoUris, setPhotoUris] = useState<string[]>([]);
@@ -162,7 +130,7 @@ export default function NearMiss() {
       return;
     }
     if (!description.trim()) {
-      Alert.alert("Missing field", "Please enter a description of the issue.");
+      Alert.alert("Missing field", "Please describe what you found.");
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -174,7 +142,7 @@ export default function NearMiss() {
       // QR code
       let qrHtml = "";
       try {
-        const qrData = `ELM|near-miss|${propertyAddress}|${dateDiscovered}|${tradeType}`;
+        const qrData = `ELM|near-miss|${propertyAddress}|${dateShort}`;
         const qrSvg = await QRCode.toString(qrData, { type: "svg", width: 100, margin: 1 });
         const qrUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrSvg)}`;
         qrHtml = `<div style="text-align:center;">
@@ -214,9 +182,6 @@ export default function NearMiss() {
 
       const td = "border:1px solid #d1d5db;padding:8px;";
 
-      const severityBg = severity === "Critical" ? "#4c1d95" : severity === "High" ? "#7f1d1d" : severity === "Medium" ? "#7c2d12" : "#14532d";
-      const severityTextColor = SEVERITY_COLORS[severity];
-
       const html = `<html><head><style>@page{margin:15mm;@bottom-right{content:"Page " counter(page) " of " counter(pages);font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}@bottom-left{content:"ELEMETRIC · Confidential";font-size:9pt;color:#6b7280;font-family:Arial,sans-serif;}}body{margin:0;padding:0;font-family:Arial,sans-serif;color:#111827;background:#fff;}</style></head>
 <body>
 <div style="background:#07152b;color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
@@ -230,75 +195,40 @@ export default function NearMiss() {
 
 <div style="padding:22px;">
 
-  <!-- Severity Banner -->
-  <div style="background:${severityBg};border:2px solid ${severityTextColor};border-radius:8px;padding:12px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
-    <div style="font-size:14px;font-weight:bold;color:${severityTextColor};">SEVERITY LEVEL</div>
-    <div style="font-size:24px;font-weight:900;color:${severityTextColor};letter-spacing:2px;">${severity.toUpperCase()}</div>
-  </div>
-
   <!-- Incident Details -->
   <div style="margin-bottom:20px;">
     <div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Incident Details</div>
     <table style="width:100%;border-collapse:collapse;">
       <tr><td style="${td}background:#f3f4f6;width:180px;"><strong>Property Address</strong></td><td style="${td}">${propertyAddress || "Not entered"}</td></tr>
-      <tr><td style="${td}background:#f3f4f6;"><strong>Date Discovered</strong></td><td style="${td}">${dateDiscovered || "Not entered"}</td></tr>
-      <tr><td style="${td}background:#f3f4f6;"><strong>Trade Type</strong></td><td style="${td}">${tradeType}</td></tr>
-      <tr><td style="${td}background:#f3f4f6;"><strong>Severity</strong></td><td style="${td}font-weight:bold;color:${severityTextColor};">${severity}</td></tr>
+      <tr><td style="${td}background:#f3f4f6;"><strong>Date Reported</strong></td><td style="${td}">${dateShort}</td></tr>
       <tr><td style="${td}background:#f3f4f6;"><strong>Reported By</strong></td><td style="${td}">${plumberName || "Not entered"}</td></tr>
       <tr><td style="${td}background:#f3f4f6;"><strong>Licence No.</strong></td><td style="${td}">${licenceNumber || "Not entered"}</td></tr>
       <tr><td style="${td}background:#f3f4f6;"><strong>Company</strong></td><td style="${td}">${companyName || "Not entered"}</td></tr>
-      ${supervisorName ? `<tr><td style="${td}background:#f3f4f6;"><strong>Supervisor</strong></td><td style="${td}">${supervisorName}${supervisorContact ? " · " + supervisorContact : ""}</td></tr>` : ""}
-      ${followUpDate ? `<tr><td style="${td}background:#f3f4f6;"><strong>Follow-Up Date</strong></td><td style="${td}">${followUpDate}</td></tr>` : ""}
     </table>
   </div>
 
   <hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
 
-  <!-- Description -->
+  <!-- What was found -->
   <div style="margin-bottom:20px;">
-    <div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Description of Non-Compliant Work</div>
+    <div style="font-size:19px;font-weight:bold;margin-bottom:10px;">What I Found</div>
     <div style="border:1px solid #d1d5db;border-radius:6px;padding:14px;font-size:14px;line-height:1.7;white-space:pre-wrap;">${description.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
   </div>
 
-  ${personsAtRisk ? `
-  <div style="margin-bottom:20px;">
-    <div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Persons at Risk</div>
-    <div style="border:1px solid #fcd34d;background:#fffbeb;border-radius:6px;padding:14px;font-size:14px;line-height:1.7;white-space:pre-wrap;">${personsAtRisk.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-  </div>` : ""}
-
-  ${contributingFactors ? `
-  <div style="margin-bottom:20px;">
-    <div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Contributing Factors</div>
-    <div style="border:1px solid #d1d5db;border-radius:6px;padding:14px;font-size:14px;line-height:1.7;white-space:pre-wrap;">${contributingFactors.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-  </div>` : ""}
-
   ${immediateAction ? `
   <div style="margin-bottom:20px;">
-    <div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Immediate Action Taken</div>
+    <div style="font-size:19px;font-weight:bold;margin-bottom:10px;">What I Did</div>
     <div style="border:1px solid #bbf7d0;background:#f0fdf4;border-radius:6px;padding:14px;font-size:14px;line-height:1.7;white-space:pre-wrap;">${immediateAction.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-  </div>` : ""}
-
-  ${correctiveActions ? `
-  <div style="margin-bottom:20px;">
-    <div style="font-size:19px;font-weight:bold;margin-bottom:10px;">Corrective Actions Required</div>
-    <div style="border:1px solid #bfdbfe;background:#eff6ff;border-radius:6px;padding:14px;font-size:14px;line-height:1.7;white-space:pre-wrap;">${correctiveActions.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
   </div>` : ""}
 
   ${photosSection}
 
   <div style="margin-top:18px;border-top:1px solid #d1d5db;padding-top:18px;page-break-inside:avoid;">
     <div style="font-size:18px;font-weight:bold;margin-bottom:12px;">Sign-Off</div>
-    <div style="display:flex;gap:48px;flex-wrap:wrap;">
-      <div>
-        <div style="margin-bottom:6px;font-weight:bold;">Reported by: ${plumberName || "Not entered"}</div>
-        <div style="width:200px;height:40px;border-bottom:1px solid #111827;margin-bottom:6px;"></div>
-        <div style="font-size:13px;"><strong>Date:</strong> ${dateShort}</div>
-      </div>
-      ${supervisorName ? `<div>
-        <div style="margin-bottom:6px;font-weight:bold;">Supervisor: ${supervisorName}</div>
-        <div style="width:200px;height:40px;border-bottom:1px solid #111827;margin-bottom:6px;"></div>
-        <div style="font-size:13px;"><strong>Date:</strong> ${followUpDate || dateShort}</div>
-      </div>` : ""}
+    <div>
+      <div style="margin-bottom:6px;font-weight:bold;">Reported by: ${plumberName || "Not entered"}</div>
+      <div style="width:200px;height:40px;border-bottom:1px solid #111827;margin-bottom:6px;"></div>
+      <div style="font-size:13px;"><strong>Date:</strong> ${dateShort}</div>
     </div>
   </div>
 
@@ -320,16 +250,8 @@ export default function NearMiss() {
           await supabase.from("near_misses").insert({
             user_id: user.id,
             property_address: propertyAddress,
-            trade_type: tradeType,
-            severity,
             description,
             immediate_action: immediateAction,
-            persons_at_risk: personsAtRisk,
-            contributing_factors: contributingFactors,
-            corrective_actions: correctiveActions,
-            follow_up_date: followUpDate || null,
-            supervisor_name: supervisorName,
-            date_discovered: dateDiscovered,
             reporter_name: plumberName,
             licence_number: licenceNumber,
           });
@@ -376,11 +298,9 @@ export default function NearMiss() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── Property Details ── */}
+        {/* ── Property Address ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Property Details</Text>
-
-          <Text style={styles.fieldLabel}>Property Address</Text>
+          <Text style={styles.sectionTitle}>Property Address</Text>
           <TextInput
             style={styles.input}
             value={propertyAddress}
@@ -389,135 +309,34 @@ export default function NearMiss() {
             placeholderTextColor="#555"
             autoCapitalize="words"
           />
-
-          <Text style={styles.fieldLabel}>Date Discovered</Text>
-          <TextInput
-            style={styles.input}
-            value={dateDiscovered}
-            onChangeText={setDateDiscovered}
-            placeholder="DD/MM/YYYY"
-            placeholderTextColor="#555"
-            keyboardType="numbers-and-punctuation"
-          />
         </View>
 
-        {/* ── Trade Type ── */}
+        {/* ── What did you find ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Trade Type</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tradeRow}
-          >
-            {TRADE_TYPES.map((t) => (
-              <Pressable
-                key={t}
-                style={[styles.tradeChip, tradeType === t && styles.tradeChipActive]}
-                onPress={() => setTradeType(t)}
-              >
-                <Text style={[styles.tradeChipText, tradeType === t && styles.tradeChipTextActive]}>
-                  {t}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* ── Severity ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Severity Level</Text>
-          <View style={styles.tradeRow}>
-            {SEVERITY_LEVELS.map((s) => (
-              <Pressable
-                key={s}
-                style={[styles.tradeChip, severity === s && { backgroundColor: SEVERITY_COLORS[s] + "30", borderColor: SEVERITY_COLORS[s] }]}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSeverity(s); }}
-              >
-                <Text style={[styles.tradeChipText, severity === s && { color: SEVERITY_COLORS[s], fontWeight: "900" }]}>{s}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        {/* ── Description ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Description of Issue</Text>
+          <Text style={styles.sectionTitle}>What did you find?</Text>
           <TextInput
             style={styles.descriptionInput}
             value={description}
             onChangeText={setDescription}
-            placeholder="Describe the pre-existing non-compliant work found on site, including location, nature of the defect, and any relevant details…"
+            placeholder="Describe the pre-existing non-compliant work found on site…"
             placeholderTextColor="#555"
             multiline
             textAlignVertical="top"
           />
         </View>
 
-        {/* ── Persons at Risk ── */}
+        {/* ── What did you do ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Persons at Risk</Text>
-          <TextInput
-            style={styles.descriptionInput}
-            value={personsAtRisk}
-            onChangeText={setPersonsAtRisk}
-            placeholder="Who could be harmed? (e.g. residents, trades, general public)"
-            placeholderTextColor="#555"
-            multiline
-            textAlignVertical="top"
-          />
-        </View>
-
-        {/* ── Contributing Factors ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Contributing Factors</Text>
-          <TextInput
-            style={styles.descriptionInput}
-            value={contributingFactors}
-            onChangeText={setContributingFactors}
-            placeholder="What contributed to this situation? (e.g. previous contractor, material failure, design issue)"
-            placeholderTextColor="#555"
-            multiline
-            textAlignVertical="top"
-          />
-        </View>
-
-        {/* ── Immediate Action ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Immediate Action Taken</Text>
+          <Text style={styles.sectionTitle}>What did you do?</Text>
           <TextInput
             style={styles.descriptionInput}
             value={immediateAction}
             onChangeText={setImmediateAction}
-            placeholder="What was done immediately to make the area safe or document the issue?"
+            placeholder="What action did you take on site? (e.g. documented and informed owner)"
             placeholderTextColor="#555"
             multiline
             textAlignVertical="top"
           />
-        </View>
-
-        {/* ── Corrective Actions ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Corrective Actions Required</Text>
-          <TextInput
-            style={styles.descriptionInput}
-            value={correctiveActions}
-            onChangeText={setCorrectiveActions}
-            placeholder="What remediation work is required? Who is responsible?"
-            placeholderTextColor="#555"
-            multiline
-            textAlignVertical="top"
-          />
-        </View>
-
-        {/* ── Follow-Up & Supervisor ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Follow-Up &amp; Supervisor</Text>
-          <Text style={styles.fieldLabel}>Follow-Up Date</Text>
-          <TextInput style={styles.input} value={followUpDate} onChangeText={setFollowUpDate} placeholder="DD/MM/YYYY" placeholderTextColor="#555" keyboardType="numbers-and-punctuation" />
-          <Text style={styles.fieldLabel}>Supervisor Name</Text>
-          <TextInput style={styles.input} value={supervisorName} onChangeText={setSupervisorName} placeholder="Supervisor or site manager name" placeholderTextColor="#555" />
-          <Text style={styles.fieldLabel}>Supervisor Contact</Text>
-          <TextInput style={styles.input} value={supervisorContact} onChangeText={setSupervisorContact} placeholder="Phone or email" placeholderTextColor="#555" keyboardType="email-address" />
         </View>
 
         {/* ── Photos ── */}
@@ -547,7 +366,7 @@ export default function NearMiss() {
           </Pressable>
         </View>
 
-        {/* ── Reporter Details (read-only display) ── */}
+        {/* ── Reporter Details (read-only) ── */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Reported By</Text>
           <View style={styles.profileRow}>
@@ -655,29 +474,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.10)",
     fontSize: 15,
-  },
-
-  tradeRow: { gap: 8, paddingVertical: 2, flexDirection: "row", flexWrap: "wrap" },
-  tradeChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(255,255,255,0.06)",
-  },
-  tradeChipActive: {
-    backgroundColor: "#f97316",
-    borderColor: "#f97316",
-  },
-  tradeChipText: {
-    color: "rgba(255,255,255,0.55)",
-    fontWeight: "500",
-    fontSize: 13,
-  },
-  tradeChipTextActive: {
-    color: "#07152b",
-    fontWeight: "700",
   },
 
   descriptionInput: {
