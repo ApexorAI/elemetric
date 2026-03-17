@@ -1451,6 +1451,11 @@ onPress={async () => {
 if (!generatedPdfUri) return;
 setShowShareModal(false);
 try {
+const srcInfo = await FileSystem.getInfoAsync(generatedPdfUri);
+if (!srcInfo.exists) {
+Alert.alert("File Not Found", "The report PDF could not be found. Tap 'Get My Report' to regenerate it.");
+return;
+}
 const filename = `elemetric-report-${Date.now()}.pdf`;
 const dest = FileSystem.cacheDirectory + filename;
 await FileSystem.copyAsync({ from: generatedPdfUri, to: dest });
@@ -1465,7 +1470,7 @@ UTI: "com.adobe.pdf",
 Alert.alert("PDF Created", `Saved to: ${dest}`);
 }
 } catch (e: any) {
-Alert.alert("Error", e?.message ?? "Could not share PDF.");
+Alert.alert("Share Failed", e?.message ?? "Could not share PDF. Try regenerating the report.");
 }
 }}
 >
@@ -1506,6 +1511,11 @@ onPress={async () => {
 if (!generatedPdfUri) return;
 setShowShareModal(false);
 try {
+const srcInfo = await FileSystem.getInfoAsync(generatedPdfUri);
+if (!srcInfo.exists) {
+Alert.alert("File Not Found", "The report PDF could not be found. Tap 'Get My Report' to regenerate it.");
+return;
+}
 const filename = `elemetric-report-${Date.now()}.pdf`;
 const dest = FileSystem.cacheDirectory + filename;
 await FileSystem.copyAsync({ from: generatedPdfUri, to: dest });
@@ -1515,9 +1525,11 @@ await Sharing.shareAsync(dest, {
 mimeType: "application/pdf",
 UTI: "com.adobe.pdf",
 });
+} else {
+Alert.alert("PDF Saved", `File saved to: ${dest}`);
 }
 } catch (e: any) {
-Alert.alert("Error", e?.message ?? "Could not save PDF.");
+Alert.alert("Save Failed", e?.message ?? "Could not save PDF. Try regenerating the report.");
 }
 }}
 >
