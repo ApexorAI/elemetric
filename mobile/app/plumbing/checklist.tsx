@@ -16,6 +16,7 @@ id: string;
 title: string;
 subtitle: string;
 kind: "photo" | "info";
+hint?: string;
 };
 
 type CurrentJob = {
@@ -36,36 +37,42 @@ id: "before",
 title: "Existing system (before)",
 subtitle: "Photo required",
 kind: "photo",
+hint: "Photo of the old unit before you remove or disconnect anything.",
 },
 {
 id: "ptr",
 title: "PTR valve installed",
 subtitle: "Photo required",
 kind: "photo",
+hint: "The small valve on the side of the hot water unit with a pipe going to the floor. It pops open if pressure gets too high.",
 },
 {
 id: "tempering",
 title: "Tempering valve",
 subtitle: "Photo required",
 kind: "photo",
+hint: "The valve that mixes cold water in so the hot water at the tap is never scalding. Usually under the unit or at the first outlet.",
 },
 {
 id: "plate",
 title: "Compliance plate / label",
 subtitle: "Photo required",
 kind: "photo",
+hint: "The label stuck to the side of the unit showing make, model, serial number, and gas/electrical rating.",
 },
 {
 id: "isolation",
 title: "Isolation valve",
 subtitle: "Photo required",
 kind: "photo",
+hint: "The tap that turns the water supply to the unit on or off. Show it clearly labelled or tagged.",
 },
 {
 id: "pressure",
 title: "Confirm: Pressure test completed",
 subtitle: "Confirmation",
 kind: "info",
+hint: "Confirm you've pressure tested the installation before signing off.",
 },
 ];
 
@@ -225,6 +232,7 @@ onPress={() => toggleItem(item.id)}
 {item.subtitle}
 {isPhoto && photoCount > 0 ? ` • ${photoCount} photo${photoCount > 1 ? "s" : ""}` : ""}
 </Text>
+{item.hint && <Text style={styles.itemHint}>{item.hint}</Text>}
 </View>
 
 <View
@@ -374,6 +382,14 @@ sub: {
 color: "rgba(255,255,255,0.55)",
 fontSize: 13,
 marginTop: 2,
+},
+
+itemHint: {
+color: "rgba(255,255,255,0.35)",
+fontSize: 12,
+fontStyle: "italic",
+marginTop: 2,
+lineHeight: 16,
 },
 
 badgeBase: {

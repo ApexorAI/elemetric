@@ -206,7 +206,7 @@ export default function VisualiserScreen() {
       <View style={styles.header}>
         <Text style={styles.brand}>ELEMETRIC</Text>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>AI Visualiser</Text>
+          <Text style={styles.title}>Show Client What It Will Look Like</Text>
           <View style={styles.betaBadge}>
             <Text style={styles.betaText}>BETA</Text>
           </View>
@@ -387,8 +387,7 @@ export default function VisualiserScreen() {
         )}
 
         <Text style={styles.finePrint}>
-          AI Visualiser is a beta feature available to Pro plan and above. Results are
-          illustrative only and are not a substitute for professional advice.
+          AI-generated visualisation is illustrative only and is not a substitute for professional advice.
         </Text>
       </ScrollView>
     </View>

@@ -367,7 +367,7 @@ export default function NearMiss() {
     <View style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.brand}>ELEMETRIC</Text>
-        <Text style={styles.title}>Near Miss Report</Text>
+        <Text style={styles.title}>Report a Problem I Found</Text>
         <Text style={styles.subtitle}>Pre-existing non-compliance documentation</Text>
       </View>
 

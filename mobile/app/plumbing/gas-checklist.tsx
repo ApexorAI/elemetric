@@ -59,6 +59,16 @@ const SERVICING_CHECKS = [
 { id: "pressure_test",  label: "Pressure test" },
 ] as const;
 
+const GAS_HINTS: Record<string, string> = {
+  gastight:      "Photo of the manometer showing inlet gas pressure. Must be within AS/NZS 5601 limits.",
+  pressures:     "Manometer reading at the appliance. This is what the burner actually receives.",
+  certification: "The metal plate on the unit showing model and serial number.",
+  serviced:      "Any existing service tag or documentation. Note if there's no previous service record.",
+  gas_tight:     "Confirm you've tested all joints with leak detection fluid or electronic detector.",
+  operating:     "Photo of the appliance running normally — flame, pilot light, or indicator.",
+  pressure_test: "Confirm you've tested all joints with leak detection fluid or electronic detector.",
+};
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 type CheckStatus = "pass" | "fail" | "na" | null;
@@ -1019,6 +1029,7 @@ const entry = installChecks[check.id];
 return (
 <View key={check.id} style={styles.checkCard}>
 <Text style={styles.checkLabel}>{check.label}</Text>
+{GAS_HINTS[check.id] && <Text style={styles.itemHint}>{GAS_HINTS[check.id]}</Text>}
 <StatusButtons id={check.id} status={entry.status} onSet={setInstallStatus} />
 <TextInput
 style={styles.notesInput}
@@ -1061,6 +1072,7 @@ const entry = serviceChecks[check.id];
 return (
 <View key={check.id} style={styles.checkCard}>
 <Text style={styles.checkLabel}>{check.label}</Text>
+{GAS_HINTS[check.id] && <Text style={styles.itemHint}>{GAS_HINTS[check.id]}</Text>}
 <StatusButtons id={check.id} status={entry.status} onSet={setServiceStatus} />
 <TextInput
 style={styles.notesInput}
@@ -1141,7 +1153,7 @@ onPress={generateReport}
 disabled={pdfLoading}
 >
 <Text style={styles.reportBtnText}>
-{pdfLoading ? "Generating…" : "Generate Compliance Report"}
+{pdfLoading ? "Generating…" : "Get My Report"}
 </Text>
 </Pressable>
 
@@ -1253,6 +1265,7 @@ padding: 14,
 gap: 10,
 },
 checkLabel: { color: "white", fontWeight: "700", fontSize: 15, lineHeight: 22 },
+itemHint: { color: "rgba(255,255,255,0.35)", fontSize: 12, fontStyle: "italic", marginTop: 2, lineHeight: 16 },
 
 statusRow:       { flexDirection: "row", gap: 8 },
 statusBtn: {

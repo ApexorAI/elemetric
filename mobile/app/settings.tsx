@@ -384,7 +384,7 @@ Employer
 <>
 <View style={styles.divider} />
 <Pressable style={styles.row} onPress={() => router.push("/employer/dashboard")}>
-<Text style={styles.rowAction}>Employer Portal</Text>
+<Text style={styles.rowAction}>Manage My Team</Text>
 <Text style={styles.rowChevron}>›</Text>
 </Pressable>
 </>

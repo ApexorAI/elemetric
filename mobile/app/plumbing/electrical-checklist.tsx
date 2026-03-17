@@ -45,6 +45,16 @@ const CHECKS = [
   { id: "test_recorded",  label: "Test results recorded" },
 ] as const;
 
+const ELECTRICAL_HINTS: Record<string, string> = {
+  rcd:            "How long the RCD takes to trip at rated current. Must be ≤300ms for 30mA devices.",
+  insulation:     "Line to Neutral insulation resistance measured at 500V DC. Must be ≥1MΩ.",
+  earth:          "The impedance of the fault path. Determines how fast a fuse or breaker will trip.",
+  test_recorded:  "The model number and last calibration date of your test equipment.",
+  connections:    "Line to Earth insulation resistance. Must be ≥1MΩ.",
+  polarity:       "Neutral to Earth insulation resistance. Must be ≥1MΩ.",
+  switchboard:    "The voltage reading at the main switchboard. Should be 230V ±10%.",
+};
+
 const DECLARATION_ITEMS = [
   "I hold a current electrical worker licence issued by Energy Safe Victoria.",
   "I hold a current electrical contractor licence as required by law.",
@@ -889,6 +899,7 @@ ${allPhotoMeta.length > 0 ? `
             return (
               <View key={check.id} style={styles.checkCard}>
                 <Text style={styles.checkLabel}>{check.label}</Text>
+                {ELECTRICAL_HINTS[check.id] && <Text style={styles.itemHint}>{ELECTRICAL_HINTS[check.id]}</Text>}
                 <StatusButtons id={check.id} status={entry.status} onSet={setStatus} />
                 <TextInput
                   style={styles.notesInput}
@@ -1018,7 +1029,7 @@ ${allPhotoMeta.length > 0 ? `
           disabled={pdfLoading}
         >
           <Text style={styles.reportBtnText}>
-            {pdfLoading ? "Generating…" : "Generate Compliance Report"}
+            {pdfLoading ? "Generating…" : "Get My Report"}
           </Text>
         </Pressable>
 
@@ -1102,6 +1113,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   checkLabel: { color: "white", fontWeight: "700", fontSize: 15, lineHeight: 22 },
+  itemHint: { color: "rgba(255,255,255,0.35)", fontSize: 12, fontStyle: "italic", marginTop: 2, lineHeight: 16 },
 
   statusRow: { flexDirection: "row", gap: 8 },
   statusBtn: {

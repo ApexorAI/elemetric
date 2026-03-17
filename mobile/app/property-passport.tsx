@@ -288,7 +288,7 @@ ${tradies.length > 0 ? `
     <View style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.brand}>ELEMETRIC</Text>
-        <Text style={styles.title}>Property Passport</Text>
+        <Text style={styles.title}>Property History</Text>
         <Text style={styles.subtitle}>Full compliance history at any address</Text>
       </View>
 

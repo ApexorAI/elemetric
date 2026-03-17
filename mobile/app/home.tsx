@@ -1,58 +1,8 @@
-import React, { useCallback, useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  ScrollView,
-  Linking,
-} from "react-native";
-import { SkeletonBox, SkeletonHomeCard } from "@/components/SkeletonLoader";
+import React, { useCallback, useState } from "react";
+import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import Svg, { Circle, G } from "react-native-svg";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
-import Constants from "expo-constants";
-
-// ── Score ring ────────────────────────────────────────────────────────────────
-
-function ScoreRing({ score }: { score: number | null }) {
-  const SIZE = 96;
-  const SW = 8;
-  const R = (SIZE - SW) / 2;
-  const CIRC = 2 * Math.PI * R;
-  const pct = Math.min(Math.max(score ?? 0, 0), 100);
-  const offset = CIRC - (pct / 100) * CIRC;
-  const color = pct >= 80 ? "#22c55e" : pct >= 50 ? "#f97316" : "#ef4444";
-  const hasScore = score !== null;
-
-  return (
-    <View style={{ width: SIZE, height: SIZE }}>
-      <Svg width={SIZE} height={SIZE}>
-        <G rotation="-90" origin={`${SIZE / 2},${SIZE / 2}`}>
-          <Circle
-            cx={SIZE / 2} cy={SIZE / 2} r={R}
-            stroke="rgba(255,255,255,0.08)" strokeWidth={SW} fill="none"
-          />
-          {hasScore && (
-            <Circle
-              cx={SIZE / 2} cy={SIZE / 2} r={R}
-              stroke={color} strokeWidth={SW} fill="none"
-              strokeDasharray={`${CIRC}`}
-              strokeDashoffset={offset}
-              strokeLinecap="round"
-            />
-          )}
-        </G>
-      </Svg>
-      <View style={s.ringInner}>
-        <Text style={[s.ringScore, hasScore && { color }]}>
-          {hasScore ? `${pct}%` : "—"}
-        </Text>
-        <Text style={s.ringCaption}>SCORE</Text>
-      </View>
-    </View>
-  );
-}
 
 // ── Greeting ──────────────────────────────────────────────────────────────────
 
@@ -74,11 +24,21 @@ type RecentJob = {
   createdAt: string;
 };
 
+const TYPE_ICON: Record<string, string> = {
+  hotwater:   "🔧",
+  gas:        "🔥",
+  drainage:   "🚿",
+  newinstall: "🏗️",
+  electrical: "⚡",
+  hvac:       "❄️",
+  carpentry:  "🪚",
+};
+
 const TYPE_LABEL: Record<string, string> = {
-  hotwater:   "Plumbing",
+  hotwater:   "Hot Water",
   gas:        "Gas Rough-In",
   drainage:   "Drainage",
-  newinstall: "New Install",
+  newinstall: "New Installation",
   electrical: "Electrical",
   hvac:       "HVAC",
   carpentry:  "Carpentry",
@@ -89,26 +49,11 @@ const TYPE_LABEL: Record<string, string> = {
 export default function Home() {
   const router = useRouter();
 
-  const [fullName,        setFullName]        = useState<string | null>(null);
-  const [complianceScore, setComplianceScore] = useState<number | null>(null);
-  const [unreadNotifs,    setUnreadNotifs]    = useState(0);
-  const [recentJobs,      setRecentJobs]      = useState<RecentJob[]>([]);
-  const [isEmployer,      setIsEmployer]      = useState(false);
-  const [assignedCount,   setAssignedCount]   = useState(0);
-  const [updateBanner,    setUpdateBanner]    = useState(false);
-  const [homeLoading,     setHomeLoading]     = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("https://elemetric.com.au/version.json", { cache: "no-store" });
-        if (!res.ok) return;
-        const data = await res.json();
-        const current = Constants.expoConfig?.version ?? "0.0.0";
-        if (data?.version && data.version !== current) setUpdateBanner(true);
-      } catch {}
-    })();
-  }, []);
+  const [firstName,      setFirstName]      = useState<string | null>(null);
+  const [recentJobs,     setRecentJobs]     = useState<RecentJob[]>([]);
+  const [jobCount,       setJobCount]       = useState(0);
+  const [isProtected,    setIsProtected]    = useState(false);
+  const [loading,        setLoading]        = useState(true);
 
   useFocusEffect(
     useCallback(() => {
@@ -118,260 +63,139 @@ export default function Home() {
           const { data: { user } } = await supabase.auth.getUser();
           if (!user || !active) return;
 
+          // Load profile
           const { data: profile } = await supabase
             .from("profiles")
-            .select("full_name, role, compliance_score")
+            .select("full_name")
             .eq("user_id", user.id)
             .single();
 
-          if (active && profile) {
-            if (profile.full_name?.trim()) setFullName(profile.full_name.trim());
-            if (profile.role === "employer") setIsEmployer(true);
-            if (profile.compliance_score != null) setComplianceScore(profile.compliance_score);
+          if (active && profile?.full_name) {
+            const first = profile.full_name.trim().split(" ")[0];
+            setFirstName(first);
           }
 
+          // Load recent jobs (last 2 only)
           const { data: jobs } = await supabase
             .from("jobs")
             .select("id, job_name, job_addr, job_type, confidence, created_at")
             .eq("user_id", user.id)
             .order("created_at", { ascending: false })
-            .limit(3);
+            .limit(2);
 
-          if (active && jobs) {
-            setRecentJobs(
-              jobs.map((j: any) => ({
-                id: j.id,
-                jobName: j.job_name,
-                jobAddr: j.job_addr,
-                jobType: j.job_type,
-                confidence: j.confidence,
-                createdAt: j.created_at,
-              }))
-            );
-            if (profile?.compliance_score == null) {
-              const withConf = jobs.filter((j: any) => j.confidence > 0);
-              if (withConf.length > 0 && active) {
-                setComplianceScore(
-                  Math.round(withConf.reduce((s: number, j: any) => s + j.confidence, 0) / withConf.length)
-                );
-              }
-            }
+          // Total job count
+          const { count } = await supabase
+            .from("jobs")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id);
+
+          if (active) {
+            const jobList = (jobs ?? []).map((j: any) => ({
+              id: j.id,
+              jobName: j.job_name ?? "Untitled Job",
+              jobAddr: j.job_addr ?? "",
+              jobType: j.job_type ?? "",
+              confidence: j.confidence ?? 0,
+              createdAt: j.created_at,
+            }));
+            setRecentJobs(jobList);
+            setJobCount(count ?? 0);
+            setIsProtected((count ?? 0) > 0);
           }
-
-          try {
-            const { count } = await supabase
-              .from("jobs")
-              .select("id", { count: "exact", head: true })
-              .eq("assigned_to", user.id)
-              .eq("status", "assigned");
-            if (active) setAssignedCount(count ?? 0);
-          } catch {}
-
-          try {
-            const { count } = await supabase
-              .from("notifications")
-              .select("id", { count: "exact", head: true })
-              .eq("user_id", user.id)
-              .eq("read", false);
-            if (active) setUnreadNotifs(count ?? 0);
-          } catch {}
         } catch {}
-        if (active) setHomeLoading(false);
+        if (active) setLoading(false);
       })();
       return () => { active = false; };
     }, [])
   );
 
-  const confColor = (c: number) => c >= 80 ? "#22c55e" : c >= 50 ? "#f97316" : "#ef4444";
+  const hasJobs = jobCount > 0;
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={s.screen}
+      contentContainerStyle={s.body}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* ── Wordmark ── */}
+      <Text style={s.wordmark}>ELEMETRIC</Text>
 
-      {/* Header */}
-      <View style={s.headerRow}>
-        <Text style={s.brand} accessibilityRole="text" accessibilityLabel="Elemetric">ELEMETRIC</Text>
-        <Pressable
-          style={s.bellBtn}
-          onPress={() => router.push("/notifications")}
-          accessibilityRole="button"
-          accessibilityLabel={unreadNotifs > 0 ? `Notifications, ${unreadNotifs} unread` : "Notifications"}
-          accessibilityHint="Opens the notifications centre"
-        >
-          <Text style={s.bellIcon}>🔔</Text>
-          {unreadNotifs > 0 && (
-            <View style={s.bellDot}>
-              <Text style={s.bellDotText}>{unreadNotifs > 9 ? "9+" : unreadNotifs}</Text>
-            </View>
-          )}
-        </Pressable>
-      </View>
+      {/* ── Greeting ── */}
+      <Text style={s.greeting}>
+        {greeting()}{firstName ? `, ${firstName}` : ""}
+      </Text>
 
-      {/* Version update banner */}
-      {updateBanner && (
-        <Pressable
-          style={s.updateBanner}
-          onPress={() => Linking.openURL("https://apps.apple.com/au/app/elemetric/id6745204858").catch(() => {})}
-        >
-          <Text style={s.updateBannerText}>New version available — update now</Text>
-          <Pressable onPress={() => setUpdateBanner(false)} hitSlop={10}>
-            <Text style={s.updateBannerClose}>✕</Text>
-          </Pressable>
-        </Pressable>
-      )}
-
-      {/* Greeting + score ring */}
-      <View style={s.greetRow}>
-        <View style={s.greetText}>
-          <Text style={s.greetLine}>{greeting()},</Text>
-          <Text style={s.greetName} numberOfLines={1}>{fullName ?? "Welcome back"}</Text>
-          {isEmployer && <Text style={s.greetRole}>Employer Account</Text>}
-        </View>
-        <ScoreRing score={complianceScore} />
-      </View>
-
-      {/* Start New Job — primary CTA */}
+      {/* ── Primary CTA ── */}
       <Pressable
-        style={s.newJobBtn}
+        style={s.startBtn}
         onPress={() => router.push("/trade")}
         accessibilityRole="button"
-        accessibilityLabel="Start New Job"
+        accessibilityLabel="Start a New Job"
         accessibilityHint="Opens the trade selector to begin a new compliance job"
       >
-        <Text style={s.newJobText}>Start New Job</Text>
-        <Text style={s.newJobArrow}>→</Text>
+        <Text style={s.startBtnText}>Start a New Job</Text>
+        <Text style={s.startBtnSub}>Takes under 60 seconds</Text>
       </Pressable>
 
-      {/* Secondary actions — 2×2 grid + row */}
-      <View style={s.secondaryGrid}>
-        <Pressable
-          style={s.secondaryBtn}
-          onPress={() => router.push("/near-miss")}
-          accessibilityRole="button"
-          accessibilityLabel="Near Miss Report"
-          accessibilityHint="Document a pre-existing non-compliance issue"
-        >
-          <Text style={s.secondaryIcon}>⚠️</Text>
-          <Text style={s.secondaryBtnText}>Near Miss</Text>
-        </Pressable>
-        <Pressable
-          style={s.secondaryBtn}
-          onPress={() => router.push("/invoice")}
-          accessibilityRole="button"
-          accessibilityLabel="Invoice Generator"
-        >
-          <Text style={s.secondaryIcon}>🧾</Text>
-          <Text style={s.secondaryBtnText}>Invoice</Text>
-        </Pressable>
-        <Pressable
-          style={[s.secondaryBtn, s.visualiserBtn]}
-          onPress={() => router.push("/(tabs)/visualiser")}
-          accessibilityRole="button"
-          accessibilityLabel="AI Visualiser, beta feature"
-          accessibilityHint="Opens the HVAC product reference visualiser"
-        >
-          <Text style={s.secondaryIcon}>✦</Text>
-          <Text style={s.visualiserText}>Visualiser</Text>
-        </Pressable>
-        <Pressable
-          style={[s.secondaryBtn, s.trainingBtn]}
-          onPress={() => router.push("/training-mode")}
-          accessibilityRole="button"
-          accessibilityLabel="Training Mode"
-          accessibilityHint="Practice compliance checklists with AI coaching"
-        >
-          <Text style={s.secondaryIcon}>🎓</Text>
-          <Text style={s.trainingBtnText}>Training</Text>
-        </Pressable>
-        <Pressable
-          style={s.secondaryBtn}
-          onPress={() => router.push("/timesheet")}
-          accessibilityRole="button"
-          accessibilityLabel="Timesheet"
-          accessibilityHint="Clock in and out, track hours"
-        >
-          <Text style={s.secondaryIcon}>⏱️</Text>
-          <Text style={s.secondaryBtnText}>Timesheet</Text>
-        </Pressable>
+      {/* ── Stat pills ── */}
+      <View style={s.pillRow}>
+        <View style={s.pill}>
+          <Text style={s.pillValue}>{loading ? "—" : jobCount}</Text>
+          <Text style={s.pillLabel}>{jobCount === 1 ? "Job" : "Jobs"}</Text>
+        </View>
+        <View style={[s.pill, isProtected && s.pillProtected]}>
+          <Text style={[s.pillValue, isProtected && s.pillValueProtected]}>
+            {isProtected ? "✓" : "○"}
+          </Text>
+          <Text style={[s.pillLabel, isProtected && s.pillLabelProtected]}>
+            {isProtected ? "Protected" : "Not yet"}
+          </Text>
+        </View>
       </View>
 
-      {/* Assigned jobs banner */}
-      {assignedCount > 0 && (
-        <Pressable
-          style={s.assignedBanner}
-          onPress={() => router.push("/assigned-jobs")}
-          accessibilityRole="button"
-          accessibilityLabel={`${assignedCount} assigned ${assignedCount === 1 ? "job" : "jobs"} pending`}
-          accessibilityHint="View and accept your assigned jobs"
-        >
-          <View style={s.assignedLeft}>
-            <View style={s.assignedDot}>
-              <Text style={s.assignedDotNum}>{assignedCount}</Text>
-            </View>
-            <View>
-              <Text style={s.assignedTitle}>
-                {assignedCount === 1 ? "Assigned Job" : "Assigned Jobs"} Pending
-              </Text>
-              <Text style={s.assignedSub}>Tap to accept or view details</Text>
-            </View>
-          </View>
-          <Text style={s.chevron}>›</Text>
-        </Pressable>
-      )}
+      {/* ── Recent jobs ── */}
+      <View style={s.section}>
+        <Text style={s.sectionLabel}>RECENT JOBS</Text>
 
-      {/* Employer portal banner */}
-      {isEmployer && (
-        <Pressable
-          style={s.employerBanner}
-          onPress={() => router.push("/employer/dashboard")}
-          accessibilityRole="button"
-          accessibilityLabel="Employer Portal"
-          accessibilityHint="Manage your team's compliance"
-        >
-          <View>
-            <Text style={s.employerTitle}>Employer Portal</Text>
-            <Text style={s.employerSub}>Manage your team's compliance</Text>
-          </View>
-          <Text style={s.chevron}>›</Text>
-        </Pressable>
-      )}
-
-      {/* Recent jobs */}
-      {homeLoading ? (
-        <View style={s.section}>
-          <View style={s.sectionHeader}>
-            <Text style={s.sectionLabel}>RECENT JOBS</Text>
-          </View>
-          {[1,2,3].map((i) => <SkeletonHomeCard key={i} />)}
-        </View>
-      ) : recentJobs.length > 0 && (
-        <View style={s.section}>
-          <View style={s.sectionHeader}>
-            <Text style={s.sectionLabel}>RECENT JOBS</Text>
-            <Pressable onPress={() => router.push("/plumbing/jobs")}>
-              <Text style={s.sectionLink}>View all →</Text>
-            </Pressable>
-          </View>
-          {recentJobs.map((job) => (
+        {loading ? null : hasJobs ? (
+          recentJobs.map((job) => (
             <View key={job.id} style={s.jobCard}>
-              <View style={s.jobCardLeft}>
+              <View style={s.jobIcon}>
+                <Text style={s.jobIconText}>{TYPE_ICON[job.jobType] ?? "📋"}</Text>
+              </View>
+              <View style={s.jobInfo}>
                 <Text style={s.jobName} numberOfLines={1}>{job.jobName}</Text>
                 <Text style={s.jobAddr} numberOfLines={1}>{job.jobAddr}</Text>
                 <Text style={s.jobMeta}>
                   {TYPE_LABEL[job.jobType] ?? job.jobType}
                   {" · "}
-                  {new Date(job.createdAt).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+                  {new Date(job.createdAt).toLocaleDateString("en-AU", {
+                    day: "numeric", month: "short",
+                  })}
                 </Text>
               </View>
               {job.confidence > 0 && (
-                <View style={[s.confBadge, { borderColor: confColor(job.confidence) + "44" }]}>
-                  <Text style={[s.confText, { color: confColor(job.confidence) }]}>
-                    {job.confidence}%
-                  </Text>
-                </View>
+                <Text style={[
+                  s.jobScore,
+                  { color: job.confidence >= 80 ? "#22c55e" : job.confidence >= 50 ? "#f97316" : "#ef4444" },
+                ]}>
+                  {job.confidence}%
+                </Text>
               )}
             </View>
-          ))}
-        </View>
+          ))
+        ) : (
+          <View style={s.emptyCard}>
+            <Text style={s.emptyText}>No jobs yet — tap above to start</Text>
+          </View>
+        )}
+      </View>
+
+      {/* ── Unlock prompt (only shown when no jobs) ── */}
+      {!loading && !hasJobs && (
+        <Text style={s.unlockHint}>
+          Document your first job to unlock more tools
+        </Text>
       )}
 
     </ScrollView>
@@ -382,168 +206,138 @@ export default function Home() {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#07152b" },
-  body: { padding: 20, paddingTop: 48, paddingBottom: 60, gap: 14 },
+  body: { padding: 20, paddingTop: 52, paddingBottom: 60, gap: 16 },
 
-  // Header
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
-  bellBtn: { position: "relative", padding: 4 },
-  bellIcon: { fontSize: 22 },
-  bellDot: {
-    position: "absolute", top: 0, right: 0,
-    backgroundColor: "#ef4444", borderRadius: 8,
-    minWidth: 16, paddingHorizontal: 3, paddingVertical: 1,
-    alignItems: "center",
+  wordmark: {
+    color: "#f97316",
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: 3,
   },
-  bellDotText: { color: "white", fontSize: 9, fontWeight: "900" },
 
-  // Greeting
-  greetRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 4,
+  greeting: {
+    color: "#ffffff",
+    fontSize: 26,
+    fontWeight: "900",
+    marginTop: 4,
+    lineHeight: 32,
   },
-  greetText: { flex: 1, paddingRight: 12 },
-  greetLine: { color: "rgba(255,255,255,0.50)", fontSize: 15 },
-  greetName: { color: "white", fontSize: 28, fontWeight: "900", marginTop: 2 },
-  greetRole: { color: "#f97316", fontSize: 13, fontWeight: "700", marginTop: 4 },
 
-  // Score ring
-  ringInner: {
-    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-    alignItems: "center", justifyContent: "center",
-  },
-  ringScore: { color: "rgba(255,255,255,0.45)", fontSize: 20, fontWeight: "900" },
-  ringCaption: { color: "rgba(255,255,255,0.30)", fontSize: 8, fontWeight: "800", letterSpacing: 0.5 },
-
-  // New Job CTA
-  newJobBtn: {
+  // Primary CTA
+  startBtn: {
     backgroundColor: "#f97316",
     borderRadius: 18,
-    paddingVertical: 20,
-    paddingHorizontal: 22,
-    flexDirection: "row",
+    paddingVertical: 22,
+    paddingHorizontal: 24,
     alignItems: "center",
-    justifyContent: "space-between",
-  },
-  newJobText: { color: "#0b1220", fontWeight: "900", fontSize: 20 },
-  newJobArrow: { color: "#0b1220", fontSize: 26, fontWeight: "300" },
-
-  // Secondary grid
-  secondaryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  secondaryBtn: {
-    width: "47%",
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "#0f2035",
-    alignItems: "center",
-    justifyContent: "center",
     gap: 6,
+    marginTop: 4,
   },
-  secondaryIcon: { fontSize: 20 },
-  secondaryBtnText: { color: "rgba(255,255,255,0.80)", fontWeight: "700", fontSize: 12, textAlign: "center" },
-  visualiserBtn: {
-    borderColor: "rgba(249,115,22,0.20)",
-    backgroundColor: "rgba(249,115,22,0.06)",
+  startBtnText: {
+    color: "#07152b",
+    fontSize: 22,
+    fontWeight: "900",
   },
-  visualiserText: { color: "#f97316", fontWeight: "700", fontSize: 12, textAlign: "center" },
-  trainingBtn: {
-    borderColor: "rgba(34,197,94,0.20)",
-    backgroundColor: "rgba(34,197,94,0.06)",
-  },
-  trainingBtnText: { color: "#22c55e", fontWeight: "700", fontSize: 12, textAlign: "center" },
-
-  // Assigned banner
-  assignedBanner: {
-    backgroundColor: "rgba(59,130,246,0.07)",
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "rgba(59,130,246,0.22)",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  assignedLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
-  assignedDot: {
-    width: 32, height: 32, borderRadius: 10,
-    backgroundColor: "#3b82f6", alignItems: "center", justifyContent: "center",
-  },
-  assignedDotNum: { color: "white", fontWeight: "900", fontSize: 16 },
-  assignedTitle: { color: "#93c5fd", fontWeight: "800", fontSize: 14 },
-  assignedSub: { color: "rgba(147,197,253,0.60)", fontSize: 12, marginTop: 1 },
-
-  // Employer banner
-  employerBanner: {
-    backgroundColor: "rgba(249,115,22,0.07)",
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "rgba(249,115,22,0.20)",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  employerTitle: { color: "#f97316", fontSize: 15, fontWeight: "800" },
-  employerSub: { color: "rgba(249,115,22,0.60)", fontSize: 12, marginTop: 2 },
-
-  chevron: { color: "rgba(255,255,255,0.30)", fontSize: 24, fontWeight: "300" },
-
-  // Version update banner
-  updateBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "rgba(34,197,94,0.10)",
-    borderWidth: 1,
-    borderColor: "rgba(34,197,94,0.30)",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-  },
-  updateBannerText: {
-    flex: 1,
-    color: "#22c55e",
-    fontWeight: "800",
+  startBtnSub: {
+    color: "rgba(7,21,43,0.60)",
     fontSize: 13,
-  },
-  updateBannerClose: {
-    color: "rgba(34,197,94,0.60)",
-    fontSize: 14,
-    fontWeight: "700",
-    paddingLeft: 10,
+    fontWeight: "600",
   },
 
-  // Recent jobs
-  section: { gap: 8 },
-  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  sectionLabel: { color: "rgba(255,255,255,0.38)", fontSize: 11, fontWeight: "800", letterSpacing: 1 },
-  sectionLink: { color: "#f97316", fontSize: 13, fontWeight: "700" },
-
-  jobCard: {
+  // Stat pills
+  pillRow: {
     flexDirection: "row",
-    alignItems: "center",
     gap: 12,
+  },
+  pill: {
+    flex: 1,
+    backgroundColor: "#0f2035",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.07)",
+    paddingVertical: 14,
+    alignItems: "center",
+    gap: 4,
+  },
+  pillProtected: {
+    borderColor: "rgba(34,197,94,0.30)",
+    backgroundColor: "rgba(34,197,94,0.07)",
+  },
+  pillValue: {
+    color: "#ffffff",
+    fontSize: 24,
+    fontWeight: "900",
+  },
+  pillValueProtected: {
+    color: "#22c55e",
+  },
+  pillLabel: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  pillLabelProtected: {
+    color: "rgba(34,197,94,0.70)",
+  },
+
+  // Section
+  section: { gap: 10 },
+  sectionLabel: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+
+  // Job cards
+  jobCard: {
+    backgroundColor: "#0f2035",
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.07)",
-    backgroundColor: "#0f2035",
-    padding: 16,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
-  jobCardLeft: { flex: 1 },
-  jobName: { color: "white", fontWeight: "800", fontSize: 15 },
-  jobAddr: { color: "rgba(255,255,255,0.45)", fontSize: 13, marginTop: 2 },
+  jobIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(249,115,22,0.10)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  jobIconText: { fontSize: 20 },
+  jobInfo: { flex: 1 },
+  jobName: { color: "#ffffff", fontSize: 15, fontWeight: "700" },
+  jobAddr: { color: "rgba(255,255,255,0.50)", fontSize: 13, marginTop: 1 },
   jobMeta: { color: "rgba(255,255,255,0.30)", fontSize: 11, marginTop: 2 },
+  jobScore: { fontSize: 14, fontWeight: "900", flexShrink: 0 },
 
-  confBadge: {
-    borderRadius: 10,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+  // Empty state
+  emptyCard: {
+    backgroundColor: "#0f2035",
+    borderRadius: 16,
     borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.07)",
+    borderStyle: "dashed",
+    paddingVertical: 28,
+    alignItems: "center",
   },
-  confText: { fontWeight: "900", fontSize: 13 },
+  emptyText: {
+    color: "rgba(255,255,255,0.30)",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+
+  // Unlock hint
+  unlockHint: {
+    color: "rgba(255,255,255,0.25)",
+    fontSize: 13,
+    textAlign: "center",
+    fontStyle: "italic",
+    paddingHorizontal: 20,
+  },
 });

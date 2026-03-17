@@ -144,7 +144,7 @@ export default function ClientPortal() {
     <View style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.brand}>ELEMETRIC</Text>
-        <Text style={styles.title}>Client Portal</Text>
+        <Text style={styles.title}>Share with Client</Text>
         <Text style={styles.subtitle}>View your property's compliance history</Text>
       </View>
 

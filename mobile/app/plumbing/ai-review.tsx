@@ -1016,6 +1016,23 @@ ${reviewPhotos.map((p) => `<tr><td style="padding:6px 8px;border:1px solid #e5e7
 const { uri } = await Print.printToFileAsync({ html });
 try { await AsyncStorage.setItem("elemetric_pdf_generated", "1"); } catch {}
 
+// Stage 2 unlock: first-ever report triggers celebration screen
+const STAGE2_KEY = "elemetric_stage2_unlocked";
+const alreadyUnlocked = await AsyncStorage.getItem(STAGE2_KEY);
+if (!alreadyUnlocked) {
+  await AsyncStorage.setItem(STAGE2_KEY, "true");
+  router.push({
+    pathname: "/celebration",
+    params: {
+      jobAddr: currentJob?.jobAddr ?? "",
+      confidence: String(decoded?.confidence ?? 0),
+      reportUri: uri,
+    },
+  });
+  setGeneratingPdf(false);
+  return;
+}
+
 // Mark any in_progress job at this address as completed
 try {
 const { data: { user } } = await supabase.auth.getUser();
@@ -1544,7 +1561,7 @@ onPress={generateReport}
 disabled={generatingPdf}
 >
 <Text style={styles.reportText}>
-{generatingPdf ? "Generating Report..." : "Generate Compliance Report"}
+{generatingPdf ? "Generating Report..." : "Get My Report"}
 </Text>
 </Pressable>
 

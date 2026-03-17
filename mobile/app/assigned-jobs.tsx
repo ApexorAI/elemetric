@@ -127,7 +127,7 @@ export default function AssignedJobs() {
     <View style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.brand}>ELEMETRIC</Text>
-        <Text style={styles.title}>Assigned Jobs</Text>
+        <Text style={styles.title}>Jobs Sent to Me</Text>
         <Text style={styles.subtitle}>Jobs assigned to you by your employer</Text>
       </View>
 

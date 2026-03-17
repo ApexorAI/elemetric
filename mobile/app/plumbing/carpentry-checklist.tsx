@@ -46,6 +46,17 @@ const CHECKS = [
   { id: "site_clean",       label: "Site cleanup completed" },
 ] as const;
 
+const CARPENTRY_HINTS: Record<string, string> = {
+  framing_plumb:    "Photo showing stud layout, spacing, and any double studs at openings.",
+  floor_framing:    "Underfloor framing — show the bearers sitting on stumps and joists spanning across.",
+  bracing:          "The diagonal bracing that stops the wall from racking. Show it nailed at both ends.",
+  structural_conn:  "Close-up of bolts, brackets, and nail plates at key structural joints.",
+  stud_spacing:     "Measure from centre to centre — standard is 450mm or 600mm depending on the plan.",
+  roof_framing:     "Photo of roof trusses or rafters in place — show the ridge, hips, or truss connections.",
+  lintel_correct:   "The beam over a door or window opening. Must be the right size and have enough bearing at each end.",
+  fixing_schedule:  "Engineer or plan shows what nails and bolts to use where. Photo showing compliance.",
+};
+
 const DECLARATION_ITEMS = [
   "I hold a current builder's licence / carpentry registration as required by the relevant authority.",
   "All structural work has been carried out in accordance with AS 1684 Residential Timber Framing.",
@@ -789,6 +800,7 @@ ${allPhotoMeta.length > 0 ? `
           return (
             <View key={c.id} style={styles.checkItem}>
               <Text style={styles.checkLabel}>{c.label}</Text>
+              {CARPENTRY_HINTS[c.id] && <Text style={styles.itemHint}>{CARPENTRY_HINTS[c.id]}</Text>}
               <StatusButtons id={c.id} status={entry.status} onSet={setStatus} />
               <TextInput
                 style={styles.notesInput}
@@ -889,7 +901,7 @@ ${allPhotoMeta.length > 0 ? `
       >
         {pdfLoading
           ? <ActivityIndicator color="#0b1220" />
-          : <Text style={styles.generateBtnText}>Generate PDF Report</Text>
+          : <Text style={styles.generateBtnText}>Get My Report</Text>
         }
       </Pressable>
 
@@ -973,6 +985,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   checkLabel: { color: "white", fontSize: 15, fontWeight: "700", lineHeight: 22 },
+  itemHint: { color: "rgba(255,255,255,0.35)", fontSize: 12, fontStyle: "italic", marginTop: 2, lineHeight: 16 },
 
   statusRow: { flexDirection: "row", gap: 8 },
   statusBtn: {

@@ -63,6 +63,14 @@ if (type === "gasheater") return "AS/NZS 5601.1";
 return "";
 }
 
+const SECTION_HINTS: Record<string, string> = {
+  overview:   "Wide photo showing the full job site — where you're working and the general condition.",
+  work_area:  "Photos of the actual installation area before and after you start work.",
+  equipment:  "Photos of the main materials and equipment you're using — brand labels visible if possible.",
+  completion: "Photos showing the finished work, all tidy and ready for sign-off.",
+  compliance: "Any stickers, certificates, or documentation labels on the installed equipment.",
+};
+
 const COMPLIANCE_ITEMS_BY_TYPE: Record<string, string[]> = {
   woodheater: [
     "Clearances to combustibles correct",
@@ -513,6 +521,7 @@ const entry = sections[sec.id];
 return (
 <View key={sec.id} style={styles.sectionCard}>
 <Text style={styles.sectionCardTitle}>{sec.label}</Text>
+{SECTION_HINTS[sec.id] && <Text style={styles.itemHint}>{SECTION_HINTS[sec.id]}</Text>}
 
 <Pressable style={styles.addPhotoBtn} onPress={() => addPhoto(sec.id)}>
 <Text style={styles.addPhotoBtnText}>+ Add Photo</Text>
@@ -619,7 +628,7 @@ onPress={generateReport}
 disabled={pdfLoading}
 >
 <Text style={styles.reportBtnText}>
-{pdfLoading ? "Generating…" : "Generate Documentation Report"}
+{pdfLoading ? "Generating…" : "Get My Report"}
 </Text>
 </Pressable>
 
@@ -670,6 +679,7 @@ padding: 16,
 gap: 10,
 },
 sectionTitle: { color: "white", fontWeight: "700", fontSize: 15 },
+itemHint: { color: "rgba(255,255,255,0.35)", fontSize: 12, fontStyle: "italic", marginTop: 2, lineHeight: 16 },
 fieldLabel: {
 color: "rgba(255,255,255,0.35)",
 fontWeight: "800",

@@ -9,8 +9,16 @@ import {
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "@/lib/supabase";
 
 const RECENT_KEY = "elemetric_recent_trade";
+
+const FIRST_TIME_TRADES = [
+  { id: "plumber",     label: "Plumbing",    icon: "🔧", desc: "Hot water, gas, drainage" },
+  { id: "electrician", label: "Electrical",  icon: "⚡", desc: "Wiring, switchboard, RCD" },
+  { id: "hvac",        label: "HVAC / Gas",  icon: "❄️", desc: "Air con, gas heaters" },
+  { id: "other",       label: "Other Trade", icon: "🪚", desc: "Carpentry and more" },
+];
 
 type JobType = {
   label: string;
@@ -78,6 +86,7 @@ export default function TradeScreen() {
   const [search, setSearch] = useState("");
   const [recentTradeId, setRecentTradeId] = useState<string | null>(null);
   const [recentJobLabel, setRecentJobLabel] = useState<string | null>(null);
+  const [jobCount, setJobCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -90,6 +99,19 @@ export default function TradeScreen() {
           } catch {}
         }
       });
+      // Load job count for progressive disclosure
+      (async () => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { count } = await supabase
+              .from("jobs")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", user.id);
+            setJobCount(count ?? 0);
+          }
+        } catch {}
+      })();
     }, [])
   );
 
@@ -191,6 +213,65 @@ export default function TradeScreen() {
                 ))}
               </View>
             )}
+          </>
+        ) : jobCount === 0 ? (
+          <>
+            {/* First-time simplified view */}
+            <Text style={s.sectionLabel}>SELECT YOUR TRADE</Text>
+            <View style={s.tradeGrid}>
+              {FIRST_TIME_TRADES.map((ft) => {
+                const tradeColor =
+                  ft.id === "plumber" ? "#60a5fa" :
+                  ft.id === "electrician" ? "#fbbf24" :
+                  ft.id === "hvac" ? "#a78bfa" : "#f97316";
+                const isSelected = selectedTrade === ft.id || (ft.id === "other" && selectedTrade === "carpenter");
+                return (
+                  <Pressable
+                    key={ft.id}
+                    style={[
+                      s.tradeCard,
+                      isSelected && { borderColor: tradeColor + "60", backgroundColor: tradeColor + "14" },
+                    ]}
+                    onPress={() => {
+                      if (ft.id === "other") {
+                        setSelectedTrade("carpenter");
+                      } else {
+                        setSelectedTrade(ft.id);
+                      }
+                    }}
+                  >
+                    <Text style={s.tradeCardIcon}>{ft.icon}</Text>
+                    <Text style={[s.tradeCardLabel, isSelected && { color: "white" }]}>{ft.label}</Text>
+                    <Text style={s.firstTimeDesc}>{ft.desc}</Text>
+                    {isSelected && (
+                      <View style={[s.tradeCardCheck, { backgroundColor: tradeColor }]}>
+                        <Text style={s.tradeCardCheckText}>✓</Text>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={s.firstTimeNote}>More job types unlock after your first report</Text>
+
+            {/* Job types for selected trade */}
+            <Text style={s.sectionLabel}>JOB TYPE — {(TRADES.find(t => t.id === selectedTrade) ?? TRADES[0]).label.toUpperCase()}</Text>
+            <View style={s.jobList}>
+              {(TRADES.find(t => t.id === selectedTrade) ?? TRADES[0]).jobTypes.map((job, idx) => (
+                <React.Fragment key={job.label}>
+                  {idx > 0 && <View style={s.divider} />}
+                  <Pressable style={s.jobRow} onPress={() => navigate(job, selectedTrade)}>
+                    <View style={[s.jobDot, { backgroundColor: (TRADES.find(t => t.id === selectedTrade) ?? TRADES[0]).color }]} />
+                    <View style={s.jobInfo}>
+                      <Text style={s.jobLabel}>{job.label}</Text>
+                      <Text style={s.jobDesc}>{job.description}</Text>
+                      <Text style={s.jobStandard}>{job.standard}</Text>
+                    </View>
+                    <Text style={s.jobChevron}>›</Text>
+                  </Pressable>
+                </React.Fragment>
+              ))}
+            </View>
           </>
         ) : (
           <>
@@ -379,6 +460,9 @@ const s = StyleSheet.create({
   jobDesc: { color: "rgba(255,255,255,0.55)", fontSize: 13, marginTop: 2 },
   jobStandard: { color: "rgba(255,255,255,0.35)", fontSize: 12, marginTop: 2 },
   jobChevron: { color: "rgba(255,255,255,0.35)", fontSize: 26, fontWeight: "300", marginTop: -2 },
+
+  firstTimeDesc: { color: "rgba(255,255,255,0.45)", fontSize: 12, marginTop: 2, lineHeight: 16 },
+  firstTimeNote: { color: "rgba(255,255,255,0.35)", fontSize: 12, fontStyle: "italic", textAlign: "center", marginTop: 12, marginBottom: 4 },
 
   emptyState: { padding: 24, alignItems: "center" },
   emptyText: { color: "rgba(255,255,255,0.35)", fontSize: 14 },

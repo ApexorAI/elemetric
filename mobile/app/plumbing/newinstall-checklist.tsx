@@ -40,6 +40,19 @@ const CHECKS = [
 { id: "leaks",        label: "No visible leaks on completion" },
 ] as const;
 
+const NEWINSTALL_HINTS: Record<string, string> = {
+  copper:       "Close-up of each brazed joint — silver filler should be visible around the full circumference.",
+  isolation:    "Photo of isolation valves at each fixture — show them clearly labelled or tagged.",
+  plv:          "The pressure limiting valve installed at the meter or main — show it with its relief outlet pipe.",
+  tempering:    "The tempering valve at the hot water unit — show the set temperature and installation.",
+  hws:          "The compliance label on the hot water system — model, serial number, and energy rating.",
+  hammer:       "Water hammer arrestors at washing machine, dishwasher, or any fast-closing tap.",
+  supports:     "Pipe clips or hangers at correct spacing — copper 1.2m max horizontal, 1.8m vertical.",
+  penetrations: "Any pipe passing through a wall, floor, or ceiling — show the sealant or sleeve.",
+  pressure:     "Confirm you've pressure tested the full system before covering any pipework.",
+  leaks:        "Final inspection photo showing no drips or moisture at any joint or connection.",
+};
+
 type CheckStatus = "pass" | "fail" | "na" | null;
 type CheckEntry = { status: CheckStatus; notes: string; photoUris: string[] };
 type PhotoMeta = { uri: string; hash: string; capturedAt: string };
@@ -534,6 +547,7 @@ const entry = checks[check.id];
 return (
 <View key={check.id} style={styles.checkCard}>
 <Text style={styles.checkLabel}>{check.label}</Text>
+{NEWINSTALL_HINTS[check.id] && <Text style={styles.itemHint}>{NEWINSTALL_HINTS[check.id]}</Text>}
 <StatusButtons id={check.id} status={entry.status} onSet={setStatus} />
 <TextInput
 style={styles.notesInput}
@@ -616,7 +630,7 @@ onPress={generateReport}
 disabled={pdfLoading}
 >
 <Text style={styles.reportBtnText}>
-{pdfLoading ? "Generating…" : "Generate Compliance Report"}
+{pdfLoading ? "Generating…" : "Get My Report"}
 </Text>
 </Pressable>
 
@@ -691,6 +705,7 @@ padding: 14,
 gap: 10,
 },
 checkLabel: { color: "white", fontWeight: "700", fontSize: 15, lineHeight: 22 },
+itemHint: { color: "rgba(255,255,255,0.35)", fontSize: 12, fontStyle: "italic", marginTop: 2, lineHeight: 16 },
 statusRow: { flexDirection: "row", gap: 8 },
 statusBtn: {
 flex: 1,

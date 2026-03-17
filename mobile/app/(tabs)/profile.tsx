@@ -547,6 +547,18 @@ export default function Profile() {
             : <Text style={styles.buttonText}>Save Profile</Text>
           }
         </Pressable>
+
+        {/* Unlock More Tools */}
+        <View style={styles.upgradeCard}>
+          <Text style={styles.upgradeLabel}>UNLOCK MORE TOOLS</Text>
+          <Text style={styles.upgradeTitle}>Built for professional tradespeople</Text>
+          <Text style={styles.upgradeBody}>
+            Referral rewards, invoice generator, timesheet tracking, and training mode are all included in Elemetric Pro.
+          </Text>
+          <Pressable style={styles.upgradeBtn} onPress={() => router.push("/subscription")}>
+            <Text style={styles.upgradeBtnText}>See What's Included →</Text>
+          </Pressable>
+        </View>
       </ScrollView>
 
       {toast && (
@@ -699,6 +711,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   buttonText: { color: "#07152b", fontWeight: "900", fontSize: 15 },
+
+  upgradeCard: {
+    backgroundColor: "rgba(249,115,22,0.07)",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.20)",
+    padding: 16,
+    gap: 10,
+    marginTop: 8,
+  },
+  upgradeLabel: { color: "#f97316", fontSize: 11, fontWeight: "800", letterSpacing: 1 },
+  upgradeTitle: { color: "#ffffff", fontSize: 17, fontWeight: "900" },
+  upgradeBody: { color: "rgba(255,255,255,0.55)", fontSize: 13, lineHeight: 20 },
+  upgradeBtn: {
+    backgroundColor: "#f97316",
+    borderRadius: 12,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  upgradeBtnText: { color: "#07152b", fontSize: 15, fontWeight: "900" },
 
   toast: {
     position: "absolute", bottom: 40, left: 20, right: 20,

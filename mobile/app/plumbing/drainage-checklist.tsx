@@ -40,6 +40,15 @@ const CHECKS = [
 { id: "overflow",   label: "Overflow relief gully installed correctly" },
 ] as const;
 
+const DRAINAGE_HINTS: Record<string, string> = {
+  fall:       "The fall of the pipe — drainage needs at least 1:40 (25mm per metre) to flow properly.",
+  joints:     "Test method — how you're testing the drain: water test, air test, or CCTV camera.",
+  bedding:    "Pipe material — what material are the pipes made of? PVC, copper, cast iron, etc.",
+  inspection: "Pipe diameter — measure and record the diameter of the main drain pipe.",
+  water_test: "Did the drain hold pressure / flow correctly? Pass or fail.",
+  overflow:   "If you used a camera, the operator name and report reference number.",
+};
+
 type CheckStatus = "pass" | "fail" | "na" | null;
 type CheckEntry = { status: CheckStatus; notes: string; photoUris: string[] };
 type PhotoMeta = { uri: string; hash: string; capturedAt: string };
@@ -626,6 +635,7 @@ const entry = checks[check.id];
 return (
 <View key={check.id} style={styles.checkCard}>
 <Text style={styles.checkLabel}>{check.label}</Text>
+{DRAINAGE_HINTS[check.id] && <Text style={styles.itemHint}>{DRAINAGE_HINTS[check.id]}</Text>}
 <StatusButtons id={check.id} status={entry.status} onSet={setStatus} />
 <TextInput
 style={styles.notesInput}
@@ -708,7 +718,7 @@ onPress={generateReport}
 disabled={pdfLoading}
 >
 <Text style={styles.reportBtnText}>
-{pdfLoading ? "Generating…" : "Generate Compliance Report"}
+{pdfLoading ? "Generating…" : "Get My Report"}
 </Text>
 </Pressable>
 
@@ -795,6 +805,7 @@ padding: 14,
 gap: 10,
 },
 checkLabel: { color: "white", fontWeight: "700", fontSize: 15, lineHeight: 22 },
+itemHint: { color: "rgba(255,255,255,0.35)", fontSize: 12, fontStyle: "italic", marginTop: 2, lineHeight: 16 },
 statusRow: { flexDirection: "row", gap: 8 },
 statusBtn: {
 flex: 1,

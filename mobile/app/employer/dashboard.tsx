@@ -315,7 +315,7 @@ ${members.length > 0 ? `<h3 style="font-size:16px;margin:0 0 10px;">Team Leaderb
       <View style={styles.screen}>
         <View style={styles.header}>
           <Text style={styles.brand}>ELEMETRIC</Text>
-          <Text style={styles.title}>Employer Portal</Text>
+          <Text style={styles.title}>Manage My Team</Text>
         </View>
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>{errorMsg}</Text>
