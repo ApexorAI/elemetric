@@ -409,8 +409,24 @@ ${members.length > 0 ? `<h3 style="font-size:16px;margin:0 0 10px;">Team Leaderb
           );
         })()}
 
+        {/* ── Create Your Team onboarding card (first-time employers) ── */}
+        {members.length === 0 && (
+          <View style={styles.onboardCard}>
+            <Text style={styles.onboardTitle}>Create Your Team</Text>
+            <Text style={styles.onboardBody}>
+              Add your team members to get started. Tap "Invite Team Member" below to send email invitations. Each member will appear here once they join.
+            </Text>
+            <Pressable
+              style={styles.onboardBtn}
+              onPress={() => router.push("/employer/invite")}
+            >
+              <Text style={styles.onboardBtnText}>Invite Team Member →</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* ── League table ── */}
-        <Text style={styles.sectionLabel}>LEAGUE TABLE — SORTED BY COMPLIANCE</Text>
+        {members.length > 0 && <Text style={styles.sectionLabel}>LEAGUE TABLE — SORTED BY COMPLIANCE</Text>}
         {members
           .slice()
           .sort((a, b) => (b.complianceScore ?? -1) - (a.complianceScore ?? -1))
@@ -904,4 +920,23 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.10)",
     marginBottom: 4,
   },
+
+  onboardCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.30)",
+    backgroundColor: "rgba(249,115,22,0.06)",
+    padding: 20,
+    gap: 12,
+  },
+  onboardTitle: { color: "white", fontWeight: "900", fontSize: 18 },
+  onboardBody: { color: "rgba(255,255,255,0.65)", fontSize: 14, lineHeight: 21 },
+  onboardBtn: {
+    backgroundColor: "#f97316",
+    borderRadius: 12,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  onboardBtnText: { color: "#07152b", fontWeight: "900", fontSize: 14 },
 });

@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Dimensions,
+  Modal,
 } from "react-native";
 import { SkeletonBox, SkeletonProfileCard } from "@/components/SkeletonLoader";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -145,6 +146,11 @@ export default function Profile() {
   const [percentile, setPercentile]         = useState<number | null>(null);
   const [benchBadge, setBenchBadge]         = useState<string | null>(null);
 
+  // Employer onboarding
+  const [isEmployer, setIsEmployer]               = useState(false);
+  const [showEmployerModal, setShowEmployerModal] = useState(false);
+  const [switchingToEmployer, setSwitchingToEmployer] = useState(false);
+
   // Licence verification
   const [licenceVerified, setLicenceVerified]     = useState(false);
   const [licenceVerifiedAt, setLicenceVerifiedAt] = useState<string | null>(null);
@@ -167,7 +173,7 @@ export default function Profile() {
 
           const { data: profile } = await supabase
             .from("profiles")
-            .select("full_name, licence_number, company_name, phone, licence_verified, licence_verified_at, licence_expiry_date")
+            .select("full_name, licence_number, company_name, phone, licence_verified, licence_verified_at, licence_expiry_date, role")
             .eq("user_id", user.id)
             .single();
 
@@ -179,6 +185,7 @@ export default function Profile() {
             setLicenceVerified(profile.licence_verified ?? false);
             setLicenceVerifiedAt(profile.licence_verified_at ?? null);
             setLicenceExpiryDate(profile.licence_expiry_date || "");
+            setIsEmployer(profile.role === "employer");
           }
 
           try {
@@ -274,6 +281,28 @@ export default function Profile() {
       showToast(e?.message ?? "Could not save profile.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ── Employer Switch ───────────────────────────────────────────────────────────
+
+  const switchToEmployer = async () => {
+    setSwitchingToEmployer(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not signed in.");
+      const { error } = await supabase.from("profiles").upsert(
+        { user_id: user.id, role: "employer" },
+        { onConflict: "user_id" }
+      );
+      if (error) throw error;
+      setIsEmployer(true);
+      setShowEmployerModal(false);
+      router.push("/employer/dashboard");
+    } catch (e: any) {
+      showToast(e?.message ?? "Could not switch to employer account.");
+    } finally {
+      setSwitchingToEmployer(false);
     }
   };
 
@@ -546,7 +575,48 @@ export default function Profile() {
             <Text style={styles.upgradeBtnText}>See What's Included →</Text>
           </Pressable>
         </View>
+
+        {/* Employer switch — only shown for non-employer accounts */}
+        {!isEmployer && (
+          <Pressable style={styles.employerBtn} onPress={() => setShowEmployerModal(true)}>
+            <Text style={styles.employerBtnText}>Switch to Employer Account</Text>
+            <Text style={styles.employerBtnSub}>Manage a team of tradespeople</Text>
+          </Pressable>
+        )}
       </ScrollView>
+
+      {/* Employer onboarding modal */}
+      <Modal
+        visible={showEmployerModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowEmployerModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowEmployerModal(false)}>
+          <Pressable style={styles.modalSheet} onPress={() => {}}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Employer Account</Text>
+            <Text style={styles.modalBody}>
+              Employer accounts let you manage your team, track compliance across multiple plumbers, assign jobs, and export team analytics reports.
+            </Text>
+            <Text style={styles.modalBody}>
+              Plans start at $99/month. You can set up your team and explore the dashboard for free before subscribing.
+            </Text>
+            <Pressable
+              style={[styles.modalPrimaryBtn, switchingToEmployer && { opacity: 0.6 }]}
+              onPress={switchToEmployer}
+              disabled={switchingToEmployer}
+            >
+              {switchingToEmployer
+                ? <ActivityIndicator color="#07152b" size="small" />
+                : <Text style={styles.modalPrimaryBtnText}>Set Up Team</Text>}
+            </Pressable>
+            <Pressable style={styles.modalSecondaryBtn} onPress={() => setShowEmployerModal(false)}>
+              <Text style={styles.modalSecondaryBtnText}>Maybe Later</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {toast && (
         <View style={styles.toast}>
@@ -726,6 +796,51 @@ const styles = StyleSheet.create({
     padding: 14, alignItems: "center",
   },
   toastText: { color: "white", fontWeight: "900", fontSize: 15 },
+
+  employerBtn: {
+    marginTop: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    padding: 16,
+    alignItems: "center",
+    gap: 4,
+  },
+  employerBtnText: { color: "rgba(255,255,255,0.70)", fontWeight: "700", fontSize: 14 },
+  employerBtnSub: { color: "rgba(255,255,255,0.35)", fontSize: 12 },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.60)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: "#0f2035",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    gap: 14,
+    paddingBottom: 40,
+  },
+  modalHandle: {
+    width: 36, height: 4, borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.20)",
+    alignSelf: "center", marginBottom: 4,
+  },
+  modalTitle: { color: "white", fontWeight: "900", fontSize: 20 },
+  modalBody: { color: "rgba(255,255,255,0.65)", fontSize: 14, lineHeight: 21 },
+  modalPrimaryBtn: {
+    backgroundColor: "#f97316",
+    borderRadius: 14,
+    height: 56,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  modalPrimaryBtnText: { color: "#07152b", fontWeight: "900", fontSize: 15 },
+  modalSecondaryBtn: { alignItems: "center", paddingVertical: 8 },
+  modalSecondaryBtnText: { color: "rgba(255,255,255,0.45)", fontWeight: "700", fontSize: 14 },
 
   chartCard: {
     marginBottom: 12,
