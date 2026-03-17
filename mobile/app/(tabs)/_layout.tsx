@@ -1,23 +1,27 @@
 import { Tabs, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-
-// Stage 2 unlocks when user generates their first PDF report.
-// Key written in app/celebration.tsx and app/plumbing/ai-review.tsx.
-const STAGE2_KEY = "elemetric_stage2_unlocked";
+import { supabase } from '@/lib/supabase';
 
 export default function TabLayout() {
-  const [stage2, setStage2] = useState(false);
+  const [isEmployer, setIsEmployer] = useState(false);
 
-  // Re-check on every focus so the Tools tab appears as soon as the
-  // celebration screen sets the key and returns to the tab bar.
+  // Re-check role on every focus so tabs update as soon as role changes.
   useFocusEffect(
     useCallback(() => {
-      AsyncStorage.getItem(STAGE2_KEY).then((v) => {
-        if (v === "true") setStage2(true);
-      });
+      (async () => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('user_id', user.id)
+            .single();
+          setIsEmployer(profile?.role === 'employer');
+        } catch {}
+      })();
     }, [])
   );
 
@@ -39,7 +43,7 @@ export default function TabLayout() {
         },
       }}
     >
-      {/* ── Visible tabs ── */}
+      {/* ── Individual plumber tabs ── */}
       <Tabs.Screen
         name="index"
         options={{
@@ -56,20 +60,22 @@ export default function TabLayout() {
           tabBarAccessibilityLabel: 'Saved jobs',
         }}
       />
-
-      {/* Tools tab — invisible until Stage 2 unlocked */}
+      <Tabs.Screen
+        name="liability-timeline"
+        options={{
+          title: 'Timeline',
+          tabBarIcon: ({ color }) => <IconSymbol size={26} name="shield.fill" color={color} />,
+          tabBarAccessibilityLabel: 'Liability timeline',
+        }}
+      />
       <Tabs.Screen
         name="tools"
         options={{
           title: 'Tools',
           tabBarIcon: ({ color }) => <IconSymbol size={26} name="wrench.fill" color={color} />,
           tabBarAccessibilityLabel: 'Tools and features',
-          // Hide from tab bar until unlocked; screen is still navigable
-          tabBarButton: stage2 ? undefined : () => null,
-          tabBarStyle: stage2 ? undefined : { display: 'none' },
         }}
       />
-
       <Tabs.Screen
         name="profile"
         options={{
@@ -79,10 +85,21 @@ export default function TabLayout() {
         }}
       />
 
+      {/* ── Employer-only tabs ── */}
+      <Tabs.Screen
+        name="calendar"
+        options={{
+          title: 'Calendar',
+          tabBarIcon: ({ color }) => <IconSymbol size={26} name="calendar" color={color} />,
+          tabBarAccessibilityLabel: 'Job calendar',
+          // Only show tab bar button for employers
+          tabBarButton: isEmployer ? undefined : () => null,
+          tabBarStyle: isEmployer ? undefined : { display: 'none' },
+        }}
+      />
+
       {/* ── Hidden screens (accessible via push, not tab bar) ── */}
-      <Tabs.Screen name="calendar"          options={{ href: null }} />
-      <Tabs.Screen name="liability-timeline" options={{ href: null }} />
-      <Tabs.Screen name="visualiser"         options={{ href: null }} />
+      <Tabs.Screen name="visualiser" options={{ href: null }} />
     </Tabs>
   );
 }

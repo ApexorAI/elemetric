@@ -85,6 +85,17 @@ export default function EmployerDashboard() {
           } = await supabase.auth.getUser();
           if (!user || !active) return;
 
+          // Role gate — redirect non-employers immediately
+          const { data: profileCheck } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("user_id", user.id)
+            .single();
+          if (active && profileCheck?.role !== "employer") {
+            router.replace("/home");
+            return;
+          }
+
           // Get team
           const { data: team, error: teamError } = await supabase
             .from("teams")
