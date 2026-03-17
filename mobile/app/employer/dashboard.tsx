@@ -593,14 +593,7 @@ ${members.length > 0 ? `<h3 style="font-size:16px;margin:0 0 10px;">Team Leaderb
           <Text style={styles.templatesBtnText}>📋 Job Templates</Text>
         </Pressable>
 
-        <Pressable
-          style={styles.templatesBtn}
-          onPress={() => router.push("/employer/subcontractors")}
-          accessibilityRole="button"
-          accessibilityLabel="Subcontractors"
-        >
-          <Text style={styles.templatesBtnText}>👷 Subcontractors</Text>
-        </Pressable>
+        {/* Subcontractors — hidden until post-launch */}
 
         <Pressable onPress={() => router.back()} style={styles.back}>
           <Text style={styles.backText}>← Back</Text>
