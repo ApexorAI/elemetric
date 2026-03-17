@@ -594,6 +594,22 @@ accessibilityLabel="Client Access"
 )}
 </View>
 )}
+{/* Invoice prompt for completed jobs */}
+{job.confidence > 0 && (
+<Pressable
+style={styles.invoicePrompt}
+onPress={() => router.push({ pathname: "/invoice", params: { jobName: job.jobName, jobAddr: job.jobAddr, jobRef: job.id } } as any)}
+accessibilityRole="button"
+accessibilityLabel="Send invoice for this job"
+>
+<Text style={styles.invoicePromptIcon}>🧾</Text>
+<View style={styles.invoicePromptText}>
+<Text style={styles.invoicePromptTitle}>Want to send an invoice?</Text>
+<Text style={styles.invoicePromptSub}>One tap — pre-filled with job details</Text>
+</View>
+<Text style={styles.invoicePromptChevron}>›</Text>
+</Pressable>
+)}
 </View>
 </Pressable>
 ))
@@ -886,4 +902,19 @@ alignItems: "center", justifyContent: "center", marginBottom: 8,
 },
 checkboxChecked: { backgroundColor: "#f97316", borderColor: "#f97316" },
 checkboxTick: { color: "white", fontWeight: "900", fontSize: 13 },
+
+invoicePrompt: {
+flexDirection: "row",
+alignItems: "center",
+gap: 12,
+marginTop: 2,
+paddingTop: 10,
+borderTopWidth: 1,
+borderTopColor: "rgba(255,255,255,0.07)",
+},
+invoicePromptIcon: { fontSize: 22, flexShrink: 0 },
+invoicePromptText: { flex: 1 },
+invoicePromptTitle: { color: "rgba(255,255,255,0.80)", fontWeight: "700", fontSize: 13 },
+invoicePromptSub: { color: "rgba(255,255,255,0.40)", fontSize: 11, marginTop: 1 },
+invoicePromptChevron: { color: "rgba(255,255,255,0.25)", fontSize: 22, fontWeight: "300" },
 });
