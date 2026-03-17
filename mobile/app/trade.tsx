@@ -214,68 +214,9 @@ export default function TradeScreen() {
               </View>
             )}
           </>
-        ) : jobCount === 0 ? (
-          <>
-            {/* First-time simplified view */}
-            <Text style={s.sectionLabel}>SELECT YOUR TRADE</Text>
-            <View style={s.tradeGrid}>
-              {FIRST_TIME_TRADES.map((ft) => {
-                const tradeColor =
-                  ft.id === "plumber" ? "#60a5fa" :
-                  ft.id === "electrician" ? "#fbbf24" :
-                  ft.id === "hvac" ? "#a78bfa" : "#f97316";
-                const isSelected = selectedTrade === ft.id || (ft.id === "other" && selectedTrade === "carpenter");
-                return (
-                  <Pressable
-                    key={ft.id}
-                    style={[
-                      s.tradeCard,
-                      isSelected && { borderColor: tradeColor + "60", backgroundColor: tradeColor + "14" },
-                    ]}
-                    onPress={() => {
-                      if (ft.id === "other") {
-                        setSelectedTrade("carpenter");
-                      } else {
-                        setSelectedTrade(ft.id);
-                      }
-                    }}
-                  >
-                    <Text style={s.tradeCardIcon}>{ft.icon}</Text>
-                    <Text style={[s.tradeCardLabel, isSelected && { color: "white" }]}>{ft.label}</Text>
-                    <Text style={s.firstTimeDesc}>{ft.desc}</Text>
-                    {isSelected && (
-                      <View style={[s.tradeCardCheck, { backgroundColor: tradeColor }]}>
-                        <Text style={s.tradeCardCheckText}>✓</Text>
-                      </View>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </View>
-            <Text style={s.firstTimeNote}>More job types unlock after your first report</Text>
-
-            {/* Job types for selected trade */}
-            <Text style={s.sectionLabel}>JOB TYPE — {(TRADES.find(t => t.id === selectedTrade) ?? TRADES[0]).label.toUpperCase()}</Text>
-            <View style={s.jobList}>
-              {(TRADES.find(t => t.id === selectedTrade) ?? TRADES[0]).jobTypes.map((job, idx) => (
-                <React.Fragment key={job.label}>
-                  {idx > 0 && <View style={s.divider} />}
-                  <Pressable style={s.jobRow} onPress={() => navigate(job, selectedTrade)}>
-                    <View style={[s.jobDot, { backgroundColor: (TRADES.find(t => t.id === selectedTrade) ?? TRADES[0]).color }]} />
-                    <View style={s.jobInfo}>
-                      <Text style={s.jobLabel}>{job.label}</Text>
-                      <Text style={s.jobDesc}>{job.description}</Text>
-                      <Text style={s.jobStandard}>{job.standard}</Text>
-                    </View>
-                    <Text style={s.jobChevron}>›</Text>
-                  </Pressable>
-                </React.Fragment>
-              ))}
-            </View>
-          </>
         ) : (
           <>
-            {/* Trade cards */}
+            {/* All trades — always show full grid from first open */}
             <Text style={s.sectionLabel}>TRADE</Text>
             <View style={s.tradeGrid}>
               {TRADES.map((t) => (
