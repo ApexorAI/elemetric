@@ -574,7 +574,7 @@ title: { marginTop: 8, color: "white", fontSize: 22, fontWeight: "900" },
 body: { paddingHorizontal: 20, paddingBottom: 60 },
 
 sectionLabel: {
-color: "rgba(255,255,255,0.35)",
+color: "#f97316",
 fontSize: 11,
 fontWeight: "800",
 letterSpacing: 1,
