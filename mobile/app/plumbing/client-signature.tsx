@@ -129,7 +129,13 @@ export default function ClientSignatureScreen() {
       </View>
 
       <View style={styles.padWrap}>
-        <View style={styles.pad} onLayout={onPadLayout} {...panResponder.panHandlers}>
+        <View
+          style={styles.pad}
+          onLayout={onPadLayout}
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => true}
+          {...panResponder.panHandlers}
+        >
           <Svg width="100%" height="100%">
             {allStrokes.map((stroke, index) => (
               <Path

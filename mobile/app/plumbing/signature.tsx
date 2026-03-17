@@ -213,7 +213,13 @@ export default function SignatureScreen() {
       {/* Signing pad */}
       <View style={styles.padWrap}>
         <Text style={styles.padLabel}>SIGNATURE</Text>
-        <View style={styles.pad} onLayout={onPadLayout} {...panResponder.panHandlers}>
+        <View
+          style={styles.pad}
+          onLayout={onPadLayout}
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => true}
+          {...panResponder.panHandlers}
+        >
           <Svg width="100%" height="100%">
             {allStrokes.map((stroke, index) => (
               <Path
