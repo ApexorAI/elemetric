@@ -70,10 +70,27 @@ export default function ToolsScreen() {
         ))}
       </View>
 
+      {/* AI Visualiser */}
+      <Pressable
+        style={s.toolCard}
+        onPress={() => router.push("/(tabs)/visualiser" as any)}
+        accessibilityRole="button"
+        accessibilityLabel="AI Visualiser"
+      >
+        <View style={[s.toolIconWrap, { backgroundColor: "#a78bfa15", borderColor: "#a78bfa35" }]}>
+          <Text style={s.toolIcon}>🤖</Text>
+        </View>
+        <View style={s.toolText}>
+          <Text style={s.toolLabel}>AI Visualiser</Text>
+          <Text style={s.toolDesc}>Upload photos of pre-existing work for instant AI analysis and documentation.</Text>
+        </View>
+        <Text style={s.chevron}>›</Text>
+      </Pressable>
+
       <View style={s.moreCard}>
         <Text style={s.moreTitle}>More tools coming soon</Text>
         <Text style={s.moreBody}>
-          Invoice generator, timesheet tracking, referral rewards, and training mode are available from your Profile.
+          Invoice generator, timesheet tracking, and referral rewards are available from your Profile.
         </Text>
       </View>
     </ScrollView>
