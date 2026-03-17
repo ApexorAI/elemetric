@@ -26,6 +26,33 @@ import { hashBase64, captureTimestamp } from "@/lib/photoHash";
 const API_BASE = "https://elemetric-ai-production.up.railway.app";
 const SIGNATURE_KEY = "elemetric_signature_svg";
 
+// Maps job type keys → server-side type + subtype for AI prompt routing.
+// Electrical subtypes route to per-trade prompts with 20 PASS + 20 FAIL examples.
+// HVAC and carpentry subtypes map to their parent trade prompts.
+const TYPE_API_MAP: Record<string, { apiType: string; apiSubtype?: string }> = {
+  powerpoint:   { apiType: "electrical", apiSubtype: "power_point_installation" },
+  lighting:     { apiType: "electrical", apiSubtype: "lighting_installation" },
+  switchboard:  { apiType: "electrical", apiSubtype: "switchboard_upgrade" },
+  circuit:      { apiType: "electrical", apiSubtype: "circuit_installation" },
+  faultfinding: { apiType: "electrical", apiSubtype: "fault_finding" },
+  appliance:    { apiType: "electrical", apiSubtype: "appliance_installation" },
+  smokealarm:   { apiType: "electrical", apiSubtype: "smoke_alarm_installation" },
+  splitsystem:  { apiType: "hvac" },
+  ducted:       { apiType: "hvac" },
+  refrigerant:  { apiType: "hvac" },
+  hvacservice:  { apiType: "hvac" },
+  ventilation:  { apiType: "hvac" },
+  framing:      { apiType: "carpentry" },
+  decking:      { apiType: "carpentry" },
+  pergola:      { apiType: "carpentry" },
+  door:         { apiType: "carpentry" },
+  window:       { apiType: "carpentry" },
+  flooring:     { apiType: "carpentry" },
+  fixing:       { apiType: "carpentry" },
+  woodheater:   { apiType: "carpentry" },
+  gasheater:    { apiType: "gas" },
+};
+
 const SECTIONS = [
 { id: "overview",     label: "Site Overview" },
 { id: "work_area",    label: "Work Area / Installation" },
@@ -435,11 +462,12 @@ base64: true,
 });
 if (r.base64) images.push({ mime: "image/jpeg", data: r.base64, label: p.label });
 }
+const { apiType, apiSubtype } = TYPE_API_MAP[jobType] ?? { apiType: jobType };
 const res = await fetch(`${API_BASE}/review`, {
 method: "POST",
 headers: { "Content-Type": "application/json",
         "X-Elemetric-Key": process.env.EXPO_PUBLIC_ELEMETRIC_API_KEY ?? "", },
-body: JSON.stringify({ type: jobType, images }),
+body: JSON.stringify({ type: apiType, ...(apiSubtype ? { subtype: apiSubtype } : {}), images }),
 });
 const json = await res.json();
 if (!res.ok) throw new Error(json?.error ?? "AI request failed");
