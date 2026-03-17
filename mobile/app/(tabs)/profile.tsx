@@ -399,24 +399,11 @@ export default function Profile() {
         {/* Compliance trend chart */}
         {trendData.length >= 2 && <ComplianceTrendChart data={trendData} />}
 
-        {/* Benchmarking card */}
-        {percentile !== null && benchBadge !== null && (
-          <View style={styles.benchCard}>
-            <View style={styles.benchRow}>
-              <View style={styles.benchLeft}>
-                <Text style={styles.benchTitle}>Industry Benchmark</Text>
-                <Text style={styles.benchSub}>You score higher than {percentile}% of plumbers on Elemetric</Text>
-              </View>
-              <View style={styles.benchBadgeWrap}>
-                <Text style={styles.benchBadgeText}>{benchBadge}</Text>
-              </View>
-            </View>
-            <View style={styles.benchBarWrap}>
-              <View style={[styles.benchBar, { width: `${percentile}%` as any }]} />
-            </View>
-            <Text style={styles.benchPercentile}>{percentile}th percentile</Text>
-          </View>
-        )}
+        {/* Benchmarking card — hidden until real data available */}
+        <View style={styles.benchCard}>
+          <Text style={styles.benchTitle}>Industry Benchmark</Text>
+          <Text style={styles.benchSub}>Benchmarking unlocks when more plumbers join Elemetric.</Text>
+        </View>
 
         {/* Profile fields */}
         <Text style={styles.label}>Full Name</Text>
