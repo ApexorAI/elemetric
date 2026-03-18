@@ -18,39 +18,27 @@ const ONBOARDING_KEY = "elemetric_onboarding_seen";
 const SLIDES = [
   {
     emoji: "🛡️",
-    title: "Stop worrying about\nthe 7-year liability",
-    subtitle: "Elemetric documents every job with AI-powered compliance reports that protect your licence.",
+    title: "Your licence is\nyour livelihood.",
+    subtitle: "We protect it. Every job documented, every time.",
     accent: "#f97316",
   },
   {
     emoji: "📸",
-    title: "Photo. Analyse.\nSign. Done.",
-    subtitle: "Complete a full compliance report in under 5 minutes on any job site — no paperwork.",
+    title: "Photo your job.",
+    subtitle: "Takes under 60 seconds on site. No paperwork.",
     accent: "#60a5fa",
   },
   {
     emoji: "🤖",
-    title: "AI checks\nevery item",
-    subtitle: "Our AI reviews your photos against AS/NZS standards and flags anything missing before you leave site.",
+    title: "AI checks\ncompliance.",
+    subtitle: "Against real Australian Standards — AS/NZS 3000, 3500, 5601 and more.",
     accent: "#a78bfa",
   },
   {
-    emoji: "📊",
-    title: "Your full job\nhistory. Always.",
-    subtitle: "Every report saved to the cloud. Pull up any job, any time — even years later.",
+    emoji: "✅",
+    title: "You're protected.",
+    subtitle: "Every job documented forever. Pull up any job, any time — even 7 years later.",
     accent: "#22c55e",
-  },
-  {
-    emoji: "👷",
-    title: "Built for\ntrade professionals",
-    subtitle: "Used by plumbers, gas fitters, electricians, and HVAC technicians across Australia.",
-    accent: "#f97316",
-  },
-  {
-    emoji: "🚀",
-    title: "Ready to protect\nyour licence?",
-    subtitle: "Create your free account and run your first compliance report today.",
-    accent: "#f97316",
   },
 ];
 
