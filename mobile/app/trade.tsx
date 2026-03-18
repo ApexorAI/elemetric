@@ -62,7 +62,7 @@ const TRADES: Trade[] = [
       { label: "Lighting Installation", description: "Lighting circuit, switching arrangement", standard: "AS/NZS 3000", params: { type: "lighting" } },
       { label: "Switchboard Upgrade", description: "Board replacement, labelling, RCD protection", standard: "AS/NZS 3000", params: { type: "switchboard" } },
       { label: "Circuit Installation", description: "New circuit, isolation, test results", standard: "AS/NZS 3000", params: { type: "circuit" } },
-      { label: "Fault Finding", description: "Fault diagnosis, repair, test after", standard: "AS/NZS 3000", params: { type: "faultfinding" } },
+      // { label: "Fault Finding", description: "Fault diagnosis, repair, test after", standard: "AS/NZS 3000", params: { type: "faultfinding" } }, // VAULTED — coming soon
       { label: "Appliance Installation", description: "Fixed appliance, isolation, earth", standard: "AS/NZS 3000", params: { type: "appliance" } },
       { label: "Smoke Alarm Installation", description: "Placement, interconnection, test", standard: "AS 3786", params: { type: "smokealarm" } },
     ],
@@ -76,7 +76,7 @@ const TRADES: Trade[] = [
       { label: "HVAC Documentation", description: "Mechanical services commissioning", standard: "AS/NZS 1668", params: { type: "hvac" } },
       { label: "Split System Installation", description: "Indoor/outdoor unit, refrigerant piping, drain", standard: "AS/NZS 5149", params: { type: "splitsystem" } },
       { label: "Ducted System Installation", description: "Ducts, diffusers, return air, commissioning", standard: "AS/NZS 1668", params: { type: "ducted" } },
-      { label: "Refrigerant Piping", description: "Pipe insulation, leak test, pressure test", standard: "AS/NZS 5149", params: { type: "refrigerant" } },
+      // { label: "Refrigerant Piping", description: "Pipe insulation, leak test, pressure test", standard: "AS/NZS 5149", params: { type: "refrigerant" } }, // VAULTED — coming soon
       { label: "Maintenance and Servicing", description: "Filter clean, coil inspect, performance check", standard: "AS/NZS 1668", params: { type: "hvacservice" } },
       { label: "Ventilation Installation", description: "Exhaust fan, ductwork, airflow rates", standard: "AS 1668.2", params: { type: "ventilation" } },
     ],
