@@ -42,9 +42,54 @@ export default function Referral() {
     [shareUrl]
   );
 
+  const fetchData = useCallback(async (generateIfMissing = false) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("referral_code")
+        .eq("user_id", user.id)
+        .single();
+
+      let code = profile?.referral_code ?? "";
+
+      if (!code && generateIfMissing) {
+        code = Math.random().toString(36).substring(2, 10).toUpperCase();
+        await supabase.from("profiles").update({ referral_code: code }).eq("user_id", user.id);
+      }
+
+      setReferralCode(code);
+
+      if (code) {
+        const { data: refs } = await supabase
+          .from("referrals")
+          .select("status, commission_amount")
+          .eq("referrer_id", user.id);
+
+        if (refs) {
+          setTotalReferrals(refs.length);
+          setPending(refs.filter((r: any) => r.status === "pending").length);
+          setEarned(
+            refs
+              .filter((r: any) => r.status === "paid")
+              .reduce((s: number, r: any) => s + (r.commission_amount ?? 0), 0)
+          );
+        }
+      }
+    } catch {}
+    setLoading(false);
+  }, []);
+
+  const generateCode = useCallback(async () => {
+    setLoading(true);
+    await fetchData(true);
+  }, [fetchData]);
+
   useFocusEffect(
     useCallback(() => {
-      let active = true;
+      setLoading(true);
 
       // Clear any pending copied timer on re-focus
       if (copiedTimerRef.current) {
@@ -52,55 +97,15 @@ export default function Referral() {
         copiedTimerRef.current = null;
       }
 
-      (async () => {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user || !active) return;
-
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("referral_code")
-            .eq("user_id", user.id)
-            .single();
-
-          let code = profile?.referral_code;
-          if (!code) {
-            code = Math.random().toString(36).substring(2, 10).toUpperCase();
-            await supabase
-              .from("profiles")
-              .update({ referral_code: code })
-              .eq("user_id", user.id);
-          }
-          if (active) setReferralCode(code);
-
-          // Referral stats
-          const { data: refs } = await supabase
-            .from("referrals")
-            .select("status, commission_amount")
-            .eq("referrer_id", user.id);
-
-          if (active && refs) {
-            setTotalReferrals(refs.length);
-            setPending(refs.filter((r: any) => r.status === "pending").length);
-            setEarned(
-              refs
-                .filter((r: any) => r.status === "paid")
-                .reduce((s: number, r: any) => s + (r.commission_amount ?? 0), 0)
-            );
-          }
-        } catch {}
-        if (active) setLoading(false);
-      })();
+      fetchData(false);
 
       return () => {
-        active = false;
-        // Cancel any pending copied reset timer
         if (copiedTimerRef.current) {
           clearTimeout(copiedTimerRef.current);
           copiedTimerRef.current = null;
         }
       };
-    }, [])
+    }, [fetchData])
   );
 
   const shareWhatsApp = useCallback(async () => {
@@ -155,6 +160,22 @@ export default function Referral() {
       </View>
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+
+        {/* Empty state — no referral code yet */}
+        {!referralCode ? (
+          <View style={styles.emptyCodeCard}>
+            <Text style={styles.emptyCodeIcon}>🎁</Text>
+            <Text style={styles.emptyCodeTitle}>No Referral Link Yet</Text>
+            <Text style={styles.emptyCodeSub}>
+              Generate your unique referral link to start earning rewards when friends sign up.
+            </Text>
+            <Pressable style={styles.generateBtn} onPress={generateCode} accessibilityRole="button">
+              <Text style={styles.generateBtnText}>Generate My Referral Link</Text>
+            </Pressable>
+          </View>
+        ) : (
+
+        <>
 
         {/* Referral link card */}
         <View style={styles.card}>
@@ -217,6 +238,9 @@ export default function Referral() {
           <Text style={styles.infoItem}>2. Your friend signs up and completes their first job</Text>
           <Text style={styles.infoItem}>3. You both earn a reward once they activate</Text>
         </View>
+
+        </>
+        )}
 
       </ScrollView>
     </View>
@@ -320,4 +344,28 @@ const styles = StyleSheet.create({
   },
   infoTitle: { color: "#f97316", fontWeight: "900", fontSize: 14 },
   infoItem: { color: "rgba(255,255,255,0.65)", fontSize: 13, lineHeight: 20 },
+
+  emptyCodeCard: {
+    backgroundColor: "#0f2035",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.25)",
+    padding: 32,
+    alignItems: "center",
+    gap: 12,
+    marginTop: 12,
+  },
+  emptyCodeIcon: { fontSize: 48 },
+  emptyCodeTitle: { color: "white", fontWeight: "900", fontSize: 20, textAlign: "center" },
+  emptyCodeSub: { color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 21, textAlign: "center" },
+  generateBtn: {
+    marginTop: 8,
+    backgroundColor: "#f97316",
+    borderRadius: 14,
+    height: 52,
+    paddingHorizontal: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  generateBtnText: { color: "#07152b", fontWeight: "900", fontSize: 15 },
 });
