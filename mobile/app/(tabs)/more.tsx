@@ -19,13 +19,6 @@ type MoreItem = {
 
 const ITEMS: MoreItem[] = [
   {
-    icon: "👤",
-    label: "Profile",
-    sub: "Your details and compliance score",
-    route: "/(tabs)/profile",
-    color: "#f97316",
-  },
-  {
     icon: "⚙️",
     label: "Settings",
     sub: "Account, notifications, data",
@@ -38,6 +31,13 @@ const ITEMS: MoreItem[] = [
     sub: "Guides and common questions",
     route: "/help",
     color: "#3b82f6",
+  },
+  {
+    icon: "💬",
+    label: "AI Assistant",
+    sub: "Ask compliance questions instantly",
+    route: "/chatbot",
+    color: "#f97316",
   },
   {
     icon: "⚠️",
@@ -54,10 +54,10 @@ const ITEMS: MoreItem[] = [
     color: "#22c55e",
   },
   {
-    icon: "🎓",
-    label: "Training Mode",
-    sub: "Practice jobs without saving",
-    comingSoon: true,
+    icon: "📊",
+    label: "AI Visualiser",
+    sub: "See your compliance analysis visually",
+    route: "/(tabs)/visualiser",
     color: "#a78bfa",
   },
   {
