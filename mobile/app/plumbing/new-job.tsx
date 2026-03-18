@@ -79,8 +79,6 @@ const TYPE_DEST: Record<string, string> = {
   gasheater: "/plumbing/general-checklist",
 };
 
-const FREE_JOB_LIMIT = 3;
-
 export default function NewJob() {
   const router = useRouter();
   const params = useLocalSearchParams<{ type?: string }>();
@@ -143,12 +141,11 @@ export default function NewJob() {
   const checkFreeLimit = async (): Promise<boolean> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return true; // not signed in — let them proceed (login will catch it)
+      if (!user) return true;
 
-      // Check role and beta status — paid users and beta testers are never blocked
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, free_jobs_used, beta_tester")
+        .select("role, beta_tester, trial_started_at")
         .eq("user_id", user.id)
         .single();
 
@@ -156,17 +153,28 @@ export default function NewJob() {
       if (role && role !== "free") return true; // paid subscriber
       if (profile?.beta_tester === true) return true; // beta tester bypass
 
-      // Count total jobs saved
-      const { count } = await supabase
-        .from("jobs")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id);
+      // Start trial on first job if not started
+      let trialStart = profile?.trial_started_at ? new Date(profile.trial_started_at) : null;
+      if (!trialStart) {
+        const now = new Date();
+        await supabase.from("profiles").update({ trial_started_at: now.toISOString() }).eq("user_id", user.id);
+        trialStart = now;
+      }
 
-      if ((count ?? 0) >= FREE_JOB_LIMIT) {
-        return false; // hit the free limit
+      const daysSince = Math.floor((Date.now() - trialStart.getTime()) / (1000 * 60 * 60 * 24));
+      const daysRemaining = 14 - daysSince;
+
+      if (daysRemaining <= 0) {
+        return false; // trial expired
+      }
+
+      if (daysRemaining === 1) {
+        Alert.alert("Last Day of Trial", "Today is the last day of your 14-day free trial. Upgrade to keep creating jobs.");
+      } else if (daysRemaining <= 2) {
+        Alert.alert("Trial Ending Soon", `You have ${daysRemaining} days left in your free trial.`);
       }
     } catch {
-      // If the check fails (offline), let them proceed
+      // If check fails (offline), let them proceed
     }
     return true;
   };

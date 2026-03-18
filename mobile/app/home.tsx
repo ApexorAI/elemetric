@@ -90,6 +90,7 @@ export default function Home() {
   const [jobCount,        setJobCount]        = useState(0);
   const [complianceScore, setComplianceScore] = useState<number | null>(null);
   const [loading,         setLoading]         = useState(true);
+  const [trialDaysLeft,   setTrialDaysLeft]   = useState<number | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -102,12 +103,31 @@ export default function Home() {
           // Load profile
           const { data: profile } = await supabase
             .from("profiles")
-            .select("full_name")
+            .select("full_name, role, beta_tester, trial_started_at")
             .eq("user_id", user.id)
             .single();
 
           if (active && profile?.full_name) {
             setFirstName(profile.full_name.trim().split(" ")[0]);
+          }
+
+          // Calculate trial days remaining
+          if (active) {
+            const role = profile?.role ?? "free";
+            const isPaid = role && role !== "free";
+            const isBeta = profile?.beta_tester === true;
+            if (!isPaid && !isBeta && profile?.trial_started_at) {
+              const trialStart = new Date(profile.trial_started_at);
+              const daysSince = Math.floor((Date.now() - trialStart.getTime()) / (1000 * 60 * 60 * 24));
+              const daysRemaining = 14 - daysSince;
+              if (daysRemaining >= 1 && daysRemaining <= 14) {
+                setTrialDaysLeft(daysRemaining);
+              } else {
+                setTrialDaysLeft(null);
+              }
+            } else {
+              setTrialDaysLeft(null);
+            }
           }
 
           // Load recent jobs (last 3)
@@ -193,6 +213,26 @@ export default function Home() {
           )}
         </View>
       </View>
+
+      {/* ── Trial banner ── */}
+      {trialDaysLeft !== null && (
+        <Pressable
+          style={s.trialBanner}
+          onPress={() => router.push("/subscription")}
+          accessibilityRole="button"
+          accessibilityLabel="Trial banner — upgrade to Pro"
+        >
+          <Text style={s.trialBannerIcon}>📅</Text>
+          <View style={s.trialBannerText}>
+            <Text style={s.trialBannerTitle}>
+              {trialDaysLeft === 1
+                ? "Last day of your free trial — upgrade now"
+                : `${trialDaysLeft} days left in your free trial`}
+            </Text>
+            <Text style={s.trialBannerSub}>Upgrade to Pro for unlimited jobs →</Text>
+          </View>
+        </Pressable>
+      )}
 
       {/* ── Primary CTA ── */}
       <Pressable
@@ -318,6 +358,22 @@ const s = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   scorePlaceholderText: { color: "rgba(255,255,255,0.35)", fontSize: 20, fontWeight: "900" },
+
+  // Trial banner
+  trialBanner: {
+    backgroundColor: "rgba(249,115,22,0.08)",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#f97316",
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  trialBannerIcon: { fontSize: 22 },
+  trialBannerText: { flex: 1 },
+  trialBannerTitle: { color: "#f97316", fontWeight: "700", fontSize: 14, lineHeight: 20 },
+  trialBannerSub: { color: "rgba(249,115,22,0.70)", fontSize: 12, marginTop: 2 },
 
   // Primary CTA
   startBtn: {
