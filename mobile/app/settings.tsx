@@ -44,6 +44,7 @@ const [deletingAccount, setDeletingAccount] = useState(false);
 const [exportingData, setExportingData] = useState(false);
 const [prefs, setPrefs] = useState<Record<string, boolean>>({});
 const [userId, setUserId] = useState<string | null>(null);
+const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(null);
 
 useFocusEffect(
 useCallback(() => {
@@ -56,13 +57,17 @@ setEmail(user.email ?? "");
 setUserId(user.id);
 const { data: profile } = await supabase
 .from("profiles")
-.select("role, full_name, notification_preferences")
+.select("role, full_name, notification_preferences, trial_started_at")
 .eq("user_id", user.id)
 .single();
 if (active && profile?.role) setRole(profile.role as "individual" | "employer");
 if (active && profile?.full_name) setFullName(profile.full_name);
 if (active && profile?.notification_preferences) {
 setPrefs(profile.notification_preferences as Record<string, boolean>);
+}
+if (active && profile?.trial_started_at && (profile?.role ?? "free") === "free") {
+const daysSince = Math.floor((Date.now() - new Date(profile.trial_started_at).getTime()) / (1000 * 60 * 60 * 24));
+setTrialDaysRemaining(Math.max(0, 14 - daysSince));
 }
 }
 } catch {}
@@ -418,6 +423,26 @@ ios_backgroundColor="rgba(255,255,255,0.15)"
 {/* Subscription */}
 <Text style={styles.sectionLabel}>SUBSCRIPTION</Text>
 <View style={styles.group}>
+{role === "free" && trialDaysRemaining !== null && (
+<>
+<View style={styles.row}>
+<Text style={styles.rowLabel}>Current Plan</Text>
+<Text style={[styles.rowValue, { color: trialDaysRemaining <= 1 ? "#ef4444" : "#f97316" }]}>
+Free Trial — {trialDaysRemaining} day{trialDaysRemaining !== 1 ? "s" : ""} left
+</Text>
+</View>
+<View style={styles.divider} />
+</>
+)}
+{role !== "free" && (
+<>
+<View style={styles.row}>
+<Text style={styles.rowLabel}>Current Plan</Text>
+<Text style={[styles.rowValue, { color: "#22c55e" }]}>Pro — Active</Text>
+</View>
+<View style={styles.divider} />
+</>
+)}
 <Pressable style={styles.row} onPress={() => router.push("/subscription")}>
 <Text style={styles.rowAction}>Manage Subscription</Text>
 <Text style={styles.rowChevron}>›</Text>
