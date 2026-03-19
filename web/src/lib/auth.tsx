@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 
@@ -31,7 +31,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  async function fetchProfile(userId: string) {
+  // Tracks whether the initial getSession() call has already resolved.
+  // onAuthStateChange must not reset loading — only getSession() does that on startup.
+  const initialised = useRef(false)
+
+  async function fetchProfile(userId: string): Promise<Profile | null> {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -48,26 +52,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id).finally(() => setLoading(false))
+    // Step 1: get the existing session synchronously from local storage,
+    // then resolve any server-side refresh. This is the authoritative
+    // source for the initial auth state — only this call marks init done.
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s)
+      setUser(s?.user ?? null)
+      if (s?.user) {
+        fetchProfile(s.user.id).finally(() => {
+          initialised.current = true
+          setLoading(false)
+        })
       } else {
+        initialised.current = true
         setLoading(false)
       }
     })
 
+    // Step 2: listen for subsequent auth changes (sign-in, sign-out, token
+    // refresh). Skip updating loading — init is owned by getSession above.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session)
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          await fetchProfile(session.user.id)
+      async (_event, s) => {
+        setSession(s)
+        setUser(s?.user ?? null)
+        if (s?.user) {
+          await fetchProfile(s.user.id)
         } else {
           setProfile(null)
         }
-        setLoading(false)
+        // Only clear loading via this path if getSession() somehow never fired
+        // (e.g. network error). Prevents permanent spinner.
+        if (!initialised.current) {
+          initialised.current = true
+          setLoading(false)
+        }
       }
     )
 
@@ -80,9 +98,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) return { error }
       if (data.user) {
         const prof = await fetchProfile(data.user.id)
-        if (!prof || prof.role !== 'employer') {
+        if (!prof || (prof.role !== 'employer' && prof.role !== 'employer_plus')) {
           await supabase.auth.signOut()
-          return { error: new Error('Access denied. This portal is for employers only.') }
+          return {
+            error: new Error(
+              'This portal is for employer accounts only. Download the Elemetric app to access your individual account.'
+            ),
+          }
         }
       }
       return { error: null }
