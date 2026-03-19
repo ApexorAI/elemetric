@@ -3,11 +3,8 @@ import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 
 const DECLARATIONS = [
-"I confirm that the work described in this report was carried out in accordance with AS/NZS 3500 and the Plumbing Regulations 2018 (Vic).",
-"I confirm that all materials and products used are compliant with relevant Australian Standards.",
-"I confirm that the installation has been tested and is functioning correctly.",
-"I confirm that this report accurately represents the work completed and the photographic evidence provided.",
-"I acknowledge that this report may be inspected by the Victorian Building Authority or a relevant statutory body.",
+  "I confirm this work was completed to the best of my knowledge.",
+  "I accept full responsibility for the compliance of this work.",
 ];
 
 export default function Declaration() {
@@ -24,7 +21,7 @@ return (
 <View style={styles.header}>
 <Text style={styles.brand}>ELEMETRIC</Text>
 <Text style={styles.title}>Declaration</Text>
-<Text style={styles.subtitle}>Tick all boxes to proceed to signature</Text>
+<Text style={styles.subtitle}>Tick both boxes to proceed to signature</Text>
 </View>
 
 <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
