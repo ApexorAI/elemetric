@@ -256,6 +256,17 @@ return;
 
 const ts = captureTimestamp();
 
+// Compress to max 1200px, 0.7 quality before reading or uploading
+let compressedUri = asset.uri;
+try {
+const compressed = await ImageManipulator.manipulateAsync(
+asset.uri,
+[{ resize: { width: 1200 } }],
+{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+);
+compressedUri = compressed.uri;
+} catch {}
+
 // Get GPS coordinates (best-effort)
 let gps: { lat: number; lng: number } | undefined;
 try {
@@ -268,14 +279,14 @@ gps = { lat: loc.coords.latitude, lng: loc.coords.longitude };
 }
 } catch {}
 
-// Read original base64
+// Read compressed base64
 let b64 = "";
 try {
-b64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
+b64 = await FileSystem.readAsStringAsync(compressedUri, { encoding: FileSystem.EncodingType.Base64 });
 } catch {}
 
 // Call server to burn GPS + timestamp onto the image (weatherproof stamp)
-let finalUri = asset.uri;
+let finalUri = compressedUri;
 let finalB64 = b64;
 try {
 const stampRes = await fetch(`${API_BASE}/stamp-photo`, {

@@ -406,8 +406,18 @@ mediaTypes: ImagePicker.MediaTypeOptions.Images,
 quality: 1,
 });
 if (result.canceled) return;
-const uri = result.assets?.[0]?.uri;
-if (!uri) return;
+const rawUri = result.assets?.[0]?.uri;
+if (!rawUri) return;
+// Compress to max 1200px, 0.7 quality before storing
+let uri = rawUri;
+try {
+const compressed = await ImageManipulator.manipulateAsync(
+rawUri,
+[{ resize: { width: 1200 } }],
+{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+);
+uri = compressed.uri;
+} catch {}
 const ts = captureTimestamp();
 let hash = "";
 try {
