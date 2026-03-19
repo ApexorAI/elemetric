@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Shield, AlertTriangle, Search, Filter, X } from 'lucide-react'
+import { Shield, AlertTriangle, Search, Filter, X, Bell } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { useAuth } from '../lib/auth'
 
@@ -36,6 +36,16 @@ interface Certificate {
   status?: string
 }
 
+interface RegulatoryUpdate {
+  id: string
+  title?: string
+  description?: string
+  effective_date?: string
+  category?: string
+  severity?: string
+  source?: string
+}
+
 interface ComplianceData {
   stats?: ComplianceStats
   risk_alerts?: RiskAlert[]
@@ -50,6 +60,8 @@ export default function Compliance() {
   const [search, setSearch] = useState('')
   const [filterTrade, setFilterTrade] = useState('')
   const [filterPlumber, setFilterPlumber] = useState('')
+  const [regulatoryUpdates, setRegulatoryUpdates] = useState<RegulatoryUpdate[]>([])
+  const [regulatoryLoading, setRegulatoryLoading] = useState(false)
   const apiUrl = import.meta.env.VITE_API_URL
 
   const fetchCompliance = useCallback(async () => {
@@ -74,7 +86,29 @@ export default function Compliance() {
     }
   }, [session, profile?.team_id, apiUrl])
 
+  const fetchRegulatoryUpdates = useCallback(async () => {
+    if (!session || !profile?.team_id) return
+    setRegulatoryLoading(true)
+    try {
+      const res = await fetch(
+        `${apiUrl}/employer/regulatory-updates?team_id=${profile.team_id}`,
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
+      )
+      if (res.ok) {
+        const json = await res.json()
+        const updates: RegulatoryUpdate[] = Array.isArray(json)
+          ? json
+          : (json.updates ?? json.data ?? [])
+        setRegulatoryUpdates(updates)
+      }
+    } catch { /* silently fail */ }
+    finally {
+      setRegulatoryLoading(false)
+    }
+  }, [session, profile?.team_id, apiUrl])
+
   useEffect(() => { fetchCompliance() }, [fetchCompliance])
+  useEffect(() => { fetchRegulatoryUpdates() }, [fetchRegulatoryUpdates])
 
   const stats = data?.stats
   const alerts = data?.risk_alerts ?? []
@@ -382,6 +416,78 @@ export default function Compliance() {
                   >
                     {cert.status ?? 'unknown'}
                   </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Regulatory Updates */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mt-6">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="font-semibold text-gray-800">Regulatory Updates</h2>
+          {regulatoryUpdates.length > 0 && (
+            <span
+              className="text-xs px-2 py-0.5 rounded-full font-semibold text-white"
+              style={{ backgroundColor: '#07152B' }}
+            >
+              {regulatoryUpdates.length}
+            </span>
+          )}
+        </div>
+        <div className="divide-y divide-gray-50">
+          {regulatoryLoading ? (
+            <div className="p-4 space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse" />
+              ))}
+            </div>
+          ) : regulatoryUpdates.length === 0 ? (
+            <div className="p-8 text-center">
+              <Bell size={28} className="mx-auto text-gray-300 mb-2" />
+              <p className="text-sm text-gray-500">No regulatory updates at this time</p>
+            </div>
+          ) : (
+            regulatoryUpdates.map((update) => (
+              <div key={update.id} className="px-5 py-4">
+                <div className="flex items-start gap-3">
+                  <div
+                    className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+                    style={{
+                      backgroundColor:
+                        update.severity === 'high'
+                          ? '#dc2626'
+                          : update.severity === 'medium'
+                          ? '#d97706'
+                          : '#6b7280',
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-gray-800">
+                        {update.title ?? 'Regulatory Update'}
+                      </p>
+                      {update.category && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                          {update.category}
+                        </span>
+                      )}
+                    </div>
+                    {update.description && (
+                      <p className="text-sm text-gray-600 mt-1">{update.description}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                      {update.effective_date && (
+                        <p className="text-xs text-gray-400">
+                          Effective: {new Date(update.effective_date).toLocaleDateString()}
+                        </p>
+                      )}
+                      {update.source && (
+                        <p className="text-xs text-gray-400">Source: {update.source}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             ))
