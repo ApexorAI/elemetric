@@ -626,6 +626,7 @@ await supabase.storage
 // Storage upload failed — continue to AI review regardless
 }
 
+console.log("[Photos] Sending AI review request — type:", currentJob.type, "images:", images.length);
 const res = await fetch(`${API_BASE}/review`, {
 method: "POST",
 headers: {
@@ -638,7 +639,9 @@ images,
 }),
 });
 
+console.log("[Photos] AI review response status:", res.status);
 const text = await res.text();
+console.log("[Photos] AI review response (first 500 chars):", text.slice(0, 500));
 
 let json: any;
 try {
@@ -651,9 +654,12 @@ if (!res.ok) {
 throw new Error(json?.error || json?.details || "AI request failed");
 }
 
+console.log("[Photos] AI result keys:", Object.keys(json));
+console.log("[Photos] Writing AI result to:", AI_RESULT_FILE);
 await FileSystem.writeAsStringAsync(AI_RESULT_FILE, JSON.stringify(json), {
   encoding: FileSystem.EncodingType.UTF8,
 });
+console.log("[Photos] AI result written successfully");
 // API done — navigate now if animation also done, else let animation trigger it
 apiDoneRef.current = true;
 if (animDoneRef.current) doNavigate();

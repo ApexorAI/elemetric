@@ -25,41 +25,61 @@ export default function Entry() {
     // Capture session via onAuthStateChange INITIAL_SESSION — fires reliably after
     // Supabase finishes reading from AsyncStorage (avoids timing race with getSession)
     type Session = Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"];
-    const sessionRef: { value: Session | undefined } = { value: undefined };
+    const sessionRef: { value: Session | undefined; resolved: boolean } = { value: undefined, resolved: false };
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "INITIAL_SESSION") {
         sessionRef.value = session;
-        console.log("[Auth] INITIAL_SESSION →", session ? "session found" : "no session");
+        sessionRef.resolved = true;
+        console.log("[Auth] INITIAL_SESSION →", session ? `session found (user: ${session.user.id})` : "no session");
       }
     });
 
+    const navigate = async (session: Session) => {
+      const seen = await AsyncStorage.getItem(ONBOARDING_KEY);
+      if (!seen) {
+        router.replace("/welcome");
+        return;
+      }
+      if (session) {
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("onboarding_complete")
+            .eq("user_id", session.user.id)
+            .single();
+          if (!profile?.onboarding_complete) {
+            router.replace("/onboarding");
+            return;
+          }
+        } catch {
+          // Profile fetch failed — go home, login guard will catch real auth issues
+        }
+        console.log("[Auth] Session valid → navigating to /home");
+        router.replace("/home");
+      } else {
+        console.log("[Auth] No session → navigating to /login");
+        router.replace("/login");
+      }
+    };
+
     const timer = setTimeout(async () => {
       Animated.timing(opacity, { toValue: 0, duration: 280, useNativeDriver: true }).start(async () => {
-        const seen = await AsyncStorage.getItem(ONBOARDING_KEY);
-        if (!seen) {
-          router.replace("/welcome");
+        // If INITIAL_SESSION has fired, use that session
+        if (sessionRef.resolved) {
+          await navigate(sessionRef.value ?? null);
           return;
         }
-
-        // By now (1500ms + 280ms) INITIAL_SESSION has long since fired
-        const session = sessionRef.value;
-        if (session) {
-          try {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("onboarding_complete")
-              .eq("user_id", session.user.id)
-              .single();
-            if (!profile?.onboarding_complete) {
-              router.replace("/onboarding");
-              return;
-            }
-          } catch {
-            // Profile fetch failed — go home, login guard will catch real auth issues
-          }
-          router.replace("/home");
-        } else {
-          router.replace("/login");
+        // INITIAL_SESSION hasn't fired yet — fall back to getSession()
+        console.log("[Auth] INITIAL_SESSION not yet fired — falling back to getSession()");
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
+          if (error) console.warn("[Auth] getSession error:", error.message);
+          console.log("[Auth] getSession() →", session ? `session found (user: ${session.user.id})` : "no session");
+          await navigate(session);
+        } catch (e) {
+          console.error("[Auth] getSession failed:", e);
+          const seen = await AsyncStorage.getItem(ONBOARDING_KEY);
+          router.replace(!seen ? "/welcome" : "/login");
         }
       });
     }, 1500);

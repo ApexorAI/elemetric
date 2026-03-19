@@ -24,15 +24,55 @@ import { sendLocalNotification } from "@/lib/notifications";
 import * as Haptics from "expo-haptics";
 import QRCode from "qrcode";
 
+// Normalised result — what the rest of the screen uses
 type AIResult = {
-relevant?: boolean;
-confidence?: number;
-detected?: string[];
-unclear?: string[];
-missing?: string[];
-action?: string;
-analysis?: string;
+  relevant?: boolean;
+  confidence?: number;
+  detected?: string[];
+  unclear?: string[];
+  missing?: string[];
+  action?: string;
+  analysis?: string;
+  risk_rating?: string;
+  liability_summary?: string;
 };
+
+// Raw server shape — server may use either naming convention
+type RawAIResult = {
+  // New field names
+  overall_confidence?: number;
+  risk_rating?: string;
+  items_detected?: string[];
+  items_missing?: string[];
+  items_unclear?: string[];
+  recommended_actions?: string;
+  liability_summary?: string;
+  // Legacy field names
+  relevant?: boolean;
+  confidence?: number;
+  detected?: string[];
+  unclear?: string[];
+  missing?: string[];
+  action?: string;
+  analysis?: string;
+};
+
+function normaliseAIResult(raw: RawAIResult): AIResult {
+  console.log("[AIReview] Raw server response fields:", Object.keys(raw));
+  const result: AIResult = {
+    relevant:          raw.relevant ?? true,
+    confidence:        raw.overall_confidence ?? raw.confidence ?? 0,
+    detected:          raw.items_detected ?? raw.detected ?? [],
+    unclear:           raw.items_unclear ?? raw.unclear ?? [],
+    missing:           raw.items_missing ?? raw.missing ?? [],
+    action:            raw.recommended_actions ?? raw.action ?? "",
+    analysis:          raw.analysis,
+    risk_rating:       raw.risk_rating,
+    liability_summary: raw.liability_summary,
+  };
+  console.log("[AIReview] Normalised result:", JSON.stringify(result));
+  return result;
+}
 
 type CurrentJob = {
 type: string;
@@ -66,13 +106,32 @@ const SIGNATURE_KEY = "elemetric_signature_svg";
 const INSTALLER_NAME_KEY = "elemetric_installer_name";
 
 const JOB_TYPE_META: Record<string, { label: string; standard: string }> = {
-  hotwater:   { label: "Hot Water System Compliance Report",  standard: "AS/NZS 3500" },
-  gas:        { label: "Gas Installation Compliance Report",  standard: "AS/NZS 5601" },
-  drainage:   { label: "Drainage Compliance Report",          standard: "AS/NZS 3500.2" },
-  newinstall: { label: "New Installation Compliance Report",  standard: "AS/NZS 3500" },
-  electrical: { label: "Electrical Compliance Report",        standard: "AS/NZS 3000" },
-  hvac:       { label: "HVAC Compliance Report",              standard: "AS/NZS 1668" },
-  carpentry:  { label: "Carpentry Documentation Report",      standard: "AS 1684" },
+  hotwater:    { label: "Hot Water System Compliance Report",   standard: "AS/NZS 3500" },
+  gas:         { label: "Gas Installation Compliance Report",   standard: "AS/NZS 5601" },
+  drainage:    { label: "Drainage Compliance Report",           standard: "AS/NZS 3500.2" },
+  newinstall:  { label: "New Installation Compliance Report",   standard: "AS/NZS 3500" },
+  woodheater:  { label: "Wood Heater Compliance Report",        standard: "AS/NZS 2918" },
+  gasheater:   { label: "Gas Heater Installation Report",       standard: "AS/NZS 5601.1" },
+  electrical:  { label: "Electrical Compliance Report",         standard: "AS/NZS 3000" },
+  powerpoint:  { label: "Power Point Installation Report",      standard: "AS/NZS 3000" },
+  lighting:    { label: "Lighting Installation Report",         standard: "AS/NZS 3000" },
+  switchboard: { label: "Switchboard Upgrade Report",           standard: "AS/NZS 3000" },
+  circuit:     { label: "Circuit Installation Report",          standard: "AS/NZS 3000" },
+  appliance:   { label: "Appliance Installation Report",        standard: "AS/NZS 3000" },
+  smokealarm:  { label: "Smoke Alarm Installation Report",      standard: "AS 3786" },
+  hvac:        { label: "HVAC Compliance Report",               standard: "AS/NZS 1668" },
+  splitsystem: { label: "Split System Installation Report",     standard: "AS/NZS 5149" },
+  ducted:      { label: "Ducted System Installation Report",    standard: "AS/NZS 1668" },
+  hvacservice: { label: "HVAC Maintenance Report",              standard: "AS/NZS 1668" },
+  ventilation: { label: "Ventilation Installation Report",      standard: "AS 1668.2" },
+  carpentry:   { label: "Carpentry Documentation Report",       standard: "AS 1684" },
+  framing:     { label: "Structural Framing Report",            standard: "AS 1684" },
+  decking:     { label: "Decking Report",                       standard: "AS 1684" },
+  pergola:     { label: "Pergola / Outdoor Structure Report",   standard: "AS 1684" },
+  door:        { label: "Door Installation Report",             standard: "AS 1684" },
+  window:      { label: "Window Installation Report",           standard: "AS 1684" },
+  flooring:    { label: "Flooring Report",                      standard: "AS 1684" },
+  fixing:      { label: "Fixing and Finishing Report",          standard: "AS 1684" },
 };
 
 
@@ -161,14 +220,30 @@ weather: parsed.weather,
 
 // Load AI result from file (written by photos.tsx runAI)
 try {
+  console.log("[AIReview] Checking for AI result file:", AI_RESULT_FILE);
   const resultInfo = await FileSystem.getInfoAsync(AI_RESULT_FILE);
+  console.log("[AIReview] AI result file exists:", resultInfo.exists);
   if (resultInfo.exists && active) {
     const rawResult = await FileSystem.readAsStringAsync(AI_RESULT_FILE, {
       encoding: FileSystem.EncodingType.UTF8,
     });
-    setDecoded(JSON.parse(rawResult));
+    console.log("[AIReview] Raw AI result string (first 300 chars):", rawResult.slice(0, 300));
+    let parsed: RawAIResult;
+    try {
+      parsed = JSON.parse(rawResult);
+    } catch (parseErr) {
+      console.error("[AIReview] JSON parse error:", parseErr);
+      throw parseErr;
+    }
+    const normalised = normaliseAIResult(parsed);
+    console.log("[AIReview] Setting decoded result — confidence:", normalised.confidence, "risk_rating:", normalised.risk_rating);
+    setDecoded(normalised);
+  } else {
+    console.warn("[AIReview] No AI result file found — decoded will be null");
   }
-} catch {}
+} catch (e) {
+  console.error("[AIReview] Error loading AI result:", e);
+}
 
 const info = await FileSystem.getInfoAsync(REVIEW_PHOTOS_FILE);
 if (info.exists && active) {
@@ -270,10 +345,14 @@ const detected = decoded?.detected ?? [];
 const unclear = decoded?.unclear ?? [];
 const missing = decoded?.missing ?? [];
 const action = decoded?.action ?? "";
+const liabilitySummary = decoded?.liability_summary ?? "";
 const showLegacyAnalysis = !!decoded?.analysis;
 
+console.log("[AIReview] Rendering — confidence:", confidence, "detected:", detected.length, "missing:", missing.length, "unclear:", unclear.length);
+
 const gaugeColor = confidence >= 80 ? "#22c55e" : confidence >= 50 ? "#f97316" : "#ef4444";
-const riskLabel = confidence >= 80 ? "LOW RISK" : confidence >= 50 ? "MEDIUM RISK" : "HIGH RISK";
+// Prefer server-supplied risk_rating if present; otherwise compute from confidence
+const riskLabel = decoded?.risk_rating?.toUpperCase() ?? (confidence >= 80 ? "LOW RISK" : confidence >= 50 ? "MEDIUM RISK" : "HIGH RISK");
 const riskBg = confidence >= 80 ? "rgba(34,197,94,0.15)" : confidence >= 50 ? "rgba(249,115,22,0.15)" : "rgba(239,68,68,0.15)";
 const riskBorderColor = confidence >= 80 ? "rgba(34,197,94,0.40)" : confidence >= 50 ? "rgba(249,115,22,0.40)" : "rgba(239,68,68,0.40)";
 
@@ -1230,6 +1309,14 @@ Alert.alert("Retry Failed", e?.message ?? "Could not connect to AI server. Check
     <Text style={styles.meansTitle}>What this means</Text>
     <Text style={styles.meansBody}>{getWhatThisMeans()}</Text>
   </View>
+
+  {/* Liability summary (from server) */}
+  {liabilitySummary ? (
+    <View style={[styles.meansCard, { borderColor: "rgba(96,165,250,0.30)", backgroundColor: "rgba(96,165,250,0.06)" }]}>
+      <Text style={[styles.meansTitle, { color: "#60a5fa" }]}>7-Year Liability Summary</Text>
+      <Text style={styles.meansBody}>{liabilitySummary}</Text>
+    </View>
+  ) : null}
 </View>
 
 {/* ── Detected Items ── */}
