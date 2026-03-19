@@ -101,29 +101,43 @@ export default function NewJob() {
     debounceRef.current = setTimeout(async () => {
       setSuggLoading(true);
       try {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=au&addressdetails=1&limit=6&q=${encodeURIComponent(text)}`;
-        const res = await fetch(url, {
-          headers: { "User-Agent": "ElemetricApp/1.0 (plumbing compliance)" },
-        });
-        const data = await res.json();
-        const items: Suggestion[] = data.map((r: any) => {
-          const p = r.address ?? {};
-          const short = [
-            p.house_number,
-            p.road,
-            p.suburb ?? p.village ?? p.town ?? p.city,
-            p.state,
-            p.postcode,
-          ].filter(Boolean).join(" ");
-          return { display: r.display_name, short: short || r.display_name };
-        });
-        setSuggestions(items);
+        const googleKey = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
+        if (googleKey) {
+          // Google Places Autocomplete — best results for Australian addresses
+          const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${googleKey}&components=country:au&language=en&types=address`;
+          const res = await fetch(url);
+          const data = await res.json();
+          const items: Suggestion[] = (data.predictions ?? []).map((p: any) => ({
+            display: p.description,
+            short: p.description,
+          }));
+          setSuggestions(items);
+        } else {
+          // Fallback: OpenStreetMap Nominatim (no API key needed)
+          const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=au&addressdetails=1&limit=6&q=${encodeURIComponent(text)}`;
+          const res = await fetch(url, {
+            headers: { "User-Agent": "ElemetricApp/1.0 (plumbing compliance)" },
+          });
+          const data = await res.json();
+          const items: Suggestion[] = data.map((r: any) => {
+            const p = r.address ?? {};
+            const short = [
+              p.house_number,
+              p.road,
+              p.suburb ?? p.village ?? p.town ?? p.city,
+              p.state,
+              p.postcode,
+            ].filter(Boolean).join(" ");
+            return { display: r.display_name, short: short || r.display_name };
+          });
+          setSuggestions(items);
+        }
       } catch {
         setSuggestions([]);
       } finally {
         setSuggLoading(false);
       }
-    }, 450);
+    }, 350);
   };
 
   const onAddrChange = (text: string) => {
@@ -264,7 +278,9 @@ export default function NewJob() {
                   </Pressable>
                 )}
               />
-              <Text style={styles.suggAttrib}>© OpenStreetMap contributors</Text>
+              <Text style={styles.suggAttrib}>
+                {process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY ? "Powered by Google" : "© OpenStreetMap contributors"}
+              </Text>
             </View>
           )}
         </View>
