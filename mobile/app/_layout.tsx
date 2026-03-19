@@ -157,12 +157,13 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: "#07152b" }}>
           <OfflineBanner />
           <Stack
             screenOptions={{
               headerShown: false,
               animation: "fade",
+              contentStyle: { backgroundColor: "#07152b" },
             }}
           />
         </View>

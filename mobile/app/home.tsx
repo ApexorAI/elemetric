@@ -1,8 +1,9 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import Svg, { Circle, Text as SvgText } from "react-native-svg";
 import { supabase } from "@/lib/supabase";
+import { SkeletonHomeCard } from "@/components/SkeletonLoader";
 
 // ── Greeting ──────────────────────────────────────────────────────────────────
 
@@ -273,8 +274,13 @@ export default function Home() {
       <View style={s.section}>
         <Text style={s.sectionLabel}>RECENT JOBS</Text>
 
-        {loading ? null : recentJobs.length > 0 ? (
-          recentJobs.map((job) => (
+        {loading ? (
+          <>
+            <SkeletonHomeCard />
+            <SkeletonHomeCard />
+          </>
+        ) : recentJobs.length > 0 ? (
+          recentJobs.slice(0, 2).map((job) => (
             <View key={job.id} style={s.jobCard}>
               <View style={s.jobIcon}>
                 <Text style={s.jobIconText}>{TYPE_ICON[job.jobType] ?? "📋"}</Text>
