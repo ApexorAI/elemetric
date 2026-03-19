@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Briefcase, Users, TrendingUp, AlertTriangle, RefreshCw, Plus, UserPlus, FileDown } from 'lucide-react'
 import { useAuth } from '../lib/auth'
+import OnboardingWizard, { ONBOARDING_KEY } from '../components/OnboardingWizard'
 
 interface DashboardData {
   team?: {
@@ -60,6 +61,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState(new Date())
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const navigate = useNavigate()
   const apiUrl = import.meta.env.VITE_API_URL
 
@@ -86,6 +88,16 @@ export default function Dashboard() {
     const interval = setInterval(fetchDashboard, 60000)
     return () => clearInterval(interval)
   }, [fetchDashboard])
+
+  // Show onboarding wizard if team has no members and onboarding not completed
+  useEffect(() => {
+    if (!loading && data && localStorage.getItem(ONBOARDING_KEY) !== '1') {
+      const memberCount = data.team?.team_members ?? 0
+      if (memberCount === 0) {
+        setShowOnboarding(true)
+      }
+    }
+  }, [loading, data])
 
   const stats = [
     {
@@ -118,6 +130,9 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      {showOnboarding && (
+        <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
+      )}
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
