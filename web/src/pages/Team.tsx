@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Users, UserPlus, X, ChevronRight, Mail, Briefcase, AlertCircle } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useAuth } from '../lib/auth'
 
 interface Member {
@@ -306,6 +307,41 @@ export default function Team() {
                     <p className="text-xs text-gray-500 mt-1">Status</p>
                   </div>
                 </div>
+              </div>
+
+              <div className="p-5 border-b border-gray-100">
+                <h4 className="font-semibold text-gray-700 text-sm mb-3">Score Trend</h4>
+                {memberJobsLoading ? (
+                  <div className="h-40 bg-gray-100 rounded-lg animate-pulse" />
+                ) : memberJobs.length < 2 ? (
+                  <p className="text-sm text-gray-400 text-center py-6">Not enough data for trend</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={160}>
+                    <LineChart
+                      data={memberJobs.slice(-8).map((job, i) => ({
+                        job: i + 1,
+                        score: job.compliance_score ?? 0,
+                      }))}
+                      margin={{ top: 4, right: 8, left: -24, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="job" tick={{ fontSize: 11 }} label={{ value: 'Job', position: 'insideBottom', offset: -2, fontSize: 11 }} />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+                      <Tooltip
+                        formatter={(value: number) => [`${value}%`, 'Score']}
+                        contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="score"
+                        stroke="#FF6B00"
+                        strokeWidth={2}
+                        dot={{ r: 3, fill: '#FF6B00' }}
+                        activeDot={{ r: 5 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </div>
 
               <div className="p-5">
