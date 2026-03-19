@@ -55,8 +55,17 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+    if (!user) return
+    try {
+      const { supabase } = await import('../lib/supabase')
+      await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user.id)
+        .eq('read', false)
+    } catch { /* silently fail */ }
   }
 
   const unreadCount = notifications.filter((n) => !n.read).length
