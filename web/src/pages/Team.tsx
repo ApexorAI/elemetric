@@ -328,7 +328,7 @@ export default function Team() {
                       <XAxis dataKey="job" tick={{ fontSize: 11 }} label={{ value: 'Job', position: 'insideBottom', offset: -2, fontSize: 11 }} />
                       <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
                       <Tooltip
-                        formatter={(value: number) => [`${value}%`, 'Score']}
+                        formatter={(value) => [`${value}%`, 'Score']}
                         contentStyle={{ fontSize: 12, borderRadius: 8 }}
                       />
                       <Line

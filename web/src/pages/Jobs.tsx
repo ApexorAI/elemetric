@@ -31,6 +31,19 @@ interface AssignJobForm {
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
 
+// Minimal type shims for Google Maps Places (loaded dynamically at runtime)
+declare namespace google {
+  namespace maps {
+    namespace places {
+      class Autocomplete {
+        constructor(input: HTMLInputElement, opts?: object)
+        addListener(event: string, handler: () => void): void
+        getPlace(): { formatted_address?: string }
+      }
+    }
+  }
+}
+
 function loadGoogleMaps(apiKey: string) {
   if (document.getElementById('google-maps-script')) return
   const script = document.createElement('script')
