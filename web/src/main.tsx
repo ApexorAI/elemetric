@@ -3,6 +3,14 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
+// Silence non-error logs in production
+if (import.meta.env.PROD) {
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  console.log = () => {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  console.warn = () => {}
+}
+
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null }
 
