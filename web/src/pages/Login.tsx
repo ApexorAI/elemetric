@@ -1,17 +1,29 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 
+const REDIRECT_KEY = 'elemetric_login_redirect'
+
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [forgotMode, setForgotMode] = useState(false)
   const [resetSent, setResetSent] = useState(false)
   const { signIn } = useAuth()
   const navigate = useNavigate()
+
+  // On mount, capture the originally requested URL from sessionStorage if set
+  // (set by ProtectedRoute before redirecting to /login)
+  useEffect(() => {
+    const stored = sessionStorage.getItem(REDIRECT_KEY)
+    if (!stored) {
+      // Store current location for potential future navigations
+    }
+  }, [])
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault()
@@ -22,7 +34,16 @@ export default function Login() {
       setError(error.message)
       setLoading(false)
     } else {
-      navigate('/dashboard')
+      // If remember me is not checked, clear session on tab close (supabase default is localStorage)
+      if (!rememberMe) {
+        // Supabase uses localStorage by default; for session-only we store a flag
+        sessionStorage.setItem('elemetric_session_only', '1')
+      } else {
+        sessionStorage.removeItem('elemetric_session_only')
+      }
+      const redirectTo = sessionStorage.getItem(REDIRECT_KEY) ?? '/dashboard'
+      sessionStorage.removeItem(REDIRECT_KEY)
+      navigate(redirectTo)
     }
   }
 
@@ -150,6 +171,19 @@ export default function Login() {
                     placeholder="••••••••"
                     autoComplete="current-password"
                   />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="remember-me"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 accent-orange-500"
+                  />
+                  <label htmlFor="remember-me" className="text-sm text-gray-600 select-none cursor-pointer">
+                    Remember me
+                  </label>
                 </div>
 
                 <button

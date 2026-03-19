@@ -1,14 +1,16 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, lazy, Suspense } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/auth'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Jobs from './pages/Jobs'
-import Team from './pages/Team'
-import Analytics from './pages/Analytics'
-import Compliance from './pages/Compliance'
-import Settings from './pages/Settings'
 import Layout from './components/Layout'
 import type { ReactNode } from 'react'
+
+const Login = lazy(() => import('./pages/Login'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Jobs = lazy(() => import('./pages/Jobs'))
+const Team = lazy(() => import('./pages/Team'))
+const Analytics = lazy(() => import('./pages/Analytics'))
+const Compliance = lazy(() => import('./pages/Compliance'))
+const Settings = lazy(() => import('./pages/Settings'))
+const Reports = lazy(() => import('./pages/Reports'))
 
 // Shown while supabase.auth.getSession() is in-flight.
 // Nothing else renders until this resolves — eliminates the race condition.
@@ -31,8 +33,12 @@ function AuthLoadingScreen() {
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user } = useAuth()
-  // loading is guaranteed false here because AppRouter only renders after init
-  if (!user) return <Navigate to="/login" replace />
+  const location = useLocation()
+  if (!user) {
+    // Store the originally requested URL so Login can redirect back after sign-in
+    sessionStorage.setItem('elemetric_login_redirect', location.pathname + location.search)
+    return <Navigate to="/login" replace />
+  }
   return <>{children}</>
 }
 
@@ -46,59 +52,69 @@ function AppRouter() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Layout><Dashboard /></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/jobs"
-          element={
-            <ProtectedRoute>
-              <Layout><Jobs /></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/team"
-          element={
-            <ProtectedRoute>
-              <Layout><Team /></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/analytics"
-          element={
-            <ProtectedRoute>
-              <Layout><Analytics /></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/compliance"
-          element={
-            <ProtectedRoute>
-              <Layout><Compliance /></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <Layout><Settings /></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Suspense fallback={<AuthLoadingScreen />}>
+        <Routes>
+          <Route path="/" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Layout><Dashboard /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/jobs"
+            element={
+              <ProtectedRoute>
+                <Layout><Jobs /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/team"
+            element={
+              <ProtectedRoute>
+                <Layout><Team /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analytics"
+            element={
+              <ProtectedRoute>
+                <Layout><Analytics /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/compliance"
+            element={
+              <ProtectedRoute>
+                <Layout><Compliance /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Layout><Settings /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute>
+                <Layout><Reports /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }
