@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Search, Filter, Download, Plus, X, ChevronLeft, ChevronRight, FileText } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import PDFViewer from '../components/PDFViewer'
@@ -27,6 +27,57 @@ interface AssignJobForm {
   scheduled_at: string
   priority: 'low' | 'medium' | 'high'
   notes: string
+}
+
+const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
+
+function loadGoogleMaps(apiKey: string) {
+  if (document.getElementById('google-maps-script')) return
+  const script = document.createElement('script')
+  script.id = 'google-maps-script'
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+  document.head.appendChild(script)
+}
+
+function AddressInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const acRef = useRef<google.maps.places.Autocomplete | null>(null)
+
+  useEffect(() => {
+    if (!GOOGLE_MAPS_KEY) return
+    loadGoogleMaps(GOOGLE_MAPS_KEY)
+
+    const tryInit = () => {
+      if (
+        inputRef.current &&
+        typeof google !== 'undefined' &&
+        google.maps?.places?.Autocomplete
+      ) {
+        acRef.current = new google.maps.places.Autocomplete(inputRef.current, {
+          types: ['address'],
+          componentRestrictions: { country: 'au' },
+        })
+        acRef.current.addListener('place_changed', () => {
+          const place = acRef.current?.getPlace()
+          if (place?.formatted_address) onChange(place.formatted_address)
+        })
+      } else {
+        setTimeout(tryInit, 500)
+      }
+    }
+    tryInit()
+  }, [onChange])
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="123 Main St, Melbourne VIC 3000"
+      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 outline-none"
+    />
+  )
 }
 
 function ScoreBadge({ score }: { score?: number }) {
@@ -80,6 +131,9 @@ export default function Jobs() {
   const [filterJobType, setFilterJobType] = useState('')
   const [filterPlumber, setFilterPlumber] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [filterDateFrom, setFilterDateFrom] = useState('')
+  const [filterDateTo, setFilterDateTo] = useState('')
+  const [filterMinScore, setFilterMinScore] = useState('')
 
   const [assignForm, setAssignForm] = useState<AssignJobForm>({
     member_id: '',
@@ -193,7 +247,11 @@ export default function Jobs() {
     const matchType = !filterJobType || job.job_type === filterJobType
     const matchPlumber = !filterPlumber || job.plumber_id === filterPlumber
     const matchStatus = !filterStatus || job.status?.toLowerCase() === filterStatus.toLowerCase()
-    return matchSearch && matchType && matchPlumber && matchStatus
+    const jobDate = job.created_at ? new Date(job.created_at) : null
+    const matchDateFrom = !filterDateFrom || (jobDate != null && jobDate >= new Date(filterDateFrom))
+    const matchDateTo = !filterDateTo || (jobDate != null && jobDate <= new Date(filterDateTo + 'T23:59:59'))
+    const matchMinScore = !filterMinScore || (job.compliance_score != null && job.compliance_score >= Number(filterMinScore))
+    return matchSearch && matchType && matchPlumber && matchStatus && matchDateFrom && matchDateTo && matchMinScore
   })
 
   const jobTypes = [...new Set(jobs.map((j) => j.job_type).filter(Boolean))]
@@ -270,9 +328,38 @@ export default function Jobs() {
             <option value="failed">Failed</option>
           </select>
 
-          {(search || filterJobType || filterPlumber || filterStatus) && (
+          <input
+            type="date"
+            value={filterDateFrom}
+            onChange={(e) => setFilterDateFrom(e.target.value)}
+            title="From date"
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 outline-none"
+          />
+
+          <input
+            type="date"
+            value={filterDateTo}
+            onChange={(e) => setFilterDateTo(e.target.value)}
+            title="To date"
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 outline-none"
+          />
+
+          <select
+            value={filterMinScore}
+            onChange={(e) => setFilterMinScore(e.target.value)}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 outline-none"
+          >
+            <option value="">Min Score</option>
+            <option value="90">90%+</option>
+            <option value="80">80%+</option>
+            <option value="70">70%+</option>
+            <option value="60">60%+</option>
+            <option value="50">50%+</option>
+          </select>
+
+          {(search || filterJobType || filterPlumber || filterStatus || filterDateFrom || filterDateTo || filterMinScore) && (
             <button
-              onClick={() => { setSearch(''); setFilterJobType(''); setFilterPlumber(''); setFilterStatus('') }}
+              onClick={() => { setSearch(''); setFilterJobType(''); setFilterPlumber(''); setFilterStatus(''); setFilterDateFrom(''); setFilterDateTo(''); setFilterMinScore('') }}
               className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
             >
               <X size={14} /> Clear
@@ -520,22 +607,28 @@ export default function Jobs() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Job Type *</label>
-                <input
-                  type="text"
+                <select
                   value={assignForm.job_type}
                   onChange={(e) => setAssignForm({ ...assignForm, job_type: e.target.value })}
-                  placeholder="e.g. Hot Water System, Gas Fitting..."
                   className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 outline-none"
-                />
+                >
+                  <option value="">Select job type...</option>
+                  <option value="Hot Water System">Hot Water System</option>
+                  <option value="Gas Fitting">Gas Fitting</option>
+                  <option value="Drainage">Drainage</option>
+                  <option value="Backflow Prevention">Backflow Prevention</option>
+                  <option value="Stormwater">Stormwater</option>
+                  <option value="Roof Plumbing">Roof Plumbing</option>
+                  <option value="Medical Gas">Medical Gas</option>
+                  <option value="Irrigation">Irrigation</option>
+                  <option value="General Plumbing">General Plumbing</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
-                <input
-                  type="text"
+                <AddressInput
                   value={assignForm.address}
-                  onChange={(e) => setAssignForm({ ...assignForm, address: e.target.value })}
-                  placeholder="123 Main St, Melbourne VIC 3000"
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 outline-none"
+                  onChange={(val) => setAssignForm((f) => ({ ...f, address: val }))}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
