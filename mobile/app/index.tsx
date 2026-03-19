@@ -22,6 +22,17 @@ export default function Entry() {
       Animated.spring(dotScale, { toValue: 1, friction: 5, tension: 80, useNativeDriver: true }).start();
     }, 400);
 
+    // Capture session via onAuthStateChange INITIAL_SESSION — fires reliably after
+    // Supabase finishes reading from AsyncStorage (avoids timing race with getSession)
+    type Session = Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"];
+    const sessionRef: { value: Session | undefined } = { value: undefined };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "INITIAL_SESSION") {
+        sessionRef.value = session;
+        console.log("[Auth] INITIAL_SESSION →", session ? "session found" : "no session");
+      }
+    });
+
     const timer = setTimeout(async () => {
       Animated.timing(opacity, { toValue: 0, duration: 280, useNativeDriver: true }).start(async () => {
         const seen = await AsyncStorage.getItem(ONBOARDING_KEY);
@@ -30,10 +41,9 @@ export default function Entry() {
           return;
         }
 
-        // Check for a persisted, valid Supabase session
-        const { data: { session } } = await supabase.auth.getSession();
+        // By now (1500ms + 280ms) INITIAL_SESSION has long since fired
+        const session = sessionRef.value;
         if (session) {
-          // Session exists — check onboarding completion
           try {
             const { data: profile } = await supabase
               .from("profiles")
@@ -45,7 +55,7 @@ export default function Entry() {
               return;
             }
           } catch {
-            // Profile fetch failed — still go home, login guard will catch real auth issues
+            // Profile fetch failed — go home, login guard will catch real auth issues
           }
           router.replace("/home");
         } else {
@@ -54,7 +64,10 @@ export default function Entry() {
       });
     }, 1500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (
