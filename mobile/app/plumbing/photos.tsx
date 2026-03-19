@@ -111,6 +111,12 @@ const [photoMap, setPhotoMap] = useState<Record<string, string[]>>({});
 const [photoMeta, setPhotoMeta] = useState<Record<string, PhotoMeta[]>>({});
 const [loading, setLoading] = useState(false);
 const [previewUri, setPreviewUri] = useState<string | null>(null);
+const [showProgress, setShowProgress] = useState(false);
+const [progressStep, setProgressStep] = useState(0);
+const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+const animDoneRef = useRef(false);
+const apiDoneRef = useRef(false);
+const doNavigateRef = useRef<(() => void) | null>(null);
 const [photo360Map, setPhoto360Map] = useState<Record<string, string[]>>({});
 const [photo360Meta, setPhoto360Meta] = useState<Record<string, PhotoMeta[]>>({});
 const [showTooltip360, setShowTooltip360] = useState(false);
@@ -475,13 +481,53 @@ mime: "image/jpeg",
 };
 };
 
+const LOADING_STEPS = [
+"Uploading your photos",
+"Checking compliance standards",
+"Analysing each photo",
+"Calculating risk rating",
+"Generating your report",
+];
+
+const startProgressAnimation = () => {
+animDoneRef.current = false;
+setShowProgress(true);
+setProgressStep(0);
+setCompletedSteps([]);
+let step = 0;
+const advance = () => {
+setCompletedSteps((prev) => [...prev, step]);
+step += 1;
+setProgressStep(step);
+if (step < LOADING_STEPS.length) {
+setTimeout(advance, 2000);
+} else {
+animDoneRef.current = true;
+if (apiDoneRef.current && doNavigateRef.current) doNavigateRef.current();
+}
+};
+setTimeout(advance, 2000);
+};
+
 const runAI = async () => {
 if (totalRequiredPhotosAdded < 2) {
-Alert.alert("More Photos Required", "Add at least 2 photos before running the AI analysis. Each checklist item should have at least one clear photo.");
+Alert.alert("More Photos Required", "Add at least 2 photos before running the AI analysis.");
 return;
 }
 
+// Show animated progress screen immediately, before API call starts
+apiDoneRef.current = false;
+animDoneRef.current = false;
+doNavigateRef.current = null;
 setLoading(true);
+startProgressAnimation();
+
+const doNavigate = () => {
+setShowProgress(false);
+setLoading(false);
+router.push({ pathname: "/plumbing/ai-review" });
+};
+doNavigateRef.current = doNavigate;
 
 try {
 const reviewPhotos: ReviewPhoto[] = [];
@@ -608,11 +654,13 @@ throw new Error(json?.error || json?.details || "AI request failed");
 await FileSystem.writeAsStringAsync(AI_RESULT_FILE, JSON.stringify(json), {
   encoding: FileSystem.EncodingType.UTF8,
 });
-router.push({ pathname: "/plumbing/ai-review" });
+// API done — navigate now if animation also done, else let animation trigger it
+apiDoneRef.current = true;
+if (animDoneRef.current) doNavigate();
 } catch (e: any) {
-Alert.alert("AI Analysis Failed", e?.message ?? "Could not analyse your photos. Check your internet connection and try again. If the problem persists, try retaking photos with better lighting.");
-} finally {
+setShowProgress(false);
 setLoading(false);
+Alert.alert("AI Analysis Failed", e?.message ?? "Could not analyse your photos. Check your internet connection and try again. If the problem persists, try retaking photos with better lighting.");
 }
 };
 
@@ -629,6 +677,32 @@ const { width: SCREEN_W } = Dimensions.get("window");
 
 return (
 <View style={styles.screen}>
+{/* AI Progress overlay — shows immediately on Run AI tap */}
+<Modal visible={showProgress} transparent animationType="fade">
+<View style={styles.progressOverlay}>
+<Text style={styles.progressBrand}>ELEMETRIC</Text>
+<Text style={styles.progressTitle}>Analysing your photos</Text>
+<Text style={styles.progressSub}>Checking against Australian Standards</Text>
+<View style={styles.progressStepList}>
+{LOADING_STEPS.map((step, i) => {
+const done = completedSteps.includes(i);
+const active = i === progressStep && !done;
+return (
+<View key={i} style={styles.progressStepRow}>
+<View style={[styles.progressDot, done ? styles.progressDotDone : active ? styles.progressDotActive : styles.progressDotPending]}>
+{done && <Text style={styles.progressDotCheck}>✓</Text>}
+{active && <ActivityIndicator size="small" color="#07152b" />}
+</View>
+<Text style={[styles.progressStepText, done ? styles.progressTextDone : active ? styles.progressTextActive : styles.progressTextPending]}>
+{step}
+</Text>
+</View>
+);
+})}
+</View>
+</View>
+</Modal>
+
 {/* Zoom preview modal */}
 <Modal visible={!!previewUri} transparent animationType="fade" onRequestClose={() => setPreviewUri(null)}>
 <Pressable style={styles.modalOverlay} onPress={() => setPreviewUri(null)}>
@@ -1227,4 +1301,31 @@ fontSize: 11,
     alignItems: "center",
   },
   wideShotBtnText: { color: "#f97316", fontWeight: "800", fontSize: 14 },
+
+  // Progress overlay
+  progressOverlay: {
+    flex: 1,
+    backgroundColor: "#07152b",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 32,
+  },
+  progressBrand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginBottom: 32 },
+  progressTitle: { color: "white", fontSize: 22, fontWeight: "900", textAlign: "center", marginBottom: 8 },
+  progressSub: { color: "rgba(255,255,255,0.45)", fontSize: 13, textAlign: "center", marginBottom: 40 },
+  progressStepList: { width: "100%", gap: 16 },
+  progressStepRow: { flexDirection: "row", alignItems: "center", gap: 14 },
+  progressDot: {
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
+  },
+  progressDotDone: { backgroundColor: "#22c55e" },
+  progressDotActive: { backgroundColor: "#f97316" },
+  progressDotPending: { backgroundColor: "rgba(255,255,255,0.10)" },
+  progressDotCheck: { color: "white", fontWeight: "900", fontSize: 14 },
+  progressStepText: { fontSize: 15, fontWeight: "600", flex: 1 },
+  progressTextDone: { color: "#22c55e" },
+  progressTextActive: { color: "white" },
+  progressTextPending: { color: "rgba(255,255,255,0.35)" },
 });
