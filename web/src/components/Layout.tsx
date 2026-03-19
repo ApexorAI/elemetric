@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   HelpCircle,
+  FileText,
 } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import NotificationBell from './NotificationBell'
@@ -21,6 +22,7 @@ const navItems = [
   { to: '/team', label: 'Team', icon: Users },
   { to: '/analytics', label: 'Analytics', icon: BarChart2 },
   { to: '/compliance', label: 'Compliance', icon: Shield },
+  { to: '/reports', label: 'Reports', icon: FileText },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
