@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, memo } from 'react'
 import { Search, Filter, Download, Plus, X, ChevronLeft, ChevronRight, FileText } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import PDFViewer from '../components/PDFViewer'
@@ -80,7 +80,7 @@ function AddressInput({ value, onChange }: { value: string; onChange: (v: string
   )
 }
 
-function ScoreBadge({ score }: { score?: number }) {
+const ScoreBadge = memo(function ScoreBadge({ score }: { score?: number }) {
   if (score == null) return <span className="text-gray-400 text-xs">—</span>
   const color = score >= 80 ? '#16a34a' : score >= 60 ? '#d97706' : '#dc2626'
   const bg = score >= 80 ? '#f0fdf4' : score >= 60 ? '#fffbeb' : '#fef2f2'
@@ -92,7 +92,7 @@ function ScoreBadge({ score }: { score?: number }) {
       {score}%
     </span>
   )
-}
+})
 
 function StatusBadge({ status }: { status?: string }) {
   const s = status?.toLowerCase() ?? 'unknown'

@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation, lazy, Suspense } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/auth'
+import { ToastProvider } from './lib/toast'
+import ErrorBoundary from './components/ErrorBoundary'
 import Layout from './components/Layout'
 import type { ReactNode } from 'react'
 
@@ -121,8 +123,12 @@ function AppRouter() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppRouter />
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <ErrorBoundary>
+          <AppRouter />
+        </ErrorBoundary>
+      </AuthProvider>
+    </ToastProvider>
   )
 }

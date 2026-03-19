@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, memo } from 'react'
 import { Users, UserPlus, X, ChevronRight, Mail, Briefcase, AlertCircle } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useAuth } from '../lib/auth'
@@ -23,7 +23,7 @@ interface MemberJob {
   status?: string
 }
 
-function ScoreRing({ score }: { score?: number }) {
+const ScoreRing = memo(function ScoreRing({ score }: { score?: number }) {
   const s = score ?? 0
   const color = s >= 80 ? '#16a34a' : s >= 60 ? '#d97706' : '#dc2626'
   const r = 18
@@ -53,7 +53,7 @@ function ScoreRing({ score }: { score?: number }) {
       </span>
     </div>
   )
-}
+})
 
 export default function Team() {
   const { session, profile } = useAuth()
