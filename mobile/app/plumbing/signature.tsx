@@ -43,6 +43,7 @@ export default function SignatureScreen() {
   const [savedPreview, setSavedPreview] = useState<string | null>(null);
   const [showingPreview, setShowingPreview] = useState(false);
 
+  const [scrollEnabled, setScrollEnabled] = useState(true);
   const drawingRef = useRef(false);
   const strokeRef = useRef<Stroke>([]);
 
@@ -90,6 +91,7 @@ export default function SignatureScreen() {
         onMoveShouldSetPanResponder: () => true,
 
         onPanResponderGrant: (evt) => {
+          setScrollEnabled(false);
           const { locationX, locationY } = evt.nativeEvent;
           const point = clampPoint(locationX, locationY);
           drawingRef.current = true;
@@ -106,8 +108,8 @@ export default function SignatureScreen() {
           setCurrentStroke(nextStroke);
         },
 
-        onPanResponderRelease: finishStroke,
-        onPanResponderTerminate: finishStroke,
+        onPanResponderRelease: () => { setScrollEnabled(true); finishStroke(); },
+        onPanResponderTerminate: () => { setScrollEnabled(true); finishStroke(); },
       }),
     [padWidth, padHeight]
   );
@@ -187,6 +189,7 @@ export default function SignatureScreen() {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
+      scrollEnabled={scrollEnabled}
     >
       <Text style={styles.brand}>ELEMETRIC</Text>
       <Text style={styles.title}>Add Signature</Text>

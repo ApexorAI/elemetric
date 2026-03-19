@@ -26,6 +26,7 @@ export default function ClientSignatureScreen() {
   const [padWidth, setPadWidth] = useState(320);
   const [padHeight, setPadHeight] = useState(180);
 
+  const [scrollEnabled, setScrollEnabled] = useState(true);
   const drawingRef = useRef(false);
   const strokeRef = useRef<Stroke>([]);
 
@@ -54,6 +55,7 @@ export default function ClientSignatureScreen() {
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
         onPanResponderGrant: (evt) => {
+          setScrollEnabled(false);
           const { locationX, locationY } = evt.nativeEvent;
           const point = clampPoint(locationX, locationY);
           drawingRef.current = true;
@@ -68,8 +70,8 @@ export default function ClientSignatureScreen() {
           strokeRef.current = nextStroke;
           setCurrentStroke(nextStroke);
         },
-        onPanResponderRelease: () => finishStroke(),
-        onPanResponderTerminate: () => finishStroke(),
+        onPanResponderRelease: () => { setScrollEnabled(true); finishStroke(); },
+        onPanResponderTerminate: () => { setScrollEnabled(true); finishStroke(); },
       }),
     [padWidth, padHeight]
   );
@@ -115,7 +117,7 @@ export default function ClientSignatureScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.body}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.body} scrollEnabled={scrollEnabled}>
       <Text style={styles.brand}>ELEMETRIC</Text>
       <Text style={styles.title}>Client Signature</Text>
       <Text style={styles.subtitle}>
