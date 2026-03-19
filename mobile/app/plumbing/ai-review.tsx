@@ -1136,8 +1136,56 @@ return (
 
 <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
 {!decoded ? (
-<View style={styles.card}>
-<Text style={styles.dim}>No AI result found.</Text>
+<View style={styles.emptyState}>
+<Text style={styles.emptyIcon}>⏱</Text>
+<Text style={styles.emptyTitle}>Analysis took too long — tap to try again</Text>
+<Text style={styles.emptySub}>
+Check your internet connection, then retry with the same photos. The AI needs clear, well-lit photos to analyse.
+</Text>
+<Pressable
+style={styles.retryBtn}
+onPress={async () => {
+try {
+const info = await FileSystem.getInfoAsync(REVIEW_PHOTOS_FILE);
+if (!info.exists) {
+Alert.alert("No Photos", "Go back and add photos before retrying.");
+return;
+}
+const rawPhotos = await FileSystem.readAsStringAsync(REVIEW_PHOTOS_FILE, {
+encoding: FileSystem.EncodingType.UTF8,
+});
+const photos = JSON.parse(rawPhotos) as ReviewPhoto[];
+const images = photos
+.filter((p) => p.base64 && p.mime)
+.map((p) => ({ mime: p.mime, data: p.base64, label: p.label }));
+if (images.length < 2) {
+Alert.alert("Not Enough Photos", "Go back and add at least 2 photos.");
+return;
+}
+const res = await fetch(`${API_BASE}/review`, {
+method: "POST",
+headers: {
+"Content-Type": "application/json",
+"X-Elemetric-Key": process.env.EXPO_PUBLIC_ELEMETRIC_API_KEY ?? "",
+},
+body: JSON.stringify({ type: currentJob.type, images }),
+});
+const json = await res.json();
+if (!res.ok) throw new Error(json?.error ?? "AI request failed");
+await FileSystem.writeAsStringAsync(AI_RESULT_FILE, JSON.stringify(json), {
+encoding: FileSystem.EncodingType.UTF8,
+});
+setDecoded(json);
+} catch (e: any) {
+Alert.alert("Retry Failed", e?.message ?? "Could not connect to AI server. Check your internet and try again.");
+}
+}}
+>
+<Text style={styles.retryBtnText}>Retry Analysis →</Text>
+</Pressable>
+<Pressable onPress={() => router.back()} style={{ marginTop: 16, alignItems: "center" }}>
+<Text style={{ color: "rgba(255,255,255,0.45)", fontWeight: "700" }}>← Go Back</Text>
+</Pressable>
 </View>
 ) : (
 <>
@@ -1830,6 +1878,36 @@ fontSize: 12,
 back: { marginTop: 6, alignItems: "center" },
 backText: { color: "rgba(255,255,255,0.75)", fontWeight: "700" },
 dim: { color: "rgba(255,255,255,0.6)", marginTop: 10, textAlign: "center" },
+emptyState: {
+  alignItems: "center",
+  paddingVertical: 48,
+  paddingHorizontal: 24,
+  gap: 12,
+},
+emptyIcon: { fontSize: 52, marginBottom: 8 },
+emptyTitle: {
+  color: "white",
+  fontSize: 20,
+  fontWeight: "900",
+  textAlign: "center",
+  lineHeight: 28,
+},
+emptySub: {
+  color: "rgba(255,255,255,0.55)",
+  fontSize: 14,
+  textAlign: "center",
+  lineHeight: 21,
+},
+retryBtn: {
+  marginTop: 8,
+  backgroundColor: "#f97316",
+  borderRadius: 14,
+  height: 52,
+  paddingHorizontal: 28,
+  alignItems: "center",
+  justifyContent: "center",
+},
+retryBtnText: { color: "#07152b", fontWeight: "900", fontSize: 15 },
 gaugeCard: {
   borderRadius: 20,
   borderWidth: 1,
