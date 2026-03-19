@@ -309,6 +309,7 @@ export default function CarpentryChecklist() {
   // Job
   const [jobName, setJobName] = useState("Untitled Job");
   const [jobAddr, setJobAddr] = useState("No address");
+  const [jobType, setJobType] = useState("carpentry");
 
   // Carpenter details
   const [carpenterLicence, setCarpenterLicence] = useState("");
@@ -350,6 +351,7 @@ export default function CarpentryChecklist() {
             const j = JSON.parse(raw);
             setJobName(j.jobName || "Untitled Job");
             setJobAddr(j.jobAddr  || "No address");
+            setJobType(j.type    || "carpentry");
           }
         } catch {}
         try {
@@ -679,7 +681,7 @@ ${allPhotoMeta.length > 0 ? `
           const confidence = CHECKS.length > 0 ? Math.round((passCount / CHECKS.length) * 100) : 0;
           await supabase.from("jobs").insert({
             user_id: user.id,
-            job_type: "carpentry",
+            job_type: jobType,
             job_name: jobName,
             job_addr: jobAddr,
             confidence: aiResult?.confidence ?? confidence,
