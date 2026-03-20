@@ -328,6 +328,20 @@ return (
 
 {/* Account */}
 <Text style={styles.sectionLabel}>ACCOUNT</Text>
+
+{/* Avatar row */}
+<View style={styles.avatarRow}>
+  <View style={styles.avatar}>
+    <Text style={styles.avatarInitial}>
+      {fullName ? fullName.trim()[0].toUpperCase() : (email ? email[0].toUpperCase() : "?")}
+    </Text>
+  </View>
+  <View>
+    <Text style={styles.avatarName}>{fullName || "Your Account"}</Text>
+    <Text style={styles.avatarEmail} numberOfLines={1}>{email || "—"}</Text>
+  </View>
+</View>
+
 <View style={styles.group}>
 {fullName ? (
 <>
@@ -597,6 +611,26 @@ header: { paddingTop: 20, paddingHorizontal: 20, paddingBottom: 12 },
 brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
 title: { marginTop: 8, color: "white", fontSize: 22, fontWeight: "900" },
 body: { paddingHorizontal: 20, paddingBottom: 60 },
+avatarRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 14,
+  paddingHorizontal: 20,
+  paddingVertical: 16,
+  borderBottomWidth: 1,
+  borderBottomColor: "rgba(255,255,255,0.06)",
+},
+avatar: {
+  width: 52,
+  height: 52,
+  borderRadius: 26,
+  backgroundColor: "#f97316",
+  alignItems: "center",
+  justifyContent: "center",
+},
+avatarInitial: { color: "#07152b", fontSize: 22, fontWeight: "900" },
+avatarName: { color: "white", fontWeight: "700", fontSize: 16 },
+avatarEmail: { color: "rgba(255,255,255,0.45)", fontSize: 13, marginTop: 2, maxWidth: 260 },
 
 sectionLabel: {
 color: "#f97316",
