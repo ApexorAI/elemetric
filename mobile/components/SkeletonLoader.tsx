@@ -33,7 +33,7 @@ export function SkeletonBox({ width = "100%", height = 16, borderRadius = 8, sty
   );
 }
 
-export function SkeletonJobCard() {
+export const SkeletonJobCard = React.memo(function SkeletonJobCard() {
   return (
     <View style={styles.card}>
       <View style={styles.cardTop}>
@@ -51,9 +51,9 @@ export function SkeletonJobCard() {
       </View>
     </View>
   );
-}
+});
 
-export function SkeletonProfileCard() {
+export const SkeletonProfileCard = React.memo(function SkeletonProfileCard() {
   return (
     <View style={styles.card}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -66,9 +66,9 @@ export function SkeletonProfileCard() {
       </View>
     </View>
   );
-}
+});
 
-export function SkeletonHomeCard() {
+export const SkeletonHomeCard = React.memo(function SkeletonHomeCard() {
   return (
     <View style={styles.card}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -81,9 +81,9 @@ export function SkeletonHomeCard() {
       </View>
     </View>
   );
-}
+});
 
-export function SkeletonTimelineCard() {
+export const SkeletonTimelineCard = React.memo(function SkeletonTimelineCard() {
   return (
     <View style={[styles.card, { borderLeftWidth: 4, borderLeftColor: "rgba(255,255,255,0.1)" }]}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
@@ -101,7 +101,7 @@ export function SkeletonTimelineCard() {
       <SkeletonBox width="40%" height={15} style={{ marginTop: 8 }} />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   skeleton: {
