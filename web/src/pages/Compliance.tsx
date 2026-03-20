@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Shield, AlertTriangle, Search, Filter, X, Bell } from 'lucide-react'
+import { Shield, AlertTriangle, Search, Filter, X, Bell, RefreshCw, AlertCircle } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { useAuth } from '../lib/auth'
+import { supabase } from '../lib/supabase'
 
 interface ComplianceStats {
   total_jobs?: number
@@ -46,6 +47,17 @@ interface RegulatoryUpdate {
   source?: string
 }
 
+interface NearMiss {
+  id: string
+  job_type?: string
+  suburb?: string
+  address?: string
+  compliance_score?: number
+  created_at?: string
+  missing?: string[]
+  issues?: string[]
+}
+
 interface ComplianceData {
   stats?: ComplianceStats
   risk_alerts?: RiskAlert[]
@@ -62,6 +74,8 @@ export default function Compliance() {
   const [filterPlumber, setFilterPlumber] = useState('')
   const [regulatoryUpdates, setRegulatoryUpdates] = useState<RegulatoryUpdate[]>([])
   const [regulatoryLoading, setRegulatoryLoading] = useState(false)
+  const [nearMisses, setNearMisses] = useState<NearMiss[]>([])
+  const [nearMissLoading, setNearMissLoading] = useState(false)
   const apiUrl = import.meta.env.VITE_API_URL
 
   const fetchCompliance = useCallback(async () => {
@@ -110,8 +124,31 @@ export default function Compliance() {
     }
   }, [session, profile?.team_id, apiUrl])
 
+  // Fetch near miss reports directly from Supabase: jobs with score 60–70 (near the fail threshold)
+  const fetchNearMisses = useCallback(async () => {
+    if (!profile?.team_id) return
+    setNearMissLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('analyses')
+        .select('id, job_type, suburb, address, compliance_score, created_at, missing, issues')
+        .eq('team_id', profile.team_id)
+        .gte('compliance_score', 60)
+        .lt('compliance_score', 70)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      if (error) throw error
+      setNearMisses((data ?? []) as NearMiss[])
+    } catch {
+      // silently fail — near miss section is non-critical
+    } finally {
+      setNearMissLoading(false)
+    }
+  }, [profile?.team_id])
+
   useEffect(() => { fetchCompliance() }, [fetchCompliance])
   useEffect(() => { fetchRegulatoryUpdates() }, [fetchRegulatoryUpdates])
+  useEffect(() => { fetchNearMisses() }, [fetchNearMisses])
 
   const stats = data?.stats
   const alerts = data?.risk_alerts ?? []
@@ -145,8 +182,14 @@ export default function Compliance() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-6 text-sm">
-          {error}
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-6 text-sm flex items-center justify-between gap-3">
+          <span>{error}</span>
+          <button
+            onClick={fetchCompliance}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-xs font-medium transition-colors flex-shrink-0"
+          >
+            <RefreshCw size={12} /> Retry
+          </button>
         </div>
       )}
 
@@ -418,6 +461,66 @@ export default function Compliance() {
                     }}
                   >
                     {cert.status ?? 'unknown'}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Near Miss Reports */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mt-6">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-gray-800">Near Miss Reports</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Jobs scoring 60–69% — just above the compliance threshold</p>
+          </div>
+          {nearMisses.length > 0 && (
+            <span
+              className="text-xs px-2 py-0.5 rounded-full font-semibold text-white"
+              style={{ backgroundColor: '#d97706' }}
+            >
+              {nearMisses.length}
+            </span>
+          )}
+        </div>
+        <div className="divide-y divide-gray-50">
+          {nearMissLoading ? (
+            <div className="p-4 space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-14 bg-gray-100 rounded-lg animate-pulse" />
+              ))}
+            </div>
+          ) : nearMisses.length === 0 ? (
+            <div className="p-8 text-center">
+              <Shield size={28} className="mx-auto text-green-300 mb-2" />
+              <p className="text-sm text-gray-500">No near miss reports — your team is scoring comfortably above threshold</p>
+            </div>
+          ) : (
+            nearMisses.map((nm) => (
+              <div key={nm.id} className="px-4 py-3">
+                <div className="flex items-start gap-3">
+                  <AlertCircle size={16} className="flex-shrink-0 mt-0.5" style={{ color: '#d97706' }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800">
+                      {nm.job_type ?? 'Unknown job type'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {nm.suburb ?? nm.address ?? '—'}
+                      {nm.created_at && ` · ${new Date(nm.created_at).toLocaleDateString()}`}
+                    </p>
+                    {nm.missing && nm.missing.length > 0 && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        Missing: {nm.missing.slice(0, 3).join(', ')}
+                      </p>
+                    )}
+                  </div>
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-full font-semibold flex-shrink-0"
+                    style={{ backgroundColor: '#fffbeb', color: '#d97706' }}
+                  >
+                    {nm.compliance_score}%
                   </span>
                 </div>
               </div>
