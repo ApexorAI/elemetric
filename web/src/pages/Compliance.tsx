@@ -65,7 +65,10 @@ export default function Compliance() {
   const apiUrl = import.meta.env.VITE_API_URL
 
   const fetchCompliance = useCallback(async () => {
-    if (!session || !profile?.team_id) return
+    if (!session || !profile?.team_id) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     try {

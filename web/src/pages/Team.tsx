@@ -73,7 +73,10 @@ export default function Team() {
   const apiUrl = import.meta.env.VITE_API_URL
 
   const fetchMembers = useCallback(async () => {
-    if (!session || !profile?.team_id) return
+    if (!session || !profile?.team_id) {
+      setLoading(false)
+      return
+    }
     try {
       setLoading(true)
       setError(null)

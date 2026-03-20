@@ -28,7 +28,17 @@ export default function Settings() {
     address: '',
   })
 
-  const [notifications, setNotifications] = useState({
+  const NOTIF_KEY = 'elemetric_notif_prefs'
+  const savedNotifPrefs = (() => {
+    try { return JSON.parse(localStorage.getItem(NOTIF_KEY) ?? 'null') } catch { return null }
+  })()
+
+  const [notifications, setNotifications] = useState<{
+    job_completed: boolean
+    compliance_alert: boolean
+    team_invite: boolean
+    weekly_summary: boolean
+  }>(savedNotifPrefs ?? {
     job_completed: true,
     compliance_alert: true,
     team_invite: true,
@@ -293,7 +303,16 @@ export default function Settings() {
                 <button
                   className="px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
                   style={{ backgroundColor: '#FF6B00' }}
-                  onClick={() => { setSaveSuccess(true); setTimeout(() => setSaveSuccess(false), 2000) }}
+                  onClick={async () => {
+                    // Persist to localStorage
+                    localStorage.setItem(NOTIF_KEY, JSON.stringify(notifications))
+                    // Attempt to persist to Supabase (gracefully fails if column doesn't exist)
+                    if (profile) {
+                      supabase.from('profiles').update({ notification_prefs: notifications } as never).eq('id', profile.id).then(() => {})
+                    }
+                    setSaveSuccess(true)
+                    setTimeout(() => setSaveSuccess(false), 2000)
+                  }}
                 >
                   Save Preferences
                 </button>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Briefcase, Users, TrendingUp, AlertTriangle, RefreshCw, Plus, UserPlus, FileDown } from 'lucide-react'
+import { Briefcase, Users, TrendingUp, AlertTriangle, RefreshCw, Plus, UserPlus, FileDown, Building2 } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import OnboardingWizard, { ONBOARDING_KEY } from '../components/OnboardingWizard'
 
@@ -66,7 +66,10 @@ export default function Dashboard() {
   const apiUrl = import.meta.env.VITE_API_URL
 
   const fetchDashboard = useCallback(async () => {
-    if (!session || !profile?.team_id) return
+    if (!session || !profile?.team_id) {
+      setLoading(false)
+      return
+    }
     try {
       setError(null)
       const res = await fetch(`${apiUrl}/employer/portal/${profile.team_id}`, {
@@ -127,6 +130,25 @@ export default function Dashboard() {
       color: '#d97706',
     },
   ]
+
+  // No team assigned — show helpful guidance instead of broken empty state
+  if (!loading && !profile?.team_id) {
+    return (
+      <div className="p-6 max-w-xl mx-auto mt-16 text-center">
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+          style={{ backgroundColor: '#FF6B0018' }}
+        >
+          <Building2 size={28} style={{ color: '#FF6B00' }} />
+        </div>
+        <h2 className="text-xl font-bold text-gray-800 mb-2">No team linked to your account</h2>
+        <p className="text-gray-500 text-sm leading-relaxed">
+          Your employer account isn't associated with a team yet. This usually means your account is still being set up.
+          Contact <a href="mailto:support@elemetric.com.au" className="underline" style={{ color: '#FF6B00' }}>support@elemetric.com.au</a> to get your team connected.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto">

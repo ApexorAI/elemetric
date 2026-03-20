@@ -160,7 +160,10 @@ export default function Jobs() {
   const apiUrl = import.meta.env.VITE_API_URL
 
   const fetchJobs = useCallback(async () => {
-    if (!session || !profile?.team_id) return
+    if (!session || !profile?.team_id) {
+      setLoading(false)
+      return
+    }
     try {
       setLoading(true)
       setError(null)
