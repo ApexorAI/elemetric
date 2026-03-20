@@ -143,9 +143,28 @@ export default function RootLayout() {
     });
 
     // Handle incoming deep links while app is open
+    // Supports: elemetric://job/:id, elemetric://employer/dashboard,
+    //           elemetric://invite/:code, elemetric://ref/:code
     const linkSub = Linking.addEventListener("url", ({ url }) => {
-      if (url.includes("job")) router.push("/plumbing/jobs");
-      else if (url.includes("notification")) router.push("/notifications");
+      try {
+        const { path } = Linking.parse(url);
+        if (!path) return;
+        if (path.startsWith("job/")) {
+          router.push("/plumbing/jobs");
+        } else if (path === "employer/dashboard") {
+          router.push("/employer-dashboard");
+        } else if (path.startsWith("invite/")) {
+          router.push("/referral");
+        } else if (path.startsWith("ref/")) {
+          router.push("/referral");
+        } else if (path.includes("job")) {
+          router.push("/plumbing/jobs");
+        } else if (path.includes("notification")) {
+          router.push("/notifications");
+        }
+      } catch {
+        // Malformed deep link — ignore
+      }
     });
 
     return () => {
