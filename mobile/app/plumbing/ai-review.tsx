@@ -960,13 +960,23 @@ ${pipeSize ? `<tr><td style="padding:7px 10px;border:1px solid #e5e7eb;font-fami
 
 <hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
 
-<div style="margin-bottom: 18px; border: 1px solid #e5e7eb; padding: 16px; background: #f9fafb;">
-<div style="font-family:Helvetica,Arial,sans-serif;font-size: 19px; font-weight: bold; margin-bottom: 10px;">AI Review Summary</div>
-<div style="font-size: 34px; font-weight: bold; color: #111827;">${confidence}%</div>
-<div style="margin-top: 8px;"><strong>Status:</strong> ${statusText}</div>
-<div style="margin-top: 8px;"><strong>Recommended Action:</strong> ${
-action || "No action provided."
-}</div>
+<div style="margin-bottom:18px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+  <div style="background:#07152b;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:900;color:white;">AI Review Summary</div>
+    <div style="background:${coverBadgeColor}22;border:1px solid ${coverBadgeColor}66;border-radius:20px;padding:5px 14px;font-family:Helvetica,Arial,sans-serif;font-size:12px;font-weight:900;color:${coverBadgeColor};letter-spacing:1px;">${riskLabel}</div>
+  </div>
+  <div style="padding:16px;background:#f9fafb;">
+    <div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:12px;">
+      <div style="font-size:52px;font-weight:900;color:${coverBadgeColor};line-height:1;">${confidence}%</div>
+      <div style="font-size:13px;color:#6b7280;padding-bottom:8px;">AI Confidence Score</div>
+    </div>
+    <div style="display:flex;gap:20px;margin-bottom:12px;">
+      <div style="text-align:center;"><div style="font-size:22px;font-weight:900;color:#16a34a;">${detected.length}</div><div style="font-size:11px;color:#6b7280;">Detected</div></div>
+      <div style="text-align:center;"><div style="font-size:22px;font-weight:900;color:#d97706;">${unclear.length}</div><div style="font-size:11px;color:#6b7280;">Unclear</div></div>
+      <div style="text-align:center;"><div style="font-size:22px;font-weight:900;color:#dc2626;">${missing.length}</div><div style="font-size:11px;color:#6b7280;">Missing</div></div>
+    </div>
+    ${action ? `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:10px 12px;font-family:Helvetica,Arial,sans-serif;font-size:12px;color:#9a3412;line-height:1.5;"><strong>Recommended Action:</strong> ${action}</div>` : ""}
+  </div>
 </div>
 
 <hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
@@ -1057,16 +1067,27 @@ ${clientSignatureSvg ? `
 
 <div style="margin-bottom:18px;page-break-inside:avoid;">
 <div style="font-size:19px;font-weight:bold;margin-bottom:6px;">Tamper-Evident Photo Record</div>
-<div style="font-size:11px;color:#6b7280;margin-bottom:10px;">Each photo hash can be used to verify this image has not been modified since capture.</div>
+<div style="font-size:11px;color:#6b7280;margin-bottom:10px;">Each SHA-256 hash verifies this image has not been modified since capture. GPS coordinates confirm on-site capture location.</div>
 <table style="width:100%;border-collapse:collapse;font-size:11px;">
-<thead><tr style="background:#f3f4f6;"><th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;">Photo Label</th><th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;">Captured At</th><th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;word-break:break-all;">SHA-256 Hash</th></tr></thead>
+<thead><tr style="background:#f3f4f6;"><th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;">Photo</th><th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;">Captured At</th><th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;">GPS</th><th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;word-break:break-all;">SHA-256</th></tr></thead>
 <tbody>
-${reviewPhotos.map((p) => `<tr><td style="padding:6px 8px;border:1px solid #e5e7eb;font-weight:600;">${p.label}</td><td style="padding:6px 8px;border:1px solid #e5e7eb;white-space:nowrap;">${p.capturedAt ? new Date(p.capturedAt).toLocaleString("en-AU") : "—"}</td><td style="padding:6px 8px;border:1px solid #e5e7eb;font-family:monospace;word-break:break-all;font-size:9px;">${p.hash || "—"}</td></tr>`).join("")}
+${reviewPhotos.map((p, idx) => `<tr style="background:${idx % 2 === 0 ? "#fff" : "#fafafa"};"><td style="padding:6px 8px;border:1px solid #e5e7eb;font-weight:600;">${p.label}</td><td style="padding:6px 8px;border:1px solid #e5e7eb;white-space:nowrap;">${p.capturedAt ? new Date(p.capturedAt).toLocaleString("en-AU") : "—"}</td><td style="padding:6px 8px;border:1px solid #e5e7eb;font-size:10px;font-family:monospace;">${p.gps ? `${p.gps.lat.toFixed(5)}, ${p.gps.lng.toFixed(5)}` : "—"}</td><td style="padding:6px 8px;border:1px solid #e5e7eb;font-family:monospace;word-break:break-all;font-size:9px;">${p.hash || "—"}</td></tr>`).join("")}
 </tbody>
 </table>
 </div>
 
-<div style="margin-top:24px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;color:#6b7280;line-height:1.6;font-family:Helvetica,Arial,sans-serif;"><strong style="color:#374151;">Compliance Disclaimer:</strong> Generated by Elemetric on ${reportDate}. This report is a documentation aid only. Elemetric Pty Ltd accepts no liability for the accuracy of work described herein. Compliance responsibility rests solely with the licensed tradesperson.</div>
+${liabilitySummary ? `
+<div style="margin-bottom:18px;page-break-inside:avoid;background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid #3b82f6;border-radius:0 8px 8px 0;padding:16px;">
+  <div style="font-size:14px;font-weight:900;color:#1e40af;margin-bottom:8px;font-family:Helvetica,Arial,sans-serif;">🛡 7-Year Liability Summary</div>
+  <div style="font-size:13px;color:#1e3a8a;line-height:1.6;font-family:Helvetica,Arial,sans-serif;">${liabilitySummary}</div>
+</div>
+` : ""}
+
+<div style="margin-top:24px;padding:14px 16px;background:#07152b;border-radius:8px;font-size:11px;color:rgba(255,255,255,0.65);line-height:1.7;font-family:Helvetica,Arial,sans-serif;">
+  <div style="color:#f97316;font-weight:900;font-size:12px;margin-bottom:6px;letter-spacing:0.5px;">ELEMETRIC — 7-YEAR LIABILITY RECORD</div>
+  <div>This compliance report forms part of the 7-year liability documentation record required under Australian building regulations. Retain this document for the full 7-year liability period.</div>
+  <div style="margin-top:6px;color:rgba(255,255,255,0.40);">Generated by Elemetric · ${reportDate} · This report is a documentation aid only. Compliance responsibility rests solely with the licensed tradesperson named above. Elemetric Pty Ltd accepts no liability for the accuracy of work described herein.</div>
+</div>
 </div>
 </body>
 </html>
