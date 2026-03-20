@@ -147,6 +147,14 @@ jobName: "Untitled Job",
 jobAddr: "No address",
 });
 
+// ── Debug panel state ────────────────────────────────────────────────────────
+const [debugInfo, setDebugInfo] = useState<{
+  fileExists: boolean | null;
+  rawLength: number | null;
+  preview: string | null;
+  error: string | null;
+}>({ fileExists: null, rawLength: null, preview: null, error: null });
+
 const [reviewPhotos, setReviewPhotos] = useState<ReviewPhoto[]>([]);
 const [expanded, setExpanded] = useState(false);
 const [saving, setSaving] = useState(false);
@@ -223,26 +231,47 @@ try {
   console.log("[AIReview] Checking for AI result file:", AI_RESULT_FILE);
   const resultInfo = await FileSystem.getInfoAsync(AI_RESULT_FILE);
   console.log("[AIReview] AI result file exists:", resultInfo.exists);
-  if (resultInfo.exists && active) {
+
+  if (!resultInfo.exists) {
+    console.warn("[AIReview] No AI result file found — decoded will be null");
+    if (active) setDebugInfo({ fileExists: false, rawLength: null, preview: null, error: null });
+  } else if (active) {
     const rawResult = await FileSystem.readAsStringAsync(AI_RESULT_FILE, {
       encoding: FileSystem.EncodingType.UTF8,
     });
     console.log("[AIReview] Raw AI result string (first 300 chars):", rawResult.slice(0, 300));
+
     let parsed: RawAIResult;
     try {
       parsed = JSON.parse(rawResult);
     } catch (parseErr) {
       console.error("[AIReview] JSON parse error:", parseErr);
+      if (active) setDebugInfo({
+        fileExists: true,
+        rawLength: rawResult.length,
+        preview: rawResult.slice(0, 100),
+        error: `JSON parse error: ${String(parseErr)}`,
+      });
       throw parseErr;
     }
+
+    if (active) setDebugInfo({
+      fileExists: true,
+      rawLength: rawResult.length,
+      preview: rawResult.slice(0, 100),
+      error: null,
+    });
+
     const normalised = normaliseAIResult(parsed);
     console.log("[AIReview] Setting decoded result — confidence:", normalised.confidence, "risk_rating:", normalised.risk_rating);
     setDecoded(normalised);
-  } else {
-    console.warn("[AIReview] No AI result file found — decoded will be null");
   }
 } catch (e) {
   console.error("[AIReview] Error loading AI result:", e);
+  if (active) setDebugInfo((prev) => ({
+    ...prev,
+    error: prev.error ?? `Load error: ${String(e)}`,
+  }));
 }
 
 const info = await FileSystem.getInfoAsync(REVIEW_PHOTOS_FILE);
@@ -1211,6 +1240,29 @@ return (
 <Text style={styles.metaLine}>Job: {currentJob.jobName}</Text>
 <Text style={styles.metaLine}>Address: {currentJob.jobAddr}</Text>
 </View>
+
+{/* ── Debug panel ── visible on screen so you can see exactly what loaded */}
+<View style={styles.debugPanel}>
+  <Text style={styles.debugTitle}>DEBUG — AI result file</Text>
+  <Text style={styles.debugLine}>
+    file exists: <Text style={[styles.debugValue, { color: debugInfo.fileExists === true ? "#4ade80" : debugInfo.fileExists === false ? "#f87171" : "#facc15" }]}>
+      {debugInfo.fileExists === null ? "checking…" : String(debugInfo.fileExists)}
+    </Text>
+  </Text>
+  <Text style={styles.debugLine}>
+    raw JSON length: <Text style={styles.debugValue}>{debugInfo.rawLength === null ? "—" : `${debugInfo.rawLength} chars`}</Text>
+  </Text>
+  <Text style={styles.debugLine}>
+    confidence: <Text style={styles.debugValue}>{decoded?.confidence !== undefined ? String(decoded.confidence) : "—"}</Text>
+    {"  "}detected: <Text style={styles.debugValue}>{decoded?.detected !== undefined ? String(decoded.detected.length) : "—"}</Text>
+  </Text>
+  <Text style={styles.debugLine} numberOfLines={2}>
+    first 100 chars:{"\n"}<Text style={styles.debugMono}>{debugInfo.preview ?? "—"}</Text>
+  </Text>
+  {debugInfo.error ? (
+    <Text style={[styles.debugLine, { color: "#f87171" }]}>{debugInfo.error}</Text>
+  ) : null}
+</View>
 </View>
 
 <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
@@ -1825,6 +1877,39 @@ borderColor: "rgba(255,255,255,0.10)",
 backgroundColor: "rgba(255,255,255,0.04)",
 padding: 12,
 gap: 4,
+// ── Debug panel styles ──────────────────────────────────────────────────────
+},
+debugPanel: {
+  marginTop: 10,
+  borderRadius: 10,
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.12)",
+  backgroundColor: "rgba(0,0,0,0.35)",
+  padding: 10,
+  gap: 4,
+},
+debugTitle: {
+  color: "#facc15",
+  fontSize: 10,
+  fontWeight: "900",
+  letterSpacing: 1,
+  marginBottom: 4,
+  textTransform: "uppercase",
+},
+debugLine: {
+  color: "rgba(255,255,255,0.55)",
+  fontSize: 11,
+  lineHeight: 17,
+},
+debugValue: {
+  color: "rgba(255,255,255,0.90)",
+  fontWeight: "700",
+},
+debugMono: {
+  color: "rgba(255,255,255,0.75)",
+  fontSize: 10,
+  fontFamily: "monospace",
+  lineHeight: 15,
 },
 metaLine: { color: "rgba(255,255,255,0.82)", fontSize: 13 },
 body: { padding: 18, gap: 12 },
