@@ -1,5 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Linking } from "react-native";
 import { supabase } from "@/lib/supabase";
 
 // ── Global Error Boundary ─────────────────────────────────────────────────────
@@ -80,8 +80,21 @@ export class ErrorBoundary extends Component<Props, State> {
           <Text style={styles.helpEmail}>cayde@elemetric.com.au</Text>
         </Text>
 
-        <Pressable style={styles.retryBtn} onPress={this.handleRetry}>
+        <Pressable
+          style={styles.retryBtn}
+          onPress={this.handleRetry}
+          accessibilityRole="button"
+          accessibilityLabel="Retry — go back to app"
+        >
           <Text style={styles.retryBtnText}>↻ Retry</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => Linking.openURL("mailto:cayde@elemetric.com.au?subject=App%20Crash%20Report")}
+          accessibilityRole="link"
+          accessibilityLabel="Contact support by email"
+        >
+          <Text style={styles.supportLink}>Contact Support →</Text>
         </Pressable>
       </ScrollView>
     );
@@ -154,4 +167,5 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   retryBtnText: { color: "#0b1220", fontWeight: "900", fontSize: 16 },
+  supportLink: { color: "#f97316", fontWeight: "700", fontSize: 14, marginTop: 4 },
 });
