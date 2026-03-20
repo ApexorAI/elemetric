@@ -6,9 +6,8 @@ import { supabase } from '../lib/supabase'
 type Section = 'company' | 'subscription' | 'notifications' | 'integrations' | 'account'
 
 interface CompanyForm {
+  full_name: string
   company_name: string
-  abn: string
-  address: string
 }
 
 export default function Settings() {
@@ -23,9 +22,8 @@ export default function Settings() {
   const [deleteConfirm, setDeleteConfirm] = useState(false)
 
   const [companyForm, setCompanyForm] = useState<CompanyForm>({
+    full_name: profile?.full_name ?? '',
     company_name: profile?.company_name ?? '',
-    abn: '',
-    address: '',
   })
 
   const NOTIF_KEY = 'elemetric_notif_prefs'
@@ -52,7 +50,10 @@ export default function Settings() {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ company_name: companyForm.company_name })
+        .update({
+          company_name: companyForm.company_name,
+          full_name: companyForm.full_name,
+        })
         .eq('id', profile.id)
       if (error) throw error
       setSaveSuccess(true)
@@ -133,6 +134,16 @@ export default function Settings() {
               </h2>
               <div className="space-y-4 max-w-lg">
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    value={companyForm.full_name}
+                    onChange={(e) => setCompanyForm({ ...companyForm, full_name: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 outline-none focus:border-orange-400"
+                    placeholder="Jane Smith"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
                   <input
                     type="text"
@@ -140,26 +151,6 @@ export default function Settings() {
                     onChange={(e) => setCompanyForm({ ...companyForm, company_name: e.target.value })}
                     className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 outline-none focus:border-orange-400"
                     placeholder="Acme Plumbing Pty Ltd"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ABN</label>
-                  <input
-                    type="text"
-                    value={companyForm.abn}
-                    onChange={(e) => setCompanyForm({ ...companyForm, abn: e.target.value })}
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 outline-none focus:border-orange-400"
-                    placeholder="12 345 678 901"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                  <input
-                    type="text"
-                    value={companyForm.address}
-                    onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })}
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 outline-none focus:border-orange-400"
-                    placeholder="123 Main St, Melbourne VIC 3000"
                   />
                 </div>
                 {saveError && (
