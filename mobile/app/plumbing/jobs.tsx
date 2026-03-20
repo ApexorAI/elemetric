@@ -36,7 +36,7 @@ createdAt: string;
 status?: string;
 };
 
-type FilterKey = "all" | "hotwater" | "gas" | "drainage" | "newinstall" | "electrical" | "hvac";
+type FilterKey = "all" | "hotwater" | "gas" | "drainage" | "newinstall" | "electrical" | "hvac" | "carpentry";
 
 const FILTERS: { key: FilterKey; label: string }[] = [
 { key: "all",        label: "All" },
@@ -46,26 +46,65 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 { key: "newinstall", label: "New Install" },
 { key: "electrical", label: "Electrical" },
 { key: "hvac",       label: "HVAC" },
+{ key: "carpentry",  label: "Carpentry" },
 ];
 
 const JOB_TYPE_LABELS: Record<string, string> = {
-hotwater:   "Plumbing",
-gas:        "Gas Rough-In",
-drainage:   "Drainage",
-newinstall: "New Install",
-electrical: "Electrical",
-hvac:       "HVAC",
-carpentry:  "Carpentry",
+hotwater:    "Plumbing",
+gas:         "Gas Rough-In",
+drainage:    "Drainage",
+newinstall:  "New Install",
+woodheater:  "Wood Heater",
+gasheater:   "Gas Heater",
+electrical:  "Electrical",
+powerpoint:  "Power Point",
+lighting:    "Lighting",
+switchboard: "Switchboard",
+circuit:     "Circuit",
+appliance:   "Appliance",
+smokealarm:  "Smoke Alarm",
+hvac:        "HVAC",
+splitsystem: "Split System",
+ducted:      "Ducted System",
+hvacservice: "HVAC Service",
+ventilation: "Ventilation",
+carpentry:   "Carpentry",
+framing:     "Framing",
+decking:     "Decking",
+pergola:     "Pergola",
+door:        "Door",
+window:      "Window",
+flooring:    "Flooring",
+fixing:      "Fixing",
 };
 
 const JOB_TYPE_ICONS: Record<string, string> = {
-hotwater:   "🔧",
-gas:        "🔥",
-drainage:   "🚿",
-newinstall: "🏗️",
-electrical: "⚡",
-hvac:       "❄️",
-carpentry:  "🪚",
+hotwater:    "🔧",
+gas:         "🔥",
+drainage:    "🚿",
+newinstall:  "🏗️",
+woodheater:  "🪵",
+gasheater:   "🔥",
+electrical:  "⚡",
+powerpoint:  "🔌",
+lighting:    "💡",
+switchboard: "🗃️",
+circuit:     "⚡",
+appliance:   "🔌",
+smokealarm:  "🚨",
+hvac:        "❄️",
+splitsystem: "❄️",
+ducted:      "💨",
+hvacservice: "🔧",
+ventilation: "💨",
+carpentry:   "🪚",
+framing:     "🏗️",
+decking:     "🪵",
+pergola:     "🌿",
+door:        "🚪",
+window:      "🪟",
+flooring:    "🪵",
+fixing:      "🔩",
 };
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; border: string; text: string }> = {
@@ -343,14 +382,26 @@ setSharingJobId(null);
 }
 };
 
+const TRADE_TYPES: Record<string, string[]> = {
+  hotwater:   ["hotwater", "woodheater", "gasheater"],
+  gas:        ["gas"],
+  drainage:   ["drainage"],
+  newinstall: ["newinstall"],
+  electrical: ["electrical", "powerpoint", "lighting", "switchboard", "circuit", "appliance", "smokealarm"],
+  hvac:       ["hvac", "splitsystem", "ducted", "hvacservice", "ventilation"],
+  carpentry:  ["carpentry", "framing", "decking", "pergola", "door", "window", "flooring", "fixing"],
+};
+
 // Filter counts
-const countFor = useCallback((key: FilterKey) =>
-key === "all" ? jobs.length : jobs.filter((j) => j.jobType === key).length,
-[jobs]);
+const countFor = useCallback((key: FilterKey) => {
+  if (key === "all") return jobs.length;
+  const types = TRADE_TYPES[key] ?? [key];
+  return jobs.filter((j) => types.includes(j.jobType)).length;
+}, [jobs]);
 
 // Apply filter + search + date range
 const filtered = useMemo(() => jobs.filter((job) => {
-const matchesFilter = activeFilter === "all" || job.jobType === activeFilter;
+const matchesFilter = activeFilter === "all" || (TRADE_TYPES[activeFilter] ?? [activeFilter]).includes(job.jobType);
 const q = search.trim().toLowerCase();
 const matchesSearch =
 !q ||
