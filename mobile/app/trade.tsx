@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
+import * as Haptics from "expo-haptics";
 
 const RECENT_KEY = "elemetric_recent_trade";
 
@@ -154,6 +155,7 @@ export default function TradeScreen() {
     : null;
 
   const navigate = async (job: JobType, tradeId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await AsyncStorage.setItem(RECENT_KEY, JSON.stringify({ tradeId, jobLabel: job.label }));
     router.push({
       pathname: (job.pathname ?? "/plumbing/new-job") as never,
@@ -194,6 +196,8 @@ export default function TradeScreen() {
             <Pressable
               style={s.recentCard}
               onPress={() => navigate(recentJob, recentTrade.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`Start ${recentJob.label} job again`}
             >
               <View style={[s.recentIconWrap, { backgroundColor: recentTrade.color + "20", borderColor: recentTrade.color + "40" }]}>
                 <Text style={s.recentIcon}>{recentTrade.icon}</Text>
@@ -245,7 +249,13 @@ export default function TradeScreen() {
                     s.tradeCard,
                     selectedTrade === t.id && { borderColor: t.color + "60", backgroundColor: t.color + "14" },
                   ]}
-                  onPress={() => setSelectedTrade(t.id)}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setSelectedTrade(t.id);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Select ${t.label} trade`}
+                  accessibilityState={{ selected: selectedTrade === t.id }}
                 >
                   <Text style={s.tradeCardIcon}>{t.icon}</Text>
                   <Text style={[s.tradeCardLabel, selectedTrade === t.id && { color: "white" }]}>{t.label}</Text>
