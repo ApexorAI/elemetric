@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef, memo } from 'react'
-import { Search, Filter, Download, Plus, X, ChevronLeft, ChevronRight, FileText } from 'lucide-react'
+import { Search, Filter, Download, Plus, X, ChevronLeft, ChevronRight, FileText, RefreshCw, CheckCircle } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import PDFViewer from '../components/PDFViewer'
 
@@ -139,6 +139,7 @@ export default function Jobs() {
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [assignLoading, setAssignLoading] = useState(false)
   const [assignError, setAssignError] = useState<string | null>(null)
+  const [assignSuccess, setAssignSuccess] = useState(false)
 
   const [search, setSearch] = useState('')
   const [filterJobType, setFilterJobType] = useState('')
@@ -245,6 +246,8 @@ export default function Jobs() {
 
       setShowAssignModal(false)
       setAssignForm({ member_id: '', job_type: '', address: '', scheduled_at: '', priority: 'medium', notes: '' })
+      setAssignSuccess(true)
+      setTimeout(() => setAssignSuccess(false), 4000)
       fetchJobs()
     } catch (err) {
       setAssignError((err as Error).message)
@@ -271,6 +274,16 @@ export default function Jobs() {
   })
 
   const jobTypes = [...new Set(jobs.map((j) => j.job_type).filter(Boolean))]
+
+  if (!loading && !profile?.team_id) {
+    return (
+      <div className="p-6 max-w-xl mx-auto mt-16 text-center">
+        <Filter size={36} className="mx-auto text-gray-300 mb-3" />
+        <h2 className="text-lg font-bold text-gray-700 mb-2">No team linked</h2>
+        <p className="text-sm text-gray-500">Jobs will appear here once your employer account is connected to a team.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -385,8 +398,22 @@ export default function Jobs() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-4 text-sm">
-          {error}
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-4 text-sm flex items-center justify-between gap-3">
+          <span>{error}</span>
+          <button
+            onClick={fetchJobs}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-xs font-medium transition-colors flex-shrink-0"
+          >
+            <RefreshCw size={12} /> Retry
+          </button>
+        </div>
+      )}
+
+      {/* Assign success toast */}
+      {assignSuccess && (
+        <div className="fixed bottom-6 right-6 z-50 bg-green-600 text-white rounded-xl px-5 py-3 shadow-xl flex items-center gap-2 text-sm font-medium animate-pulse">
+          <CheckCircle size={16} />
+          Job assigned successfully
         </div>
       )}
 
