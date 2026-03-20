@@ -155,6 +155,9 @@ const [debugInfo, setDebugInfo] = useState<{
   error: string | null;
 }>({ fileExists: null, rawLength: null, preview: null, error: null });
 
+// ── UI state for AI results section ──────────────────────────────────────────
+const [actionsExpanded, setActionsExpanded] = useState(true);
+
 const [reviewPhotos, setReviewPhotos] = useState<ReviewPhoto[]>([]);
 const [expanded, setExpanded] = useState(false);
 const [saving, setSaving] = useState(false);
@@ -1236,32 +1239,9 @@ return (
 <Text style={styles.title}>AI Overview</Text>
 
 <View style={styles.metaCard}>
-<Text style={styles.metaLine}>Job type: {currentJob.type}</Text>
-<Text style={styles.metaLine}>Job: {currentJob.jobName}</Text>
-<Text style={styles.metaLine}>Address: {currentJob.jobAddr}</Text>
-</View>
-
-{/* ── Debug panel ── visible on screen so you can see exactly what loaded */}
-<View style={styles.debugPanel}>
-  <Text style={styles.debugTitle}>DEBUG — AI result file</Text>
-  <Text style={styles.debugLine}>
-    file exists: <Text style={[styles.debugValue, { color: debugInfo.fileExists === true ? "#4ade80" : debugInfo.fileExists === false ? "#f87171" : "#facc15" }]}>
-      {debugInfo.fileExists === null ? "checking…" : String(debugInfo.fileExists)}
-    </Text>
-  </Text>
-  <Text style={styles.debugLine}>
-    raw JSON length: <Text style={styles.debugValue}>{debugInfo.rawLength === null ? "—" : `${debugInfo.rawLength} chars`}</Text>
-  </Text>
-  <Text style={styles.debugLine}>
-    confidence: <Text style={styles.debugValue}>{decoded?.confidence !== undefined ? String(decoded.confidence) : "—"}</Text>
-    {"  "}detected: <Text style={styles.debugValue}>{decoded?.detected !== undefined ? String(decoded.detected.length) : "—"}</Text>
-  </Text>
-  <Text style={styles.debugLine} numberOfLines={2}>
-    first 100 chars:{"\n"}<Text style={styles.debugMono}>{debugInfo.preview ?? "—"}</Text>
-  </Text>
-  {debugInfo.error ? (
-    <Text style={[styles.debugLine, { color: "#f87171" }]}>{debugInfo.error}</Text>
-  ) : null}
+<Text style={styles.metaJobType}>{JOB_TYPE_META[currentJob.type]?.label ?? currentJob.type}</Text>
+<Text style={styles.metaLine}>{currentJob.jobName}</Text>
+<Text style={styles.metaAddr}>{currentJob.jobAddr}</Text>
 </View>
 </View>
 
@@ -1322,38 +1302,51 @@ Alert.alert("Retry Failed", e?.message ?? "Could not connect to AI server. Check
 <>
 {/* Multi-day timeline — hidden until post-launch */}
 
-{/* ── Confidence Gauge ── */}
-<View style={styles.gaugeCard}>
-  <View style={{ position: "relative", alignSelf: "center" }}>
-    <Svg width={180} height={180}>
+{/* ── Hero Gauge ── */}
+<View style={[styles.gaugeHero, { borderColor: gaugeColor + "30" }]}>
+  {/* Glow backdrop */}
+  <View style={[styles.gaugeGlow, { backgroundColor: gaugeColor + "18" }]} />
+
+  {/* Risk banner at very top */}
+  <View style={[styles.riskBanner, { backgroundColor: gaugeColor + "22", borderColor: gaugeColor + "55" }]}>
+    <Text style={[styles.riskText, { color: gaugeColor }]}>{riskLabel}</Text>
+  </View>
+
+  {/* Gauge ring */}
+  <View style={{ position: "relative", alignSelf: "center", marginTop: 8 }}>
+    <Svg width={200} height={200}>
+      <Circle cx={100} cy={100} r={GAUGE_RADIUS} stroke="rgba(255,255,255,0.08)" strokeWidth={GAUGE_SW} fill="none" />
       <Circle
-        cx={90} cy={90} r={GAUGE_RADIUS}
-        stroke="rgba(255,255,255,0.10)"
-        strokeWidth={GAUGE_SW}
-        fill="none"
-      />
-      <Circle
-        cx={90} cy={90} r={GAUGE_RADIUS}
-        stroke={gaugeColor}
-        strokeWidth={GAUGE_SW}
-        fill="none"
+        cx={100} cy={100} r={GAUGE_RADIUS}
+        stroke={gaugeColor} strokeWidth={GAUGE_SW} fill="none"
         strokeDasharray={`${GAUGE_C} ${GAUGE_C}`}
         strokeDashoffset={gaugeDashOffset}
         strokeLinecap="round"
-        rotation="-90"
-        originX={90}
-        originY={90}
+        rotation="-90" originX={100} originY={100}
       />
     </Svg>
     <View style={styles.gaugeCenter}>
       <Text style={[styles.gaugeScore, { color: gaugeColor }]}>{confidence}%</Text>
       <Text style={styles.gaugeLabel}>confidence</Text>
+      <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
+        <View style={styles.gaugeStat}>
+          <Text style={[styles.gaugeStatNum, { color: "#22c55e" }]}>{detected.length}</Text>
+          <Text style={styles.gaugeStatLbl}>detected</Text>
+        </View>
+        {unclear.length > 0 && (
+          <View style={styles.gaugeStat}>
+            <Text style={[styles.gaugeStatNum, { color: "#f97316" }]}>{unclear.length}</Text>
+            <Text style={styles.gaugeStatLbl}>unclear</Text>
+          </View>
+        )}
+        {missing.length > 0 && (
+          <View style={styles.gaugeStat}>
+            <Text style={[styles.gaugeStatNum, { color: "#ef4444" }]}>{missing.length}</Text>
+            <Text style={styles.gaugeStatLbl}>missing</Text>
+          </View>
+        )}
+      </View>
     </View>
-  </View>
-
-  {/* Risk Banner */}
-  <View style={[styles.riskBanner, { backgroundColor: riskBg, borderColor: riskBorderColor }]}>
-    <Text style={[styles.riskText, { color: gaugeColor }]}>{riskLabel}</Text>
   </View>
 
   {/* What this means */}
@@ -1361,26 +1354,32 @@ Alert.alert("Retry Failed", e?.message ?? "Could not connect to AI server. Check
     <Text style={styles.meansTitle}>What this means</Text>
     <Text style={styles.meansBody}>{getWhatThisMeans()}</Text>
   </View>
-
-  {/* Liability summary (from server) */}
-  {liabilitySummary ? (
-    <View style={[styles.meansCard, { borderColor: "rgba(96,165,250,0.30)", backgroundColor: "rgba(96,165,250,0.06)" }]}>
-      <Text style={[styles.meansTitle, { color: "#60a5fa" }]}>7-Year Liability Summary</Text>
-      <Text style={styles.meansBody}>{liabilitySummary}</Text>
-    </View>
-  ) : null}
 </View>
+
+{/* ── Liability Summary ── */}
+{liabilitySummary ? (
+  <View style={styles.liabilityCard}>
+    <View style={styles.liabilityHeader}>
+      <Text style={styles.liabilityIcon}>🛡</Text>
+      <Text style={styles.liabilityTitle}>7-Year Liability Summary</Text>
+    </View>
+    <Text style={styles.liabilityBody}>{liabilitySummary}</Text>
+  </View>
+) : null}
 
 {/* ── Detected Items ── */}
 {detected.length > 0 && (
-  <View style={styles.breakdownCard}>
-    <Text style={[styles.breakdownTitle, { color: "#22c55e" }]}>Detected Items</Text>
+  <View style={styles.itemsSection}>
+    <View style={styles.itemsSectionHeader}>
+      <View style={[styles.itemsSectionDot, { backgroundColor: "#22c55e" }]} />
+      <Text style={[styles.itemsSectionTitle, { color: "#22c55e" }]}>Detected ({detected.length})</Text>
+    </View>
     {detected.map((x, i) => (
-      <View key={`d-${i}`} style={styles.breakdownRow}>
-        <View style={styles.breakdownIconGreen}>
-          <Text style={styles.breakdownIconText}>✓</Text>
+      <View key={`d-${i}`} style={styles.detectedRow}>
+        <View style={styles.detectedCheck}>
+          <Text style={styles.detectedCheckText}>✓</Text>
         </View>
-        <Text style={styles.breakdownItemText}>{x}</Text>
+        <Text style={styles.detectedText}>{x}</Text>
       </View>
     ))}
   </View>
@@ -1388,23 +1387,33 @@ Alert.alert("Retry Failed", e?.message ?? "Could not connect to AI server. Check
 
 {/* ── Missing Items ── */}
 {missing.length > 0 && (
-  <View style={styles.breakdownCard}>
-    <Text style={[styles.breakdownTitle, { color: "#ef4444" }]}>Missing Items</Text>
+  <View style={styles.itemsSection}>
+    <View style={styles.itemsSectionHeader}>
+      <View style={[styles.itemsSectionDot, { backgroundColor: "#ef4444" }]} />
+      <Text style={[styles.itemsSectionTitle, { color: "#ef4444" }]}>Missing — Action Required ({missing.length})</Text>
+    </View>
     {missing.map((x, i) => (
-      <View key={`m-${i}`} style={styles.issueRow}>
-        <View style={styles.breakdownIconRed}>
-          <Text style={styles.breakdownIconText}>✗</Text>
+      <View key={`m-${i}`} style={styles.missingCard}>
+        <View style={styles.missingCardInner}>
+          <View style={styles.missingIcon}>
+            <Text style={styles.missingIconText}>✗</Text>
+          </View>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={styles.missingTitle}>{x}</Text>
+            <Text style={styles.missingHint}>{getItemAction(x, "missing")}</Text>
+          </View>
         </View>
-        <View style={{ flex: 1, gap: 6 }}>
-          <Text style={styles.breakdownItemText}>{x}</Text>
-          <Text style={styles.actionHint}>{getItemAction(x, "missing")}</Text>
-          <Pressable
-            style={styles.retakeBtn}
-            onPress={() => router.push({ pathname: "/plumbing/photos", params: { focusItem: x } })}
-          >
-            <Text style={styles.retakeBtnText}>Retake Photo →</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          style={styles.retakeBtn}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.push({ pathname: "/plumbing/photos", params: { focusItem: x } });
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`Retake photo for ${x}`}
+        >
+          <Text style={styles.retakeBtnText}>Retake Photo →</Text>
+        </Pressable>
       </View>
     ))}
   </View>
@@ -1412,34 +1421,60 @@ Alert.alert("Retry Failed", e?.message ?? "Could not connect to AI server. Check
 
 {/* ── Unclear Items ── */}
 {unclear.length > 0 && (
-  <View style={styles.breakdownCard}>
-    <Text style={[styles.breakdownTitle, { color: "#f97316" }]}>Unclear Items</Text>
+  <View style={styles.itemsSection}>
+    <View style={styles.itemsSectionHeader}>
+      <View style={[styles.itemsSectionDot, { backgroundColor: "#f97316" }]} />
+      <Text style={[styles.itemsSectionTitle, { color: "#f97316" }]}>Unclear — Improve Photo ({unclear.length})</Text>
+    </View>
     {unclear.map((x, i) => (
-      <View key={`u-${i}`} style={styles.issueRow}>
-        <View style={styles.breakdownIconOrange}>
-          <Text style={styles.breakdownIconText}>!</Text>
+      <View key={`u-${i}`} style={styles.unclearCard}>
+        <View style={styles.unclearCardInner}>
+          <View style={styles.unclearIcon}>
+            <Text style={styles.unclearIconText}>!</Text>
+          </View>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={styles.unclearTitle}>{x}</Text>
+            <Text style={styles.unclearHint}>{getItemAction(x, "unclear")}</Text>
+          </View>
         </View>
-        <View style={{ flex: 1, gap: 6 }}>
-          <Text style={styles.breakdownItemText}>{x}</Text>
-          <Text style={styles.actionHint}>{getItemAction(x, "unclear")}</Text>
-          <Pressable
-            style={styles.retakeBtn}
-            onPress={() => router.push({ pathname: "/plumbing/photos", params: { focusItem: x } })}
-          >
-            <Text style={styles.retakeBtnText}>Retake Photo →</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          style={styles.retakeBtnOrange}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.push({ pathname: "/plumbing/photos", params: { focusItem: x } });
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`Retake photo for ${x}`}
+        >
+          <Text style={styles.retakeBtnText}>Improve Photo →</Text>
+        </Pressable>
       </View>
     ))}
   </View>
 )}
 
-{/* ── Overall Recommended Action ── */}
+{/* ── Recommended Actions (expandable) ── */}
 {!!action && (
-  <View style={styles.overallActionCard}>
-    <Text style={styles.overallActionLabel}>RECOMMENDED ACTION</Text>
-    <Text style={styles.overallActionText}>{action}</Text>
-  </View>
+  <Pressable
+    style={styles.actionsCard}
+    onPress={() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setActionsExpanded(v => !v);
+    }}
+    accessibilityRole="button"
+    accessibilityLabel="Toggle recommended actions"
+  >
+    <View style={styles.actionsHeader}>
+      <View style={styles.actionsIconWrap}>
+        <Text style={styles.actionsIcon}>⚡</Text>
+      </View>
+      <Text style={styles.actionsTitle}>Recommended Actions</Text>
+      <Text style={styles.actionsChevron}>{actionsExpanded ? "▲" : "▼"}</Text>
+    </View>
+    {actionsExpanded && (
+      <Text style={styles.actionsBody}>{action}</Text>
+    )}
+  </Pressable>
 )}
 
 {showLegacyAnalysis && (
@@ -2080,48 +2115,53 @@ retryBtn: {
   justifyContent: "center",
 },
 retryBtnText: { color: "#07152b", fontWeight: "900", fontSize: 15 },
-gaugeCard: {
-  borderRadius: 20,
+// ── Hero gauge ──────────────────────────────────────────────────────────────
+gaugeHero: {
+  borderRadius: 24,
   borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.10)",
-  backgroundColor: "rgba(255,255,255,0.04)",
-  padding: 18,
-  gap: 14,
+  overflow: "hidden",
+  padding: 20,
+  gap: 16,
   alignItems: "center",
 },
-gaugeCenter: {
+gaugeGlow: {
   position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  alignItems: "center",
-  justifyContent: "center",
-},
-gaugeScore: {
-  fontSize: 40,
-  fontWeight: "900" as const,
-},
-gaugeLabel: {
-  color: "rgba(255,255,255,0.55)",
-  fontSize: 12,
-  marginTop: 2,
+  top: 0, left: 0, right: 0, bottom: 0,
 },
 riskBanner: {
-  borderRadius: 12,
+  borderRadius: 10,
   borderWidth: 1,
-  paddingVertical: 10,
+  paddingVertical: 9,
   paddingHorizontal: 24,
   alignItems: "center" as const,
   alignSelf: "stretch" as const,
 },
 riskText: {
   fontWeight: "900" as const,
-  fontSize: 18,
+  fontSize: 16,
   letterSpacing: 2,
+  textTransform: "uppercase" as const,
 },
+gaugeCenter: {
+  position: "absolute",
+  top: 0, left: 0, right: 0, bottom: 0,
+  alignItems: "center",
+  justifyContent: "center",
+},
+gaugeScore: {
+  fontSize: 46,
+  fontWeight: "900" as const,
+},
+gaugeLabel: {
+  color: "rgba(255,255,255,0.50)",
+  fontSize: 12,
+  marginTop: -2,
+},
+gaugeStat: { alignItems: "center" },
+gaugeStatNum: { fontSize: 18, fontWeight: "900" },
+gaugeStatLbl: { color: "rgba(255,255,255,0.45)", fontSize: 10, fontWeight: "700" },
 meansCard: {
-  backgroundColor: "rgba(255,255,255,0.04)",
+  backgroundColor: "rgba(255,255,255,0.05)",
   borderRadius: 12,
   padding: 14,
   gap: 6,
@@ -2130,113 +2170,162 @@ meansCard: {
 meansTitle: {
   color: "white",
   fontWeight: "800" as const,
-  fontSize: 14,
+  fontSize: 13,
+  textTransform: "uppercase" as const,
+  letterSpacing: 0.5,
 },
 meansBody: {
-  color: "rgba(255,255,255,0.75)",
+  color: "rgba(255,255,255,0.72)",
   fontSize: 14,
-  lineHeight: 20,
+  lineHeight: 21,
 },
-breakdownCard: {
-  borderRadius: 20,
+// ── Liability card ───────────────────────────────────────────────────────────
+liabilityCard: {
+  borderRadius: 18,
   borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.10)",
-  backgroundColor: "rgba(255,255,255,0.04)",
-  padding: 18,
-  gap: 12,
+  borderColor: "rgba(96,165,250,0.30)",
+  backgroundColor: "rgba(96,165,250,0.08)",
+  padding: 16,
+  gap: 10,
 },
-breakdownTitle: {
+liabilityHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+liabilityIcon: { fontSize: 22 },
+liabilityTitle: {
+  color: "#93c5fd",
   fontWeight: "900" as const,
-  fontSize: 16,
-  marginBottom: 2,
-},
-breakdownRow: {
-  flexDirection: "row" as const,
-  alignItems: "center" as const,
-  gap: 12,
-},
-issueRow: {
-  flexDirection: "row" as const,
-  alignItems: "flex-start" as const,
-  gap: 12,
-},
-breakdownIconGreen: {
-  width: 28,
-  height: 28,
-  borderRadius: 14,
-  backgroundColor: "rgba(34,197,94,0.20)",
-  alignItems: "center" as const,
-  justifyContent: "center" as const,
-  flexShrink: 0,
-},
-breakdownIconRed: {
-  width: 28,
-  height: 28,
-  borderRadius: 14,
-  backgroundColor: "rgba(239,68,68,0.20)",
-  alignItems: "center" as const,
-  justifyContent: "center" as const,
-  flexShrink: 0,
-  marginTop: 2,
-},
-breakdownIconOrange: {
-  width: 28,
-  height: 28,
-  borderRadius: 14,
-  backgroundColor: "rgba(249,115,22,0.20)",
-  alignItems: "center" as const,
-  justifyContent: "center" as const,
-  flexShrink: 0,
-  marginTop: 2,
-},
-breakdownIconText: {
-  color: "white",
-  fontWeight: "900" as const,
-  fontSize: 13,
-},
-breakdownItemText: {
-  color: "rgba(255,255,255,0.85)",
   fontSize: 15,
-  fontWeight: "700" as const,
 },
-actionHint: {
-  color: "rgba(255,255,255,0.55)",
-  fontSize: 13,
-  lineHeight: 18,
+liabilityBody: {
+  color: "rgba(255,255,255,0.78)",
+  fontSize: 14,
+  lineHeight: 21,
 },
+// ── Items sections ───────────────────────────────────────────────────────────
+itemsSection: {
+  borderRadius: 18,
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.07)",
+  backgroundColor: "rgba(255,255,255,0.03)",
+  overflow: "hidden",
+},
+itemsSectionHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+  paddingHorizontal: 16,
+  paddingTop: 14,
+  paddingBottom: 10,
+},
+itemsSectionDot: { width: 8, height: 8, borderRadius: 4 },
+itemsSectionTitle: { fontWeight: "900", fontSize: 14, flex: 1 },
+// Detected
+detectedRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 12,
+  paddingHorizontal: 16,
+  paddingVertical: 10,
+  borderTopWidth: 1,
+  borderTopColor: "rgba(34,197,94,0.10)",
+  backgroundColor: "rgba(34,197,94,0.05)",
+},
+detectedCheck: {
+  width: 24, height: 24, borderRadius: 12,
+  backgroundColor: "rgba(34,197,94,0.25)",
+  alignItems: "center", justifyContent: "center",
+  flexShrink: 0,
+},
+detectedCheckText: { color: "#22c55e", fontSize: 12, fontWeight: "900" },
+detectedText: { color: "rgba(255,255,255,0.88)", fontSize: 14, fontWeight: "600", flex: 1 },
+// Missing
+missingCard: {
+  paddingHorizontal: 14,
+  paddingVertical: 12,
+  borderTopWidth: 1,
+  borderTopColor: "rgba(239,68,68,0.15)",
+  backgroundColor: "rgba(239,68,68,0.07)",
+  gap: 10,
+},
+missingCardInner: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
+missingIcon: {
+  width: 28, height: 28, borderRadius: 8,
+  backgroundColor: "rgba(239,68,68,0.25)",
+  alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1,
+},
+missingIconText: { color: "#ef4444", fontSize: 14, fontWeight: "900" },
+missingTitle: { color: "white", fontSize: 14, fontWeight: "700" },
+missingHint: { color: "rgba(255,255,255,0.50)", fontSize: 12, lineHeight: 17 },
 retakeBtn: {
-  backgroundColor: "rgba(249,115,22,0.20)",
+  backgroundColor: "rgba(239,68,68,0.18)",
   borderRadius: 8,
   paddingVertical: 8,
   paddingHorizontal: 14,
-  alignSelf: "flex-start" as const,
+  alignSelf: "flex-end" as const,
+  borderWidth: 1,
+  borderColor: "rgba(239,68,68,0.35)",
+},
+retakeBtnOrange: {
+  backgroundColor: "rgba(249,115,22,0.18)",
+  borderRadius: 8,
+  paddingVertical: 8,
+  paddingHorizontal: 14,
+  alignSelf: "flex-end" as const,
   borderWidth: 1,
   borderColor: "rgba(249,115,22,0.35)",
 },
-retakeBtnText: {
-  color: "#f97316",
-  fontWeight: "900" as const,
-  fontSize: 13,
+retakeBtnText: { color: "#f97316", fontWeight: "900" as const, fontSize: 13 },
+// Unclear
+unclearCard: {
+  paddingHorizontal: 14,
+  paddingVertical: 12,
+  borderTopWidth: 1,
+  borderTopColor: "rgba(249,115,22,0.15)",
+  backgroundColor: "rgba(249,115,22,0.07)",
+  gap: 10,
 },
-overallActionCard: {
-  borderRadius: 16,
+unclearCardInner: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
+unclearIcon: {
+  width: 28, height: 28, borderRadius: 8,
+  backgroundColor: "rgba(249,115,22,0.25)",
+  alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1,
+},
+unclearIconText: { color: "#f97316", fontSize: 14, fontWeight: "900" },
+unclearTitle: { color: "white", fontSize: 14, fontWeight: "700" },
+unclearHint: { color: "rgba(255,255,255,0.50)", fontSize: 12, lineHeight: 17 },
+// Actions card
+actionsCard: {
+  borderRadius: 18,
   borderWidth: 1,
-  borderColor: "rgba(249,115,22,0.35)",
-  backgroundColor: "rgba(249,115,22,0.10)",
+  borderColor: "rgba(249,115,22,0.30)",
+  backgroundColor: "rgba(249,115,22,0.07)",
+  overflow: "hidden",
+},
+actionsHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 12,
   padding: 16,
-  gap: 6,
 },
-overallActionLabel: {
-  color: "#f97316",
-  fontWeight: "900" as const,
-  fontSize: 11,
-  letterSpacing: 1,
+actionsIconWrap: {
+  width: 36, height: 36, borderRadius: 10,
+  backgroundColor: "rgba(249,115,22,0.20)",
+  alignItems: "center", justifyContent: "center",
 },
-overallActionText: {
-  color: "rgba(255,255,255,0.85)",
-  fontSize: 15,
+actionsIcon: { fontSize: 18 },
+actionsTitle: { color: "#f97316", fontWeight: "900", fontSize: 15, flex: 1 },
+actionsChevron: { color: "rgba(249,115,22,0.60)", fontSize: 12 },
+actionsBody: {
+  color: "rgba(255,255,255,0.80)",
+  fontSize: 14,
   lineHeight: 22,
+  paddingHorizontal: 16,
+  paddingBottom: 16,
 },
+// ── Meta card styles ─────────────────────────────────────────────────────────
+metaJobType: { color: "#f97316", fontSize: 12, fontWeight: "800", letterSpacing: 0.5, textTransform: "uppercase" },
+metaAddr: { color: "rgba(255,255,255,0.45)", fontSize: 12, marginTop: 1 },
+// ── Legacy (keep for fallback) ────────────────────────────────────────────────
+actionHint: { color: "rgba(255,255,255,0.55)", fontSize: 13, lineHeight: 18 },
 fieldSub: {
   color: "rgba(255,255,255,0.45)",
   fontSize: 12,
