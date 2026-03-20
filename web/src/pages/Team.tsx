@@ -139,6 +139,8 @@ export default function Team() {
       setInviteSuccess(true)
       setInviteEmail('')
       setInviteName('')
+      // Refresh members list after a short delay to pick up any newly-created profile
+      setTimeout(() => fetchMembers(), 2000)
     } catch (err) {
       setInviteError((err as Error).message)
     } finally {
@@ -160,6 +162,16 @@ export default function Team() {
     finally {
       setRemoveConfirmId(null)
     }
+  }
+
+  if (!loading && !profile?.team_id) {
+    return (
+      <div className="p-6 max-w-xl mx-auto mt-16 text-center">
+        <Users size={36} className="mx-auto text-gray-300 mb-3" />
+        <h2 className="text-lg font-bold text-gray-700 mb-2">No team linked</h2>
+        <p className="text-sm text-gray-500">Your account needs to be connected to a team before you can manage members.</p>
+      </div>
+    )
   }
 
   return (
