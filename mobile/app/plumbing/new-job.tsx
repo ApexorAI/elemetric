@@ -250,6 +250,7 @@ export default function NewJob() {
           placeholder="e.g. Smith Residence"
           placeholderTextColor="rgba(255,255,255,0.28)"
           returnKeyType="next"
+          accessibilityLabel="Job name"
         />
 
         <Text style={styles.label}>Job Address</Text>
@@ -276,7 +277,7 @@ export default function NewJob() {
                 scrollEnabled={false}
                 ItemSeparatorComponent={() => <View style={styles.suggDivider} />}
                 renderItem={({ item }) => (
-                  <Pressable style={styles.suggItem} onPress={() => pickSuggestion(item)}>
+                  <Pressable style={styles.suggItem} onPress={() => pickSuggestion(item)} accessibilityRole="button" accessibilityLabel={item.display}>
                     <Text style={styles.suggPrimary} numberOfLines={1}>{item.short}</Text>
                     <Text style={styles.suggSecondary} numberOfLines={1}>{item.display}</Text>
                   </Pressable>
@@ -295,6 +296,8 @@ export default function NewJob() {
           style={[styles.button, checking && { opacity: 0.6 }]}
           onPress={onContinue}
           disabled={checking}
+          accessibilityRole="button"
+          accessibilityLabel="Continue to checklist"
         >
           {checking
             ? <ActivityIndicator color="#0b1220" />
@@ -302,7 +305,7 @@ export default function NewJob() {
           }
         </Pressable>
 
-        <Pressable onPress={() => router.back()} style={styles.back}>
+        <Pressable onPress={() => router.back()} style={styles.back} accessibilityRole="button" accessibilityLabel="Go back">
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
       </ScrollView>
