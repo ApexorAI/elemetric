@@ -3,7 +3,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar,
 } from 'recharts'
-import { Download, TrendingUp, AlertTriangle, Award } from 'lucide-react'
+import { Download, TrendingUp, AlertTriangle, Award, RefreshCw } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 
 interface OverviewData {
@@ -107,18 +107,22 @@ export default function Analytics() {
         <div className="flex items-center gap-2">
           {/* Date range selector */}
           <div className="flex items-center bg-white border border-gray-200 rounded-lg overflow-hidden">
-            {(['7d', '30d', '90d'] as DateRange[]).map((r) => (
+            {([
+              { value: '7d', label: '7 days' },
+              { value: '30d', label: '30 days' },
+              { value: '90d', label: '12 weeks' },
+            ] as { value: DateRange; label: string }[]).map(({ value, label }) => (
               <button
-                key={r}
-                onClick={() => setDateRange(r)}
+                key={value}
+                onClick={() => setDateRange(value)}
                 className="px-3 py-1.5 text-sm font-medium transition-colors"
                 style={
-                  dateRange === r
+                  dateRange === value
                     ? { backgroundColor: '#FF6B00', color: '#fff' }
                     : { color: '#6b7280' }
                 }
               >
-                {r}
+                {label}
               </button>
             ))}
           </div>
@@ -132,9 +136,21 @@ export default function Analytics() {
         </div>
       </div>
 
+      {!loading && !profile?.team_id && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-lg p-4 mb-6 text-sm">
+          Analytics will appear once your account is connected to a team.
+        </div>
+      )}
+
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-6 text-sm">
-          {error}
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-6 text-sm flex items-center justify-between gap-3">
+          <span>{error}</span>
+          <button
+            onClick={fetchAll}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-xs font-medium transition-colors flex-shrink-0"
+          >
+            <RefreshCw size={12} /> Retry
+          </button>
         </div>
       )}
 
