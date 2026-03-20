@@ -191,13 +191,13 @@ export default function Layout({ children }: LayoutProps) {
         </main>
 
         {/* Mobile bottom nav */}
-        <nav className="md:hidden bg-white border-t border-gray-200 flex items-center justify-around py-2 flex-shrink-0">
-          {navItems.slice(0, 5).map(({ to, label, icon: Icon }) => (
+        <nav className="md:hidden bg-white border-t border-gray-200 flex items-center justify-around py-1 flex-shrink-0">
+          {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg min-w-[44px] min-h-[44px] justify-center ${
+                `flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg min-w-[44px] min-h-[44px] justify-center ${
                   isActive ? 'text-orange-500' : 'text-gray-400'
                 }`
               }
@@ -205,8 +205,8 @@ export default function Layout({ children }: LayoutProps) {
                 isActive ? { color: '#FF6B00' } : {}
               }
             >
-              <Icon size={20} />
-              <span className="text-xs">{label}</span>
+              <Icon size={18} />
+              <span className="text-[10px] leading-tight">{label}</span>
             </NavLink>
           ))}
         </nav>

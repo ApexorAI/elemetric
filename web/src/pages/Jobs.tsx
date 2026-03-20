@@ -288,12 +288,12 @@ export default function Jobs() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Jobs</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
           >
             <Download size={15} />
             Export CSV
@@ -304,7 +304,8 @@ export default function Jobs() {
             style={{ backgroundColor: '#FF6B00' }}
           >
             <Plus size={15} />
-            Assign New Job
+            <span className="hidden sm:inline">Assign New Job</span>
+            <span className="sm:hidden">Assign Job</span>
           </button>
         </div>
       </div>
@@ -411,7 +412,7 @@ export default function Jobs() {
 
       {/* Assign success toast */}
       {assignSuccess && (
-        <div className="fixed bottom-6 right-6 z-50 bg-green-600 text-white rounded-xl px-5 py-3 shadow-xl flex items-center gap-2 text-sm font-medium animate-pulse">
+        <div className="fixed bottom-20 md:bottom-6 right-6 z-50 bg-green-600 text-white rounded-xl px-5 py-3 shadow-xl flex items-center gap-2 text-sm font-medium animate-pulse">
           <CheckCircle size={16} />
           Job assigned successfully
         </div>
@@ -674,7 +675,7 @@ export default function Jobs() {
                   onChange={(val) => setAssignForm((f) => ({ ...f, address: val }))}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Scheduled Date/Time</label>
                   <input
