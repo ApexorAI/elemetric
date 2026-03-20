@@ -131,13 +131,13 @@ export default function Home() {
             }
           }
 
-          // Load recent jobs (last 3)
+          // Load recent jobs (last 2)
           const { data: jobs } = await supabase
             .from("jobs")
             .select("id, job_name, job_addr, job_type, confidence, created_at")
             .eq("user_id", user.id)
             .order("created_at", { ascending: false })
-            .limit(3);
+            .limit(2);
 
           // Total job count + compliance score
           const { data: allJobs } = await supabase
@@ -272,7 +272,14 @@ export default function Home() {
 
       {/* ── Recent jobs ── */}
       <View style={s.section}>
-        <Text style={s.sectionLabel}>RECENT JOBS</Text>
+        <View style={s.sectionRow}>
+          <Text style={s.sectionLabel}>RECENT JOBS</Text>
+          {recentJobs.length > 0 && (
+            <Pressable onPress={() => router.push("/(tabs)/jobs")} accessibilityRole="link" accessibilityLabel="View all jobs">
+              <Text style={s.sectionLink}>View all →</Text>
+            </Pressable>
+          )}
+        </View>
 
         {loading ? (
           <>
@@ -280,8 +287,14 @@ export default function Home() {
             <SkeletonHomeCard />
           </>
         ) : recentJobs.length > 0 ? (
-          recentJobs.slice(0, 2).map((job) => (
-            <View key={job.id} style={s.jobCard}>
+          recentJobs.map((job) => (
+            <Pressable
+              key={job.id}
+              style={s.jobCard}
+              onPress={() => router.push("/(tabs)/jobs")}
+              accessibilityRole="button"
+              accessibilityLabel={`View job at ${job.jobAddr}`}
+            >
               <View style={s.jobIcon}>
                 <Text style={s.jobIconText}>{TYPE_ICON[job.jobType] ?? "📋"}</Text>
               </View>
@@ -304,7 +317,7 @@ export default function Home() {
                   {job.confidence}%
                 </Text>
               )}
-            </View>
+            </Pressable>
           ))
         ) : (
           <View style={s.emptyCard}>
@@ -419,11 +432,17 @@ const s = StyleSheet.create({
 
   // Section
   section: { gap: 10 },
+  sectionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   sectionLabel: {
     color: "rgba(255,255,255,0.35)",
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 1,
+  },
+  sectionLink: {
+    color: "#f97316",
+    fontSize: 12,
+    fontWeight: "700",
   },
 
   // Job cards
