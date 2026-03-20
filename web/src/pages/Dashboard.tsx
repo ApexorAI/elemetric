@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Briefcase, Users, TrendingUp, AlertTriangle, RefreshCw, Plus, UserPlus, FileDown, Building2 } from 'lucide-react'
+import { Briefcase, Users, TrendingUp, AlertTriangle, RefreshCw, Plus, UserPlus, FileDown, Building2, TrendingDown } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import OnboardingWizard, { ONBOARDING_KEY } from '../components/OnboardingWizard'
 
@@ -62,6 +62,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState(new Date())
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const prevData = useRef<DashboardData | null>(null)
   const navigate = useNavigate()
   const apiUrl = import.meta.env.VITE_API_URL
 
@@ -77,6 +78,7 @@ export default function Dashboard() {
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = await res.json()
+      prevData.current = data
       setData(json)
       setLastRefresh(new Date())
     } catch (err) {
@@ -102,32 +104,46 @@ export default function Dashboard() {
     }
   }, [loading, data])
 
+  function getTrend(curr?: number, prev?: number): 'up' | 'down' | 'flat' {
+    if (curr == null || prev == null) return 'flat'
+    if (curr > prev) return 'up'
+    if (curr < prev) return 'down'
+    return 'flat'
+  }
+
+  const prev = prevData.current?.team
+  const curr = data?.team
+
   const stats = [
     {
       label: 'Jobs This Week',
-      value: data?.team?.total_jobs_this_week ?? 0,
+      value: curr?.total_jobs_this_week ?? 0,
       icon: Briefcase,
       color: '#FF6B00',
+      trend: getTrend(curr?.total_jobs_this_week, prev?.total_jobs_this_week),
     },
     {
       label: 'Avg Compliance Score',
-      value: data?.team?.avg_compliance_score != null
-        ? `${Math.round(data.team.avg_compliance_score)}%`
+      value: curr?.avg_compliance_score != null
+        ? `${Math.round(curr.avg_compliance_score)}%`
         : '—',
       icon: TrendingUp,
       color: '#16a34a',
+      trend: getTrend(curr?.avg_compliance_score, prev?.avg_compliance_score),
     },
     {
       label: 'Team Members',
-      value: data?.team?.team_members ?? 0,
+      value: curr?.team_members ?? 0,
       icon: Users,
       color: '#2563eb',
+      trend: getTrend(curr?.team_members, prev?.team_members),
     },
     {
       label: 'Active Jobs',
-      value: data?.team?.active_jobs ?? 0,
+      value: curr?.active_jobs ?? 0,
       icon: AlertTriangle,
       color: '#d97706',
+      trend: getTrend(curr?.active_jobs, prev?.active_jobs),
     },
   ]
 
@@ -175,8 +191,14 @@ export default function Dashboard() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-6 text-sm">
-          Failed to load dashboard data: {error}
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-6 text-sm flex items-center justify-between gap-3">
+          <span>Failed to load dashboard data: {error}</span>
+          <button
+            onClick={() => { setLoading(true); fetchDashboard() }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-xs font-medium transition-colors flex-shrink-0"
+          >
+            <RefreshCw size={12} /> Retry
+          </button>
         </div>
       )}
 
@@ -184,10 +206,10 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {loading
           ? [1, 2, 3, 4].map((i) => <SkeletonCard key={i} />)
-          : stats.map(({ label, value, icon: Icon, color }) => (
+          : stats.map(({ label, value, icon: Icon, color, trend }) => (
               <div
                 key={label}
-                className="bg-white rounded-xl p-5 shadow-sm border border-gray-100"
+                className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm text-gray-500">{label}</p>
@@ -198,7 +220,20 @@ export default function Dashboard() {
                     <Icon size={18} style={{ color }} />
                   </div>
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{value}</p>
+                <div className="flex items-end gap-2">
+                  <p className="text-2xl font-bold text-gray-900">{value}</p>
+                  {trend !== 'flat' && prevData.current && (
+                    <span
+                      className="flex items-center gap-0.5 text-xs font-medium mb-0.5"
+                      style={{ color: trend === 'up' ? '#16a34a' : '#dc2626' }}
+                    >
+                      {trend === 'up'
+                        ? <TrendingUp size={13} />
+                        : <TrendingDown size={13} />}
+                      {trend === 'up' ? 'up' : 'down'}
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
       </div>
