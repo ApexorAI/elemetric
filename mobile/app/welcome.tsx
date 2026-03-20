@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Haptics from "expo-haptics";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const ONBOARDING_KEY = "elemetric_onboarding_seen";
@@ -52,18 +53,20 @@ export default function Onboarding() {
     setActiveIndex(index);
   };
 
-  const goToSlide = (index: number) => {
+  const goToSlide = useCallback((index: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     scrollRef.current?.scrollTo({ x: index * SCREEN_WIDTH, animated: true });
-  };
+  }, []);
 
-  const finish = async () => {
+  const finish = useCallback(async () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     await AsyncStorage.setItem(ONBOARDING_KEY, "true");
     router.replace("/login");
-  };
+  }, [router]);
 
-  const goBack = () => {
+  const goBack = useCallback(() => {
     if (activeIndex > 0) goToSlide(activeIndex - 1);
-  };
+  }, [activeIndex, goToSlide]);
 
   const isFirst = activeIndex === 0;
   const isLast = activeIndex === SLIDES.length - 1;
@@ -95,13 +98,15 @@ export default function Onboarding() {
         {SLIDES.map((slide, i) => (
           <View key={i} style={styles.slide}>
             {/* Illustration */}
-            <View style={[styles.illustrationWrap, { borderColor: slide.accent + "33", backgroundColor: slide.accent + "12" }]}>
-              <Text style={styles.illustrationEmoji}>{slide.emoji}</Text>
+            <View style={[styles.illustrationOuter, { borderColor: slide.accent + "22" }]}>
+              <View style={[styles.illustrationWrap, { backgroundColor: slide.accent + "18", borderColor: slide.accent + "40" }]}>
+                <Text style={styles.illustrationEmoji}>{slide.emoji}</Text>
+              </View>
             </View>
 
             <Text style={styles.brand}>ELEMETRIC</Text>
             <Text style={styles.title}>{slide.title}</Text>
-            <Text style={styles.subtitle}>{slide.subtitle}</Text>
+            <Text style={[styles.subtitle, { borderLeftColor: slide.accent + "80" }]}>{slide.subtitle}</Text>
 
             {/* Step indicator text */}
             <Text style={styles.stepLabel}>{i + 1} of {SLIDES.length}</Text>
@@ -125,16 +130,28 @@ export default function Onboarding() {
             style={[styles.backBtn, isFirst && { opacity: 0 }]}
             onPress={goBack}
             disabled={isFirst}
+            accessibilityRole="button"
+            accessibilityLabel="Go to previous slide"
           >
             <Text style={styles.backBtnText}>← Back</Text>
           </Pressable>
 
           {isLast ? (
-            <Pressable style={styles.getStartedBtn} onPress={finish}>
+            <Pressable
+              style={styles.getStartedBtn}
+              onPress={finish}
+              accessibilityRole="button"
+              accessibilityLabel="Get started with Elemetric"
+            >
               <Text style={styles.getStartedText}>Get Started →</Text>
             </Pressable>
           ) : (
-            <Pressable style={styles.nextBtn} onPress={() => goToSlide(activeIndex + 1)}>
+            <Pressable
+              style={styles.nextBtn}
+              onPress={() => goToSlide(activeIndex + 1)}
+              accessibilityRole="button"
+              accessibilityLabel="Go to next slide"
+            >
               <Text style={styles.nextText}>Next →</Text>
             </Pressable>
           )}
@@ -187,19 +204,26 @@ const styles = StyleSheet.create({
     gap: 20,
   },
 
-  illustrationWrap: {
-    width: 100,
-    height: 100,
-    borderRadius: 28,
+  illustrationOuter: {
+    width: 144,
+    height: 144,
+    borderRadius: 40,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.07)",
-    backgroundColor: "#0f2035",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
+    backgroundColor: "rgba(255,255,255,0.02)",
+  },
+  illustrationWrap: {
+    width: 116,
+    height: 116,
+    borderRadius: 32,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
   },
   illustrationEmoji: {
-    fontSize: 48,
+    fontSize: 56,
   },
 
   brand: {
@@ -215,9 +239,11 @@ const styles = StyleSheet.create({
     lineHeight: 40,
   },
   subtitle: {
-    color: "rgba(255,255,255,0.55)",
-    fontSize: 15,
-    lineHeight: 24,
+    color: "rgba(255,255,255,0.65)",
+    fontSize: 16,
+    lineHeight: 26,
+    borderLeftWidth: 3,
+    paddingLeft: 12,
   },
   stepLabel: {
     color: "rgba(255,255,255,0.35)",
