@@ -14,6 +14,7 @@ import {
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
+import * as Haptics from "expo-haptics";
 
 const SOUND_PREF_KEY = "elemetric_notif_sound";
 
@@ -163,9 +164,9 @@ export default function Notifications() {
   };
 
   const handlePress = (n: Notification) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!n.read) markAsRead(n.id);
     if (n.jobId) {
-      // Navigate to assigned jobs if this is a job-related notification
       router.push("/assigned-jobs");
     }
   };
@@ -336,6 +337,8 @@ export default function Notifications() {
                 key={n.id}
                 style={[styles.notifCard, !n.read && styles.notifCardUnread]}
                 onPress={() => handlePress(n)}
+                accessibilityRole="button"
+                accessibilityLabel={`${n.title}${n.body ? `: ${n.body}` : ""}${!n.read ? " — unread" : ""}`}
               >
                 <View style={[styles.iconWrap, { borderColor: cfg.color + "44", backgroundColor: cfg.color + "18" }]}>
                   <Text style={styles.icon}>{cfg.icon}</Text>
