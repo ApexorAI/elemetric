@@ -18,6 +18,11 @@ function useReportState(): [ReportState, (loading: boolean, error?: string | nul
   return [state, update]
 }
 
+// Current-month defaults computed once at module level
+const _now = new Date()
+const DEFAULT_DATE_FROM = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-01`
+const DEFAULT_DATE_TO = _now.toISOString().split('T')[0]
+
 export default function Reports() {
   const { session, profile } = useAuth()
   const [members, setMembers] = useState<Member[]>([])
@@ -29,8 +34,8 @@ export default function Reports() {
   // Individual plumber report state
   const [plumberState, setPlumberState] = useReportState()
   const [selectedPlumber, setSelectedPlumber] = useState('')
-  const [plumberDateFrom, setPlumberDateFrom] = useState('')
-  const [plumberDateTo, setPlumberDateTo] = useState('')
+  const [plumberDateFrom, setPlumberDateFrom] = useState(DEFAULT_DATE_FROM)
+  const [plumberDateTo, setPlumberDateTo] = useState(DEFAULT_DATE_TO)
 
   // Property report state
   const [propertyState, setPropertyState] = useReportState()
@@ -118,6 +123,16 @@ export default function Reports() {
     } catch (err) {
       setRegulatoryState(false, (err as Error).message)
     }
+  }
+
+  if (!profile?.team_id) {
+    return (
+      <div className="p-6 max-w-xl mx-auto mt-16 text-center">
+        <FileDown size={36} className="mx-auto text-gray-300 mb-3" />
+        <h2 className="text-lg font-bold text-gray-700 mb-2">No team linked</h2>
+        <p className="text-sm text-gray-500">Reports will be available once your account is connected to a team.</p>
+      </div>
+    )
   }
 
   return (
