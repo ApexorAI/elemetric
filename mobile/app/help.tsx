@@ -1,149 +1,258 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  Pressable,
   ScrollView,
+  Pressable,
+  TextInput,
   Linking,
-  Alert,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from "react-native";
 import { useRouter } from "expo-router";
-import Constants from "expo-constants";
 
-// ── FAQ data ──────────────────────────────────────────────────────────────────
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
-const SECTIONS = [
+type FAQ = { q: string; a: string };
+type Category = { id: string; icon: string; label: string; faqs: FAQ[] };
+
+const CATEGORIES: Category[] = [
   {
-    title: "Getting Started",
-    icon: "🚀",
-    items: [
+    id: "getting-started",
+    icon: "rocket",
+    label: "Getting Started",
+    faqs: [
       {
-        q: "How do I create my first job?",
-        a: "From the home screen, tap New Job. Enter the job name and address, then select your trade type. You'll be taken to the checklist for that trade where you can capture photos.",
+        q: "What is Elemetric?",
+        a: "Elemetric is an AI-powered compliance documentation app for licensed tradespeople. You photograph your work, and our AI analyses the photos against Australian Standards — generating a compliance report you can use for your 7-year liability records.",
       },
       {
-        q: "What information do I need in my profile?",
-        a: "Add your full name, licence number, company name, and phone number. These details are automatically included in every compliance report PDF you generate.",
+        q: "How do I start my first job?",
+        a: "Tap 'New Job' on the home screen. Enter the job name and address, select the job type (e.g. Hot Water, Gas, Drainage), then work through the checklist, photos, and AI review steps.",
       },
       {
-        q: "How do I set up a team as an employer?",
-        a: "Go to Settings and switch your account type to Employer. A team will be created automatically. Then use the Employer Portal to invite team members by email.",
+        q: "What trades are supported?",
+        a: "Currently: Plumbing (hot water, gas, drainage, roof plumbing), Electrical, HVAC, Fire Protection, and General Mechanical. More trades are added regularly.",
       },
       {
-        q: "How do plumbers join a team?",
-        a: "Ask your employer to send you an invite email. Then go to Settings → Join a Team and enter the email address the invite was sent to. Your account will be linked to the team.",
+        q: "Do I need an internet connection?",
+        a: "An internet connection is required for AI analysis and syncing jobs to the cloud. Offline, you can still complete checklists and capture photos — these sync automatically when you reconnect.",
+      },
+      {
+        q: "Is my data backed up?",
+        a: "Yes. All completed jobs are saved to our secure Supabase cloud database, as well as locally on your device. You can also export your data any time from Settings > Privacy & Data.",
       },
     ],
   },
   {
-    title: "How AI Analysis Works",
-    icon: "🤖",
-    items: [
+    id: "ai-review",
+    icon: "robot",
+    label: "AI Review",
+    faqs: [
       {
-        q: "What does the AI analyse?",
-        a: "The AI reviews your site photos against Australian Standards (AS/NZS 3500 for plumbing, AS/NZS 5601 for gas, AS/NZS 3000 for electrical, AS/NZS 1668 for HVAC). It identifies visible components, unclear elements, and missing items.",
+        q: "How does the AI review work?",
+        a: "After uploading your job photos, our AI compares what it detects in the images against the relevant Australian Standard (e.g. AS/NZS 3500.4 for hot water). It produces a confidence score, lists detected and missing items, and gives you a recommended action.",
       },
       {
-        q: "What does Visible, Unclear, and Missing mean?",
-        a: "Visible: components clearly captured in photos that meet the standard. Unclear: components present but photo quality or angle makes it hard to confirm compliance. Missing: components required by the standard that are not visible in the provided photos.",
+        q: "What is the confidence score?",
+        a: "The confidence score (0-100%) represents how completely the AI could verify compliance from your photos. A score above 85% is excellent. Lower scores usually mean some photos are unclear or missing — the AI will tell you specifically what to re-photograph.",
       },
       {
-        q: "How accurate is the AI?",
-        a: "The AI is a documentation aid, not a certified compliance inspector. It helps you capture and document your work systematically. Final compliance responsibility always rests with the licensed tradesperson.",
+        q: "The AI result is wrong — what do I do?",
+        a: "AI analysis is a decision-support tool, not a legal substitute for your professional judgement. If you believe the result is incorrect, re-photograph the specific items flagged, or add a note in the job summary. Always sign off on your own compliance.",
       },
       {
-        q: "What is AI Confidence?",
-        a: "Confidence is a 0–100% score representing how completely your photo set documents the required compliance items for that trade type. Higher confidence means more required items were clearly captured.",
+        q: "How many photos should I take?",
+        a: "More is always better. Aim for at least 6-10 photos per job: wide shots for context, close-ups of key compliance points (valves, labels, connections), and any certificates or test readings. Good lighting significantly improves accuracy.",
       },
       {
-        q: "Why did my photos get a low confidence score?",
-        a: "Common causes: photos are too dark or blurry, required components are out of frame, or photos were taken before installation was complete. Retake photos in good light with all components clearly in frame.",
-      },
-    ],
-  },
-  {
-    title: "Understanding Your Compliance Score",
-    icon: "📊",
-    items: [
-      {
-        q: "How is my compliance score calculated?",
-        a: "Your compliance score is the average AI confidence across all your completed jobs. A score above 80% is Excellent, 50–79% is Good, and below 50% indicates your documentation needs improvement.",
-      },
-      {
-        q: "How do I improve my score?",
-        a: "Take clear, well-lit photos of all required components before and after installation. Ensure every checklist item is covered by at least one photo. Re-run analysis if you add more photos.",
-      },
-      {
-        q: "Does my compliance score affect anything?",
-        a: "Your score is visible to your employer if you're part of a team, and it appears in your profile. A high score demonstrates consistent, thorough documentation practice.",
+        q: "Why is analysis taking a long time?",
+        a: "AI analysis typically takes 10-30 seconds depending on the number of photos and server load. If it takes more than 2 minutes, check your internet connection and try again. Your photos are already uploaded so no data is lost.",
       },
     ],
   },
   {
-    title: "Liability Timeline Explained",
-    icon: "📅",
-    items: [
+    id: "documents",
+    icon: "doc",
+    label: "Documents & PDF",
+    faqs: [
       {
-        q: "What is the Liability Timeline?",
-        a: "Under Australian law, licensed tradespeople can be held liable for their work for up to 7 years after completion. The Liability Timeline shows a countdown for each job from its completion date.",
+        q: "How do I generate a compliance PDF?",
+        a: "From any completed job's AI Review screen, tap the Share button in the top-right corner and select 'Export PDF'. The PDF includes a cover page, executive summary, full AI assessment, your photos, and a compliance certificate.",
       },
       {
-        q: "Why does this matter?",
-        a: "If a defect claim is made years after a job, your compliance reports are your evidence that work was done correctly at the time. Elemetric keeps your documentation safely stored in the cloud.",
+        q: "Is the PDF legally valid?",
+        a: "The PDF is a detailed compliance record suitable for your 7-year liability documentation obligations. It is not a formal certificate of compliance — that must be issued through your state's regulatory body. Elemetric documents support your records, not replace official certificates.",
       },
       {
-        q: "What happens when a job expires?",
-        a: "After 7 years the job is outside the general liability window. You can safely archive old records, though keeping them longer is always an option.",
+        q: "Can I share the PDF with my client?",
+        a: "Yes. Use the standard iOS/Android share sheet to send via email, AirDrop, or any messaging app. You can also save it to Files or Google Drive.",
       },
       {
-        q: "What are compliance alerts?",
-        a: "When a job is within 12 months of its 7-year liability expiry, Elemetric sends you an alert so you can review and archive the documentation as needed.",
+        q: "Where are my PDFs stored?",
+        a: "PDFs are generated on-device and can be shared immediately. They are not automatically stored — save them to Files or email yourself a copy for your records.",
       },
     ],
   },
   {
-    title: "Employer Portal Guide",
-    icon: "🏢",
-    items: [
+    id: "checklist",
+    icon: "check",
+    label: "Checklists",
+    faqs: [
       {
-        q: "What can I do in the Employer Portal?",
-        a: "View all team members' compliance scores, job counts, and last active dates. Assign jobs to specific plumbers with a scheduled date. Use the Job Planner for a weekly schedule view. Export monthly PDF team reports.",
+        q: "What is the checklist for?",
+        a: "The checklist ensures you capture all required compliance items before taking photos and running the AI review. Completing it prompts you to photograph each item methodically, which improves your AI confidence score.",
       },
       {
-        q: "How do I assign a job to a plumber?",
-        a: "From the Employer Portal, tap Assign New Job. Fill in the job details, select a team member from the dropdown, and tap Create & Assign Job. The plumber receives a push notification and can accept the job in their app.",
+        q: "Can I skip checklist items?",
+        a: "You can proceed even if not all items are ticked, but your AI confidence score will likely be lower. Required items are marked — these correspond to mandatory Australian Standards requirements.",
       },
       {
-        q: "What does the Job Planner show?",
-        a: "The Job Planner shows all assigned jobs in a weekly calendar view. Tap any day to see that day's jobs and the assigned plumber. Tap a job card to reassign it or change the scheduled date.",
+        q: "Can I customise the checklist?",
+        a: "Custom checklist templates are available to Employer account holders via the Job Templates feature in the Employer Dashboard. Individual accounts use the standard trade-specific checklists.",
+      },
+    ],
+  },
+  {
+    id: "account",
+    icon: "person",
+    label: "Account & Billing",
+    faqs: [
+      {
+        q: "What is the difference between Individual and Employer accounts?",
+        a: "Individual accounts are for sole traders managing their own jobs. Employer accounts add team management: you can invite subcontractors, assign jobs, view team reports, and manage job templates.",
       },
       {
-        q: "How do I generate a team report?",
-        a: "From the Employer Portal, tap Team Report. This shows each team member's jobs completed this month, average compliance score, and total jobs. Tap Export Team Report PDF to generate and share a branded report.",
+        q: "How do I switch between Individual and Employer mode?",
+        a: "Go to Settings > View > Account Type and tap 'Employer' or 'Individual'. Switching is instant and reversible. Your job history is preserved regardless of role.",
+      },
+      {
+        q: "What is included in the free trial?",
+        a: "The 14-day free trial includes full access to all features. No credit card is required to start. After 14 days, you'll need a Pro subscription to continue creating new jobs.",
+      },
+      {
+        q: "How do I cancel my subscription?",
+        a: "Subscriptions are managed through the App Store (iOS) or Google Play (Android). Go to your device's subscription settings and cancel from there. Go to Settings > Subscription > Manage Subscription for a direct link.",
+      },
+      {
+        q: "Will I lose my data if I cancel?",
+        a: "No. Your completed jobs and history remain accessible in read-only mode after cancellation. You just won't be able to create new jobs until you resubscribe.",
+      },
+    ],
+  },
+  {
+    id: "employer",
+    icon: "building",
+    label: "Employer & Teams",
+    faqs: [
+      {
+        q: "How do I invite a team member?",
+        a: "From the Employer Dashboard, tap 'Invite Member'. Enter their email address — they'll receive an invitation to join your team in Elemetric. They need to have an existing Elemetric account or create one.",
+      },
+      {
+        q: "How do I assign a job to someone?",
+        a: "Tap 'Assign Job' on the Employer Dashboard, fill in the job details and address, and select the team member from your roster. They'll receive a notification and the job will appear in their queue.",
+      },
+      {
+        q: "Can I see my team's compliance reports?",
+        a: "Yes. The Team Report view in the Employer Dashboard shows all completed jobs by your team members, including AI confidence scores and compliance status.",
+      },
+      {
+        q: "How many team members can I add?",
+        a: "There is no hard limit on team size. Each team member requires their own Elemetric subscription — your Employer subscription covers your own account only.",
+      },
+    ],
+  },
+  {
+    id: "privacy",
+    icon: "lock",
+    label: "Privacy & Security",
+    faqs: [
+      {
+        q: "Who can see my job photos?",
+        a: "Only you (and your employer if you're on a team). Photos are stored securely in Australian-region cloud storage. Elemetric staff do not access your photos except to investigate a specific support request you raise.",
+      },
+      {
+        q: "How is my data protected?",
+        a: "All data is encrypted in transit (TLS 1.3) and at rest (AES-256). We use Supabase with row-level security — each user can only access their own data.",
+      },
+      {
+        q: "How do I export or delete my data?",
+        a: "Go to Settings > Privacy & Data > Export My Data to download a JSON export of all your jobs. To delete your account, tap 'Request Account Deletion' — your data is removed within 30 days per our privacy policy.",
+      },
+      {
+        q: "Is Elemetric compliant with Australian privacy law?",
+        a: "Yes. Elemetric complies with the Australian Privacy Act 1988 and the Australian Privacy Principles (APPs). Our full privacy policy is at elemetric.com.au/privacy.",
+      },
+    ],
+  },
+  {
+    id: "troubleshooting",
+    icon: "wrench",
+    label: "Troubleshooting",
+    faqs: [
+      {
+        q: "The app crashed — what do I do?",
+        a: "Force-close and reopen the app. If the crash repeats, restart your device. If the problem persists, contact support at cayde@elemetric.com.au with a description of what you were doing.",
+      },
+      {
+        q: "My photos aren't uploading",
+        a: "Check your internet connection. Make sure Elemetric has permission to access your camera and photo library in your device Settings. Photos up to 20MB are supported — very large RAW files may need to be compressed first.",
+      },
+      {
+        q: "I can't sign in",
+        a: "Try resetting your password via Settings > Change Password, or from the login screen. If you've forgotten your email, contact support. Make sure you're using the same sign-in method you registered with (email/Google/Apple).",
+      },
+      {
+        q: "The AI returned 'Unable to analyse'",
+        a: "This usually means the photos were too dark, blurry, or the subject wasn't clearly visible. Retake the photos in better lighting with the camera steady, ensuring compliance labels and components are in focus.",
+      },
+      {
+        q: "GPS address not auto-filling",
+        a: "Elemetric requires location permission to auto-fill the job address. Go to your device Settings > Privacy > Location Services > Elemetric and set to 'While Using'. You can always type the address manually.",
       },
     ],
   },
 ];
 
-// ── Main screen ───────────────────────────────────────────────────────────────
+const CAT_ICONS: Record<string, string> = {
+  rocket: "🚀",
+  robot: "🤖",
+  doc: "📄",
+  check: "✅",
+  person: "👤",
+  building: "🏢",
+  lock: "🔒",
+  wrench: "🛠",
+};
 
 export default function Help() {
   const router = useRouter();
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [search, setSearch] = useState("");
+  const [openItems, setOpenItems] = useState<Set<string>>(new Set());
 
-  const toggle = (key: string) =>
-    setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return CATEGORIES;
+    return CATEGORIES.map((cat) => ({
+      ...cat,
+      faqs: cat.faqs.filter(
+        (f) => f.q.toLowerCase().includes(q) || f.a.toLowerCase().includes(q)
+      ),
+    })).filter((cat) => cat.faqs.length > 0);
+  }, [search]);
 
-  const openSupport = () => {
-    const email = "cayde@elemetric.com.au";
-    const subject = encodeURIComponent("Elemetric App Support Request");
-    const body = encodeURIComponent(
-      `Hi Elemetric Support,\n\nI need help with:\n\n[Describe your issue here]\n\nApp version: ${Constants.expoConfig?.version ?? "1.0.0"}\nDevice: [Your device]\n`
-    );
-    Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`).catch(() =>
-      Alert.alert("Cannot open email", "Please email cayde@elemetric.com.au directly.")
-    );
+  const toggle = (key: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setOpenItems((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
   };
 
   return (
@@ -151,135 +260,218 @@ export default function Help() {
       <View style={styles.header}>
         <Text style={styles.brand}>ELEMETRIC</Text>
         <Text style={styles.title}>Help & FAQ</Text>
-        <Text style={styles.subtitle}>Everything you need to know</Text>
+      </View>
+
+      <View style={styles.searchWrap}>
+        <Text style={styles.searchIconText}>🔍</Text>
+        <TextInput
+          style={styles.searchInput}
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search questions..."
+          placeholderTextColor="rgba(255,255,255,0.30)"
+          returnKeyType="search"
+          autoCorrect={false}
+          clearButtonMode="while-editing"
+        />
+        {search.length > 0 && (
+          <Pressable onPress={() => setSearch("")} hitSlop={8}>
+            <Text style={styles.searchClear}>X</Text>
+          </Pressable>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        {filtered.length === 0 && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>?</Text>
+            <Text style={styles.emptyTitle}>No results found</Text>
+            <Text style={styles.emptyText}>
+              Try different keywords, or contact support below.
+            </Text>
+          </View>
+        )}
 
-        {SECTIONS.map((section) => (
-          <View key={section.title} style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionIcon}>{section.icon}</Text>
-              <Text style={styles.sectionTitle}>{section.title}</Text>
+        {filtered.map((cat) => (
+          <View key={cat.id} style={styles.section}>
+            <View style={styles.catHeader}>
+              <Text style={styles.catIconText}>{CAT_ICONS[cat.icon] ?? ""}</Text>
+              <Text style={styles.catLabel}>{cat.label}</Text>
             </View>
-
-            {section.items.map((item, idx) => {
-              const key = `${section.title}-${idx}`;
-              const open = !!expanded[key];
-              return (
-                <Pressable
-                  key={key}
-                  style={[styles.faqItem, idx < section.items.length - 1 && styles.faqItemBorder]}
-                  onPress={() => toggle(key)}
-                >
-                  <View style={styles.faqQ}>
-                    <Text style={styles.faqQText}>{item.q}</Text>
-                    <Text style={[styles.faqChevron, open && styles.faqChevronOpen]}>
-                      {open ? "−" : "+"}
-                    </Text>
-                  </View>
-                  {open && (
-                    <Text style={styles.faqA}>{item.a}</Text>
-                  )}
-                </Pressable>
-              );
-            })}
+            <View style={styles.group}>
+              {cat.faqs.map((faq, i) => {
+                const key = `${cat.id}-${i}`;
+                const open = openItems.has(key);
+                return (
+                  <React.Fragment key={key}>
+                    {i > 0 && <View style={styles.divider} />}
+                    <Pressable style={styles.faqRow} onPress={() => toggle(key)}>
+                      <Text style={styles.faqQ}>{faq.q}</Text>
+                      <Text style={[styles.faqChevron, open && styles.faqChevronOpen]}>
+                        {open ? "v" : ">"}
+                      </Text>
+                    </Pressable>
+                    {open && (
+                      <View style={styles.faqAnswer}>
+                        <Text style={styles.faqAnswerText}>{faq.a}</Text>
+                      </View>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </View>
           </View>
         ))}
 
-        {/* Contact support */}
-        <View style={styles.supportCard}>
-          <Text style={styles.supportTitle}>Still need help?</Text>
-          <Text style={styles.supportSubtitle}>
-            Our team is here to help. Send us an email and we'll get back to you within one business day.
+        <View style={styles.contactCard}>
+          <Text style={styles.contactTitle}>Still need help?</Text>
+          <Text style={styles.contactText}>
+            Our support team responds within 1 business day.
           </Text>
-          <Pressable style={styles.supportBtn} onPress={openSupport}>
-            <Text style={styles.supportBtnText}>✉️  Contact Support</Text>
+          <Pressable
+            style={styles.contactBtn}
+            onPress={() => {
+              const subject = encodeURIComponent("Elemetric Support Request");
+              Linking.openURL(`mailto:cayde@elemetric.com.au?subject=${subject}`).catch(() => {});
+            }}
+          >
+            <Text style={styles.contactBtnText}>Email Support</Text>
           </Pressable>
-          <Text style={styles.supportEmail}>cayde@elemetric.com.au</Text>
         </View>
 
         <Pressable onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>Back</Text>
         </Pressable>
       </ScrollView>
     </View>
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#07152b" },
-  header: { paddingTop: 20, paddingHorizontal: 20, paddingBottom: 8 },
+  header: { paddingTop: 20, paddingHorizontal: 20, paddingBottom: 12 },
   brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
   title: { marginTop: 8, color: "white", fontSize: 22, fontWeight: "900" },
-  subtitle: { marginTop: 4, color: "rgba(255,255,255,0.55)", fontSize: 13 },
 
-  body: { padding: 20, gap: 12, paddingBottom: 50 },
+  searchWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: "#0f2035",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  searchIconText: { fontSize: 16 },
+  searchInput: {
+    flex: 1,
+    color: "white",
+    fontSize: 15,
+    paddingVertical: 12,
+  },
+  searchClear: {
+    color: "rgba(255,255,255,0.40)",
+    fontSize: 14,
+    fontWeight: "700",
+    paddingLeft: 4,
+  },
 
-  section: {
+  body: { paddingHorizontal: 20, paddingBottom: 60 },
+
+  emptyState: { alignItems: "center", paddingTop: 60, gap: 12 },
+  emptyIcon: { fontSize: 48, color: "rgba(255,255,255,0.30)" },
+  emptyTitle: { color: "white", fontSize: 18, fontWeight: "700" },
+  emptyText: { color: "rgba(255,255,255,0.45)", fontSize: 14, textAlign: "center" },
+
+  section: { marginBottom: 24 },
+  catHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  catIconText: { fontSize: 18 },
+  catLabel: {
+    color: "#f97316",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+
+  group: {
+    backgroundColor: "#0f2035",
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.07)",
-    backgroundColor: "#0f2035",
     overflow: "hidden",
   },
-  sectionHeader: {
+  divider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    marginHorizontal: 16,
+  },
+
+  faqRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.07)",
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+    gap: 8,
   },
-  sectionIcon: { fontSize: 20 },
-  sectionTitle: { color: "white", fontWeight: "700", fontSize: 15 },
+  faqQ: {
+    flex: 1,
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 20,
+  },
+  faqChevron: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 16,
+    fontWeight: "700",
+    minWidth: 16,
+    textAlign: "center",
+  },
+  faqChevronOpen: {
+    color: "#f97316",
+  },
+  faqAnswer: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  faqAnswerText: {
+    color: "rgba(255,255,255,0.60)",
+    fontSize: 14,
+    lineHeight: 21,
+  },
 
-  faqItem: { padding: 16 },
-  faqItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.07)",
-  },
-  faqQ: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
-  faqQText: { flex: 1, color: "rgba(255,255,255,0.85)", fontWeight: "700", fontSize: 15, lineHeight: 22 },
-  faqChevron: { color: "#f97316", fontSize: 20, fontWeight: "700", lineHeight: 22, marginTop: -1 },
-  faqChevronOpen: { color: "#f97316" },
-  faqA: {
-    marginTop: 10,
-    color: "rgba(255,255,255,0.55)",
-    fontSize: 13,
-    lineHeight: 22,
-  },
-
-  supportCard: {
+  contactCard: {
+    marginTop: 8,
+    backgroundColor: "#0f2035",
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "rgba(249,115,22,0.25)",
-    backgroundColor: "#0f2035",
     padding: 20,
+    gap: 8,
+  },
+  contactTitle: { color: "white", fontSize: 16, fontWeight: "700" },
+  contactText: { color: "rgba(255,255,255,0.50)", fontSize: 14 },
+  contactBtn: {
+    marginTop: 8,
+    backgroundColor: "rgba(249,115,22,0.15)",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#f97316",
+    paddingVertical: 12,
     alignItems: "center",
-    gap: 10,
   },
-  supportTitle: { color: "white", fontWeight: "900", fontSize: 15 },
-  supportSubtitle: {
-    color: "rgba(255,255,255,0.55)",
-    fontSize: 13,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  supportBtn: {
-    backgroundColor: "#f97316",
-    borderRadius: 14,
-    height: 56,
-    paddingHorizontal: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4,
-  },
-  supportBtnText: { color: "#07152b", fontWeight: "900", fontSize: 15 },
-  supportEmail: { color: "#f97316", fontSize: 12, marginTop: -4 },
+  contactBtnText: { color: "#f97316", fontWeight: "700", fontSize: 15 },
 
-  back: { marginTop: 4, alignItems: "center" },
+  back: { marginTop: 24, alignItems: "center" },
   backText: { color: "rgba(255,255,255,0.55)", fontWeight: "700" },
 });
