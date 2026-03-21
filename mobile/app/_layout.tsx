@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { View } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { registerForPushNotifications } from "@/lib/notifications";
+import { registerForPushNotifications, scheduleWeeklyComplianceTip, syncBadgeCount } from "@/lib/notifications";
 import { ThemeProvider } from "@/lib/theme";
 import { supabase } from "@/lib/supabase";
 import { OfflineBanner } from "@/components/OfflineBanner";
@@ -126,6 +126,8 @@ export default function RootLayout() {
     registerForPushNotifications();
     runComplianceAlerts();
     runLicenceExpiryCheck();
+    scheduleWeeklyComplianceTip();
+    syncBadgeCount();
 
     // Handle notification taps — deep link to the relevant screen
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {

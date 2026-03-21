@@ -14,6 +14,7 @@ import {
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
+import { syncBadgeCount } from "@/lib/notifications";
 import * as Haptics from "expo-haptics";
 
 const SOUND_PREF_KEY = "elemetric_notif_sound";
@@ -135,6 +136,7 @@ export default function Notifications() {
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, read: true } : n))
       );
+      syncBadgeCount();
     } catch {}
   };
 
@@ -149,6 +151,7 @@ export default function Notifications() {
         .eq("user_id", user.id)
         .eq("read", false);
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      syncBadgeCount();
     } catch (e: any) {
       Alert.alert("Error", e?.message ?? "Could not mark all as read.");
     } finally {

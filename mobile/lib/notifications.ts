@@ -11,7 +11,7 @@ Notifications.setNotificationHandler({
     shouldShowBanner: true,
     shouldShowList: true,
     shouldPlaySound: true,
-    shouldSetBadge: false,
+    shouldSetBadge: true,
   }),
 });
 
@@ -145,6 +145,67 @@ export async function sendLocalNotification(
     await Notifications.scheduleNotificationAsync({
       content: { title, body, sound: true },
       trigger: null, // fire immediately
+    });
+  } catch {}
+}
+
+/**
+ * Update the app's badge count to the number of unread notifications for the current user.
+ * Call this whenever notifications are read or created.
+ */
+export async function syncBadgeCount(): Promise<void> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      await Notifications.setBadgeCountAsync(0);
+      return;
+    }
+    const { count } = await supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("read", false);
+    await Notifications.setBadgeCountAsync(count ?? 0);
+  } catch {}
+}
+
+/**
+ * Schedule a weekly compliance tip local notification.
+ * Idempotent — cancels any previously scheduled tip before re-scheduling.
+ * Fires every Sunday at 8:00 AM.
+ */
+export async function scheduleWeeklyComplianceTip(): Promise<void> {
+  try {
+    // Cancel any previously scheduled weekly tips
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    for (const n of scheduled) {
+      if ((n.content.data as any)?.elemetric_type === "weekly_tip") {
+        await Notifications.cancelScheduledNotificationAsync(n.identifier);
+      }
+    }
+
+    const tips = [
+      "Photograph your PTR valve and tempering valve settings on every hot water job — BPC auditors check these first.",
+      "Record trench depth before backfilling. A photo proves AS/NZS 3500.4:2025 Cl. 4.10 compliance.",
+      "Your 7-year liability clock starts from the date of work — keep photos dated and geotagged.",
+      "Gas compliance certificates must be issued before the appliance is operated. Photograph the certificate on site.",
+      "Always photograph the RCD test result on the breaker — it's evidence AS/NZS 3000:2018 Cl. 2.6 was met.",
+    ];
+    const tip = tips[Math.floor(Math.random() * tips.length)];
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Elemetric Compliance Tip",
+        body: tip,
+        sound: true,
+        data: { elemetric_type: "weekly_tip", screen: "/notifications" },
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+        weekday: 1, // Sunday (1 = Sunday in Expo)
+        hour: 8,
+        minute: 0,
+      },
     });
   } catch {}
 }
