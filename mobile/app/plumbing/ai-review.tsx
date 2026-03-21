@@ -100,7 +100,6 @@ type RawAIResult = {
 };
 
 function normaliseAIResult(raw: RawAIResult): AIResult {
-  console.log("[AIReview] Raw server response fields:", Object.keys(raw));
   const result: AIResult = {
     relevant:          raw.relevant ?? true,
     confidence:        raw.overall_confidence ?? raw.confidence ?? 0,
@@ -112,7 +111,6 @@ function normaliseAIResult(raw: RawAIResult): AIResult {
     risk_rating:       raw.risk_rating,
     liability_summary: raw.liability_summary,
   };
-  console.log("[AIReview] Normalised result:", JSON.stringify(result));
   return result;
 }
 
@@ -331,24 +329,19 @@ weather: parsed.weather,
 
 // Load AI result from file (written by photos.tsx runAI)
 try {
-  console.log("[AIReview] Checking for AI result file:", AI_RESULT_FILE);
   const resultInfo = await FileSystem.getInfoAsync(AI_RESULT_FILE);
-  console.log("[AIReview] AI result file exists:", resultInfo.exists);
 
   if (!resultInfo.exists) {
-    console.warn("[AIReview] No AI result file found — decoded will be null");
     if (active) setDebugInfo({ fileExists: false, rawLength: null, preview: null, error: null });
   } else if (active) {
     const rawResult = await FileSystem.readAsStringAsync(AI_RESULT_FILE, {
       encoding: FileSystem.EncodingType.UTF8,
     });
-    console.log("[AIReview] Raw AI result string (first 300 chars):", rawResult.slice(0, 300));
 
     let parsed: RawAIResult;
     try {
       parsed = JSON.parse(rawResult);
     } catch (parseErr) {
-      console.error("[AIReview] JSON parse error:", parseErr);
       if (active) setDebugInfo({
         fileExists: true,
         rawLength: rawResult.length,
@@ -366,11 +359,9 @@ try {
     });
 
     const normalised = normaliseAIResult(parsed);
-    console.log("[AIReview] Setting decoded result — confidence:", normalised.confidence, "risk_rating:", normalised.risk_rating);
     setDecoded(normalised);
   }
 } catch (e) {
-  console.error("[AIReview] Error loading AI result:", e);
   if (active) setDebugInfo((prev) => ({
     ...prev,
     error: prev.error ?? `Load error: ${String(e)}`,
@@ -479,8 +470,6 @@ const missing = decoded?.missing ?? [];
 const action = decoded?.action ?? "";
 const liabilitySummary = decoded?.liability_summary ?? "";
 const showLegacyAnalysis = !!decoded?.analysis;
-
-console.log("[AIReview] Rendering — confidence:", confidence, "detected:", detected.length, "missing:", missing.length, "unclear:", unclear.length);
 
 const gaugeColor = confidence >= 80 ? "#22c55e" : confidence >= 50 ? "#f97316" : "#ef4444";
 // Prefer server-supplied risk_rating if present; otherwise compute from confidence
