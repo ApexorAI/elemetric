@@ -577,57 +577,30 @@ ${members.length > 0 ? `<h3 style="font-size:16px;margin:0 0 10px;">Team Leaderb
           )}
         </Pressable>
 
-        {/* ── Action buttons ── */}
-        <View style={styles.actionRow}>
-          <Pressable
-            style={styles.actionCard}
-            onPress={() => router.push("/employer/job-planner")}
-          >
-            <Text style={styles.actionCardTitle}>Job Planner</Text>
-            <Text style={styles.actionCardSub}>Weekly schedule view</Text>
-          </Pressable>
-          <Pressable
-            style={styles.actionCard}
-            onPress={() => router.push("/employer/team-report")}
-          >
-            <Text style={styles.actionCardTitle}>Team Report</Text>
-            <Text style={styles.actionCardSub}>Monthly compliance PDF</Text>
-          </Pressable>
+        {/* ── Quick actions grid ── */}
+        <Text style={styles.sectionLabel}>QUICK ACTIONS</Text>
+        <View style={styles.quickGrid}>
+          {[
+            { icon: "📋", label: "Assign Job", sub: "Create & assign work", route: "/employer/assign-job" },
+            { icon: "👤", label: "Invite Member", sub: "Add to team", route: "/employer/invite" },
+            { icon: "📅", label: "Job Planner", sub: "Weekly schedule", route: "/employer/job-planner" },
+            { icon: "📊", label: "Team Report", sub: "Compliance PDF", route: "/employer/team-report" },
+            { icon: "🗂️", label: "Job Templates", sub: "Reuse job types", route: "/employer/job-templates" },
+            { icon: "👷", label: "Subcontractors", sub: "Manage subs", route: "/employer/subcontractors" },
+          ].map((a) => (
+            <Pressable
+              key={a.route}
+              style={styles.quickActionCard}
+              onPress={() => router.push(a.route as never)}
+              accessibilityRole="button"
+              accessibilityLabel={a.label}
+            >
+              <Text style={styles.quickActionIcon}>{a.icon}</Text>
+              <Text style={styles.quickActionLabel}>{a.label}</Text>
+              <Text style={styles.quickActionSub}>{a.sub}</Text>
+            </Pressable>
+          ))}
         </View>
-
-        <Pressable
-          style={styles.assignBtn}
-          onPress={() => router.push("/employer/assign-job")}
-        >
-          <Text style={styles.assignBtnText}>+ Assign New Job</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.inviteBtn}
-          onPress={() => router.push("/employer/invite")}
-          accessibilityRole="button"
-          accessibilityLabel="Invite a team member"
-        >
-          <Text style={styles.inviteBtnText}>+ Invite Member</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.templatesBtn}
-          onPress={() => router.push("/employer/job-templates")}
-          accessibilityRole="button"
-          accessibilityLabel="Job Templates"
-        >
-          <Text style={styles.templatesBtnText}>📋 Job Templates</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.subsBtn}
-          onPress={() => router.push("/employer/subcontractors")}
-          accessibilityRole="button"
-          accessibilityLabel="Subcontractor Management"
-        >
-          <Text style={styles.subsBtnText}>👷 Subcontractor Management</Text>
-        </Pressable>
 
         <Pressable onPress={() => router.back()} style={styles.back}>
           <Text style={styles.backText}>← Back</Text>
@@ -927,6 +900,27 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.10)",
   },
   subsBtnText: { color: "rgba(255,255,255,0.85)", fontWeight: "700", fontSize: 15 },
+
+  // ── Quick actions grid ─────────────────────────────────────────────────────
+  quickGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  quickActionCard: {
+    width: "31%",
+    backgroundColor: "#0f2035",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.07)",
+    padding: 14,
+    gap: 4,
+    alignItems: "flex-start",
+  },
+  quickActionIcon: { fontSize: 22 },
+  quickActionLabel: { color: "white", fontWeight: "800", fontSize: 13, marginTop: 4 },
+  quickActionSub: { color: "rgba(255,255,255,0.40)", fontSize: 11 },
+
   searchInput: {
     backgroundColor: "#0f2035",
     borderRadius: 12,
