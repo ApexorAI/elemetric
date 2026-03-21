@@ -61,6 +61,9 @@ export default function Chatbot() {
   const [loading, setLoading] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const sentTimestamps = useRef<number[]>([]);
+  const RATE_LIMIT_COUNT = 8;
+  const RATE_LIMIT_WINDOW_MS = 60_000;
 
   // Load chat history on mount
   useEffect(() => {
@@ -95,6 +98,26 @@ export default function Chatbot() {
     async (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || loading) return;
+
+      // Rate limit check
+      const now = Date.now();
+      sentTimestamps.current = sentTimestamps.current.filter(
+        (t) => now - t < RATE_LIMIT_WINDOW_MS
+      );
+      if (sentTimestamps.current.length >= RATE_LIMIT_COUNT) {
+        const waitSecs = Math.ceil(
+          (RATE_LIMIT_WINDOW_MS - (now - sentTimestamps.current[0])) / 1000
+        );
+        const rateLimitMsg: Message = {
+          id: Date.now().toString(),
+          role: "assistant",
+          content: `You're sending messages too quickly. Please wait ${waitSecs} second${waitSecs !== 1 ? "s" : ""} before sending another message.`,
+        };
+        setMessages((prev) => [...prev, rateLimitMsg]);
+        scrollToBottom();
+        return;
+      }
+      sentTimestamps.current.push(now);
 
       const userMsg: Message = {
         id: Date.now().toString(),
@@ -260,17 +283,22 @@ export default function Chatbot() {
 
         {/* Input bar */}
         <View style={styles.inputBar}>
-          <TextInput
-            style={styles.input}
-            value={input}
-            onChangeText={setInput}
-            placeholder="Ask a compliance question..."
-            placeholderTextColor="rgba(255,255,255,0.30)"
-            multiline
-            maxLength={1000}
-            onSubmitEditing={() => sendMessage(input)}
-            blurOnSubmit={false}
-          />
+          <View style={styles.inputWrap}>
+            <TextInput
+              style={styles.input}
+              value={input}
+              onChangeText={setInput}
+              placeholder="Ask a compliance question..."
+              placeholderTextColor="rgba(255,255,255,0.30)"
+              multiline
+              maxLength={1000}
+              onSubmitEditing={() => sendMessage(input)}
+              blurOnSubmit={false}
+            />
+            {input.length > 800 && (
+              <Text style={styles.charCount}>{input.length}/1000</Text>
+            )}
+          </View>
           <Pressable
             style={[styles.sendBtn, (!input.trim() || loading) && styles.sendBtnDisabled]}
             onPress={() => sendMessage(input)}
@@ -471,6 +499,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(255,255,255,0.07)",
     gap: 10,
+  },
+  inputWrap: { flex: 1, position: "relative" },
+  charCount: {
+    position: "absolute",
+    bottom: 6,
+    right: 12,
+    color: "rgba(249,115,22,0.7)",
+    fontSize: 10,
+    fontWeight: "700",
   },
   input: {
     flex: 1,
