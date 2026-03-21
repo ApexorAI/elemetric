@@ -150,6 +150,7 @@ const [selectMode, setSelectMode] = useState(false);
 const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 const [bulkExporting, setBulkExporting] = useState(false);
 const [loading, setLoading] = useState(true);
+const [sortAsc, setSortAsc] = useState(false);
 
 const loadJobs = async () => {
 try {
@@ -399,20 +400,51 @@ const countFor = useCallback((key: FilterKey) => {
   return jobs.filter((j) => types.includes(j.jobType)).length;
 }, [jobs]);
 
-// Apply filter + search + date range
-const filtered = useMemo(() => jobs.filter((job) => {
-const matchesFilter = activeFilter === "all" || (TRADE_TYPES[activeFilter] ?? [activeFilter]).includes(job.jobType);
-const q = search.trim().toLowerCase();
-const matchesSearch =
-!q ||
-job.jobName.toLowerCase().includes(q) ||
-job.jobAddr.toLowerCase().includes(q) ||
-(JOB_TYPE_LABELS[job.jobType] ?? job.jobType).toLowerCase().includes(q);
-const jobDate = new Date(job.createdAt);
-const matchesFrom = !dateFrom || jobDate >= dateFrom;
-const matchesTo = !dateTo || jobDate <= new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), 23, 59, 59);
-return matchesFilter && matchesSearch && matchesFrom && matchesTo;
-}), [jobs, activeFilter, search, dateFrom, dateTo]);
+function relativeDate(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return diffMins <= 1 ? "Just now" : `${diffMins}m ago`;
+  const diffHrs = Math.floor(diffMins / 60);
+  if (diffHrs < 24) return `${diffHrs}h ago`;
+  const diffDays = Math.floor(diffHrs / 24);
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  return new Date(iso).toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function riskLabel(confidence: number): { label: string; color: string } {
+  if (confidence >= 80) return { label: "COMPLIANT", color: "#22c55e" };
+  if (confidence >= 50) return { label: "REVIEW", color: "#f97316" };
+  return { label: "HIGH RISK", color: "#ef4444" };
+}
+
+// Apply filter + search + date range + sort
+const filtered = useMemo(() => {
+  const result = jobs.filter((job) => {
+    const matchesFilter = activeFilter === "all" || (TRADE_TYPES[activeFilter] ?? [activeFilter]).includes(job.jobType);
+    const q = search.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      job.jobName.toLowerCase().includes(q) ||
+      job.jobAddr.toLowerCase().includes(q) ||
+      (JOB_TYPE_LABELS[job.jobType] ?? job.jobType).toLowerCase().includes(q);
+    const jobDate = new Date(job.createdAt);
+    const matchesFrom = !dateFrom || jobDate >= dateFrom;
+    const matchesTo = !dateTo || jobDate <= new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), 23, 59, 59);
+    return matchesFilter && matchesSearch && matchesFrom && matchesTo;
+  });
+  result.sort((a, b) => {
+    const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    return sortAsc ? diff : -diff;
+  });
+  return result;
+}, [jobs, activeFilter, search, dateFrom, dateTo, sortAsc]);
+
+const summaryAvg = filtered.length > 0
+  ? Math.round(filtered.reduce((s, j) => s + j.confidence, 0) / filtered.length)
+  : null;
+const compliantCount = filtered.filter((j) => j.confidence >= 80).length;
 
 return (
 <View style={styles.screen}>
@@ -420,6 +452,15 @@ return (
 <Text style={styles.brand}>ELEMETRIC</Text>
 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
 <Text style={styles.title}>Saved Jobs</Text>
+<View style={{ flexDirection: "row", gap: 8 }}>
+<Pressable
+style={styles.sortBtn}
+onPress={() => setSortAsc((v) => !v)}
+accessibilityRole="button"
+accessibilityLabel={sortAsc ? "Sort newest first" : "Sort oldest first"}
+>
+<Text style={styles.sortBtnText}>{sortAsc ? "↑ Oldest" : "↓ Newest"}</Text>
+</Pressable>
 <Pressable
 style={[styles.selectModeBtn, selectMode && styles.selectModeBtnActive]}
 onPress={() => { setSelectMode((v) => !v); setSelectedIds(new Set()); }}
@@ -430,6 +471,7 @@ accessibilityLabel={selectMode ? "Exit select mode" : "Enter select mode"}
 {selectMode ? "Cancel" : "Select"}
 </Text>
 </Pressable>
+</View>
 </View>
 </View>
 
@@ -545,6 +587,17 @@ onPress={() => setActiveFilter(f.key)}
 })}
 </ScrollView>
 
+{/* Summary bar */}
+{filtered.length > 0 && summaryAvg !== null && (
+<View style={styles.summaryBar}>
+<Text style={styles.summaryItem}>{filtered.length} job{filtered.length !== 1 ? "s" : ""}</Text>
+<Text style={styles.summarySep}>·</Text>
+<Text style={styles.summaryItem}>Avg <Text style={{ color: summaryAvg >= 80 ? "#22c55e" : summaryAvg >= 50 ? "#f97316" : "#ef4444", fontWeight: "800" }}>{summaryAvg}%</Text></Text>
+<Text style={styles.summarySep}>·</Text>
+<Text style={styles.summaryItem}><Text style={{ color: "#22c55e", fontWeight: "800" }}>{compliantCount}</Text> compliant</Text>
+</View>
+)}
+
 <ScrollView
 contentContainerStyle={styles.body}
 showsVerticalScrollIndicator={false}
@@ -604,12 +657,16 @@ filtered.map((job) => (
 </View>
 <View style={styles.metaItem}>
 <Text style={styles.metaKey}>DATE</Text>
-<Text style={styles.metaVal}>
-{new Date(job.createdAt).toLocaleDateString("en-AU", {
-day: "2-digit", month: "short", year: "numeric",
-})}
-</Text>
+<Text style={styles.metaVal}>{relativeDate(job.createdAt)}</Text>
 </View>
+{job.confidence > 0 && (() => {
+  const risk = riskLabel(job.confidence);
+  return (
+    <View style={[styles.riskBadge, { borderColor: risk.color + "50", backgroundColor: risk.color + "18" }]}>
+      <Text style={[styles.riskBadgeText, { color: risk.color }]}>{risk.label}</Text>
+    </View>
+  );
+})()}
 <StatusBadge status={job.status} />
 </View>
 
@@ -968,4 +1025,34 @@ invoicePromptText: { flex: 1 },
 invoicePromptTitle: { color: "rgba(255,255,255,0.80)", fontWeight: "700", fontSize: 13 },
 invoicePromptSub: { color: "rgba(255,255,255,0.40)", fontSize: 11, marginTop: 1 },
 invoicePromptChevron: { color: "rgba(255,255,255,0.25)", fontSize: 22, fontWeight: "300" },
+
+sortBtn: {
+paddingHorizontal: 12,
+paddingVertical: 7,
+borderRadius: 20,
+borderWidth: 1,
+borderColor: "rgba(255,255,255,0.15)",
+backgroundColor: "rgba(255,255,255,0.05)",
+},
+sortBtnText: { color: "rgba(255,255,255,0.65)", fontSize: 12, fontWeight: "700" },
+
+summaryBar: {
+flexDirection: "row",
+alignItems: "center",
+gap: 8,
+paddingHorizontal: 20,
+paddingVertical: 8,
+borderBottomWidth: 1,
+borderBottomColor: "rgba(255,255,255,0.05)",
+},
+summaryItem: { color: "rgba(255,255,255,0.45)", fontSize: 12 },
+summarySep: { color: "rgba(255,255,255,0.20)", fontSize: 12 },
+
+riskBadge: {
+borderRadius: 20,
+borderWidth: 1,
+paddingHorizontal: 8,
+paddingVertical: 3,
+},
+riskBadgeText: { fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
 });
