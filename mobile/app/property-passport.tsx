@@ -287,6 +287,9 @@ ${tradies.length > 0 ? `
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back">
+          <Text style={styles.backBtnText}>← Back</Text>
+        </Pressable>
         <Text style={styles.brand}>ELEMETRIC</Text>
         <Text style={styles.title}>Property History</Text>
         <Text style={styles.subtitle}>Full compliance history at any address</Text>
@@ -507,10 +510,12 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#07152b" },
 
   header: {
-    paddingTop: 20,
+    paddingTop: 52,
     paddingHorizontal: 20,
     paddingBottom: 12,
   },
+  backBtn: { marginBottom: 10 },
+  backBtnText: { color: "#f97316", fontWeight: "700", fontSize: 15 },
   brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
   title: { marginTop: 8, color: "white", fontSize: 22, fontWeight: "900" },
   subtitle: { marginTop: 4, color: "rgba(255,255,255,0.55)", fontSize: 13 },
