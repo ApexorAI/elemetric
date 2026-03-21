@@ -581,7 +581,7 @@ export default function Compliance() {
                     <td className="px-4 py-3 text-gray-700 text-xs">{cert.job_type ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-600 text-xs max-w-36 truncate">{cert.address ?? cert.suburb ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
-                      {cert.issued_at ? new Date(cert.issued_at).toLocaleDateString() : '—'}
+                      {cert.issued_at ? new Date(cert.issued_at).toLocaleDateString('en-AU') : '—'}
                     </td>
                     <td className="px-4 py-3">
                       {cert.compliance_score != null ? (
