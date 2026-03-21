@@ -39,6 +39,11 @@ const [editingName, setEditingName] = useState(false);
 const [editNameValue, setEditNameValue] = useState("");
 const [savingName, setSavingName] = useState(false);
 const [licenceNumber, setLicenceNumber] = useState("");
+const [companyName, setCompanyName] = useState("");
+const [phone, setPhone] = useState("");
+const [editingCompany, setEditingCompany] = useState(false);
+const [editCompanyValue, setEditCompanyValue] = useState("");
+const [savingCompany, setSavingCompany] = useState(false);
 const [role, setRole] = useState<"individual" | "employer" | "free">("individual");
 const [switchingRole, setSwitchingRole] = useState(false);
 const [secretInput, setSecretInput] = useState("");
@@ -61,12 +66,14 @@ setEmail(user.email ?? "");
 setUserId(user.id);
 const { data: profile } = await supabase
 .from("profiles")
-.select("role, full_name, notification_preferences, trial_started_at")
+.select("role, full_name, notification_preferences, trial_started_at, licence_number, company_name, phone")
 .eq("user_id", user.id)
 .single();
 if (active && profile?.role) setRole(profile.role as "individual" | "employer");
 if (active && profile?.full_name) { setFullName(profile.full_name); setEditNameValue(profile.full_name); }
 if (active && (profile as any)?.licence_number) setLicenceNumber((profile as any).licence_number);
+if (active && (profile as any)?.company_name) { setCompanyName((profile as any).company_name); setEditCompanyValue((profile as any).company_name); }
+if (active && (profile as any)?.phone) setPhone((profile as any).phone);
 if (active && profile?.notification_preferences) {
 setPrefs(profile.notification_preferences as Record<string, boolean>);
 }
@@ -116,6 +123,23 @@ showToast("Name updated.");
 Alert.alert("Error", e?.message ?? "Could not save name.");
 } finally {
 setSavingName(false);
+}
+};
+
+const saveCompany = async () => {
+const trimmed = editCompanyValue.trim();
+setSavingCompany(true);
+try {
+const { data: { user } } = await supabase.auth.getUser();
+if (!user) throw new Error("Not signed in.");
+await supabase.from("profiles").update({ company_name: trimmed }).eq("user_id", user.id);
+setCompanyName(trimmed);
+setEditingCompany(false);
+showToast("Company name updated.");
+} catch (e: any) {
+Alert.alert("Error", e?.message ?? "Could not save company.");
+} finally {
+setSavingCompany(false);
 }
 };
 
@@ -414,6 +438,31 @@ onSubmitEditing={saveName}
 <View style={styles.divider} />
 </>
 ) : null}
+<Pressable style={styles.row} onPress={() => { setEditingCompany(true); setEditCompanyValue(companyName); }}>
+<Text style={styles.rowLabel}>Company</Text>
+{editingCompany ? (
+<View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }}>
+<TextInput
+style={[styles.rowValue, { flex: 1, borderBottomWidth: 1, borderBottomColor: "#f97316", paddingVertical: 2 }]}
+value={editCompanyValue}
+onChangeText={setEditCompanyValue}
+autoFocus
+autoCapitalize="words"
+returnKeyType="done"
+onSubmitEditing={saveCompany}
+/>
+<Pressable onPress={saveCompany} disabled={savingCompany} style={{ paddingHorizontal: 8 }}>
+{savingCompany ? <ActivityIndicator size="small" color="#f97316" /> : <Text style={{ color: "#f97316", fontWeight: "700" }}>Save</Text>}
+</Pressable>
+<Pressable onPress={() => setEditingCompany(false)}>
+<Text style={{ color: "rgba(255,255,255,0.40)", fontWeight: "700" }}>✕</Text>
+</Pressable>
+</View>
+) : (
+<Text style={styles.rowValue} numberOfLines={1}>{companyName || "Tap to set company"}</Text>
+)}
+</Pressable>
+<View style={styles.divider} />
 <View style={styles.row}>
 <Text style={styles.rowLabel}>Email</Text>
 <Text style={styles.rowValue} numberOfLines={1}>{email || "—"}</Text>
