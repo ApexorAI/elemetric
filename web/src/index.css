@@ -16,6 +16,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Prevent iOS from zooming on input focus (requires font-size >= 16px) */
+input, select, textarea {
+  font-size: 16px;
+}
+
 #root {
   min-height: 100vh;
   display: flex;
