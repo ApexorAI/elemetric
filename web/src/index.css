@@ -26,3 +26,33 @@ input, select, textarea {
   display: flex;
   flex-direction: column;
 }
+
+/* 44px minimum touch targets for interactive elements */
+button, a, [role="button"], [role="switch"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Restore icon-only buttons that are intentionally smaller */
+button.icon-btn {
+  min-height: unset;
+  min-width: unset;
+}
+
+/* Horizontal scroll filter chip rows */
+.filter-chips {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.filter-chips::-webkit-scrollbar { display: none; }
+.filter-chips > * { flex-shrink: 0; }
+
+/* Smooth momentum scrolling on iOS */
+.scroll-smooth-ios {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}

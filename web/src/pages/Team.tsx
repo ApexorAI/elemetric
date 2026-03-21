@@ -668,8 +668,8 @@ export default function Team() {
 
       {/* Remove Confirm */}
       {removeConfirmId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl w-full sm:max-w-sm p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center">
                 <AlertCircle size={20} className="text-red-500" />

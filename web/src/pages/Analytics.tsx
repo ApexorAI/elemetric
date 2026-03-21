@@ -176,11 +176,11 @@ export default function Analytics() {
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-start justify-between mb-6 gap-3">
+        <h1 className="text-2xl font-bold text-gray-900 flex-shrink-0">Analytics</h1>
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mr-4 sm:mr-0 flex-shrink min-w-0">
           {/* Date range selector */}
-          <div className="flex items-center bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="flex items-center bg-white border border-gray-200 rounded-lg overflow-hidden flex-shrink-0">
             {RANGE_OPTIONS.map(({ value, label }) => (
               <button
                 key={value}
