@@ -177,8 +177,32 @@ export default function Compliance() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-gray-900">Compliance</h1>
+      </div>
+
+      {/* Regulatory credibility banner */}
+      <div
+        className="rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-3"
+        style={{ backgroundColor: '#07152B' }}
+      >
+        <div className="flex-shrink-0">
+          <Shield size={28} style={{ color: '#FF6B00' }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-white">
+            Elemetric references AS/NZS 3500 series standards as enforced by the Building and Plumbing Commission of Victoria (BPC).
+          </p>
+          <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
+            All compliance scores and risk assessments are calculated against the current AS/NZS 3500.0–3500.5 plumbing and drainage standards. Employers can be confident that Elemetric is built on the correct regulatory foundation for licensed plumbing work in Victoria.
+          </p>
+        </div>
+        <span
+          className="text-xs font-bold px-3 py-1.5 rounded-full flex-shrink-0 self-start sm:self-center"
+          style={{ backgroundColor: '#FF6B00', color: '#fff' }}
+        >
+          BPC Aligned
+        </span>
       </div>
 
       {error && (

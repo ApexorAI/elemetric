@@ -172,18 +172,26 @@ export default function Dashboard() {
         <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
       )}
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Welcome back, {profile?.full_name?.split(' ')[0] ?? 'there'}
-          </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <div className="flex items-center gap-3 flex-wrap mb-1">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Welcome back, {profile?.full_name?.split(' ')[0] ?? 'there'}
+            </h1>
+            <span
+              className="text-xs font-semibold px-2.5 py-1 rounded-full tracking-wide"
+              style={{ backgroundColor: '#07152B', color: '#fff' }}
+            >
+              BPC Referenced Standards — AS/NZS 3500 Series
+            </span>
+          </div>
+          <p className="text-sm text-gray-500">
             Last updated {lastRefresh.toLocaleTimeString()}
           </p>
         </div>
         <button
           onClick={() => { setLoading(true); fetchDashboard() }}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors flex-shrink-0"
         >
           <RefreshCw size={15} />
           Refresh
