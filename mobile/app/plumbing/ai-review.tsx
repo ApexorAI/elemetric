@@ -15,6 +15,7 @@ Linking,
 LayoutAnimation,
 Platform,
 UIManager,
+Animated as RNAnimated,
 } from "react-native";
 import Animated, {
   useSharedValue,
@@ -216,6 +217,37 @@ const [completedSteps, setCompletedSteps] = useState<number[]>([]);
 const loadingDoneRef = useRef(false);
 const pdfReadyRef = useRef(false);
 const pdfResultRef = useRef<string | null>(null);
+
+// Particle animations for loading overlay
+const particleAnims = useRef(
+  Array.from({ length: 6 }, (_, i) => ({
+    y: new RNAnimated.Value(0),
+    opacity: new RNAnimated.Value(0),
+    x: (i % 2 === 0 ? 1 : -1) * (20 + i * 18),
+  }))
+).current;
+
+useEffect(() => {
+  if (!showLoadingOverlay) return;
+  const anims = particleAnims.map((p, i) =>
+    RNAnimated.loop(
+      RNAnimated.sequence([
+        RNAnimated.delay(i * 350),
+        RNAnimated.parallel([
+          RNAnimated.timing(p.opacity, { toValue: 0.7, duration: 500, useNativeDriver: true }),
+          RNAnimated.timing(p.y, { toValue: -(50 + i * 15), duration: 1600, useNativeDriver: true }),
+        ]),
+        RNAnimated.timing(p.opacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+        RNAnimated.timing(p.y, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
+    )
+  );
+  anims.forEach((a) => a.start());
+  return () => {
+    anims.forEach((a) => a.stop());
+    particleAnims.forEach((p) => { p.y.setValue(0); p.opacity.setValue(0); });
+  };
+}, [showLoadingOverlay]);
 const [toast, setToast] = useState<string | null>(null);
 const [showShareModal, setShowShareModal] = useState(false);
 const [generatedPdfUri, setGeneratedPdfUri] = useState<string | null>(null);
@@ -1931,9 +1963,43 @@ disabled={generatingCert}
   onRequestClose={() => {}}
 >
   <View style={loadingStyles.overlay}>
+    {/* Particles */}
+    <View style={loadingStyles.particleWrap} pointerEvents="none">
+      {particleAnims.map((p, i) => (
+        <RNAnimated.View
+          key={i}
+          style={[
+            loadingStyles.particle,
+            {
+              left: "50%",
+              marginLeft: p.x,
+              opacity: p.opacity,
+              transform: [{ translateY: p.y }],
+            },
+          ]}
+        />
+      ))}
+    </View>
     <View style={loadingStyles.card}>
+      <View style={loadingStyles.logoRow}>
+        <Text style={loadingStyles.logoText}>ELEMETRIC</Text>
+      </View>
       <Text style={loadingStyles.title}>Generating Your Report</Text>
       <Text style={loadingStyles.sub}>Our AI is reviewing your photos against Australian Standards…</Text>
+
+      {/* Progress bar */}
+      <View style={loadingStyles.progressTrack}>
+        <Animated.View
+          style={[
+            loadingStyles.progressFill,
+            { width: `${Math.round((completedSteps.length / LOADING_STEPS.length) * 100)}%` as any },
+          ]}
+        />
+      </View>
+      <Text style={loadingStyles.progressLabel}>
+        {completedSteps.length}/{LOADING_STEPS.length} steps complete
+      </Text>
+
       <View style={loadingStyles.steps}>
         {LOADING_STEPS.map((step, i) => {
           const done = completedSteps.includes(i);
@@ -2969,6 +3035,40 @@ const loadingStyles = StyleSheet.create({
   stepLabelDone: { color: "#22c55e", fontWeight: "700" },
   stepLabelActive: { color: "white", fontWeight: "700" },
   hint: { color: "rgba(255,255,255,0.30)", fontSize: 12, textAlign: "center", marginTop: 4 },
+  logoRow: { alignItems: "center" },
+  logoText: { color: "#f97316", fontWeight: "900", fontSize: 16, letterSpacing: 4 },
+  progressTrack: {
+    height: 4,
+    backgroundColor: "rgba(255,255,255,0.10)",
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: 4,
+    backgroundColor: "#f97316",
+    borderRadius: 2,
+  },
+  progressLabel: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 11,
+    textAlign: "center",
+    marginTop: -8,
+  },
+  particleWrap: {
+    position: "absolute",
+    bottom: 80,
+    left: 0,
+    right: 0,
+    height: 200,
+  },
+  particle: {
+    position: "absolute",
+    bottom: 0,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#f97316",
+  },
 });
 
 const shareStyles = StyleSheet.create({
