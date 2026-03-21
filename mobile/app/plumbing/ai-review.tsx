@@ -39,6 +39,7 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import { supabase } from "@/lib/supabase";
 import { sendLocalNotification } from "@/lib/notifications";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import QRCode from "qrcode";
 
@@ -178,6 +179,7 @@ const JOB_TYPE_META: Record<string, { label: string; standard: string }> = {
 
 export default function AIReview() {
 const router = useRouter();
+const insets = useSafeAreaInsets();
 
 const [decoded, setDecoded] = useState<AIResult | null>(null);
 
@@ -1403,7 +1405,7 @@ return (
 
 return (
 <View style={styles.screen}>
-<View style={styles.header}>
+<View style={[styles.header, { paddingTop: Math.max(52, insets.top + 12) }]}>
   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
     <Text style={styles.brand}>ELEMETRIC</Text>
     {decoded && (
