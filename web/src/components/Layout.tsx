@@ -74,7 +74,7 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1" aria-label="Main navigation">
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -136,6 +136,7 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <RouteProgressBar />
       {/* Desktop sidebar */}
       <div className="hidden md:flex flex-col w-60 flex-shrink-0">
@@ -209,12 +210,12 @@ export default function Layout({ children }: LayoutProps) {
         <SessionExpiryBanner />
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto bg-gray-50">
+        <main id="main-content" className="flex-1 overflow-auto bg-gray-50" tabIndex={-1}>
           {children}
         </main>
 
         {/* Mobile bottom nav */}
-        <nav className="md:hidden bg-white border-t border-gray-200 flex items-center justify-around py-1 flex-shrink-0">
+        <nav className="md:hidden bg-white border-t border-gray-200 flex items-center justify-around py-1 flex-shrink-0" aria-label="Mobile navigation">
           {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
