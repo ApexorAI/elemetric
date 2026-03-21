@@ -433,7 +433,7 @@ if (rev) {
 const formatted = [
 rev.streetNumber,
 rev.street,
-rev.suburb ?? rev.city,
+(rev as any).suburb ?? rev.city,
 rev.region,
 rev.postalCode,
 ].filter(Boolean).join(" ");

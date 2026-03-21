@@ -713,5 +713,4 @@ const styles = StyleSheet.create({
   generateBtnText: { color: "#07152b", fontWeight: "900", fontSize: 15 },
 
   back: { alignItems: "center" },
-  backText: { color: "rgba(255,255,255,0.55)", fontWeight: "700" },
 });

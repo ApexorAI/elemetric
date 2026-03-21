@@ -294,7 +294,7 @@ export default function NearMiss() {
         <Text style={styles.brand}>ELEMETRIC</Text>
         <Text style={styles.title}>Report a Problem I Found</Text>
         <Text style={styles.subtitle}>Pre-existing non-compliance documentation</Text>
-        <Pressable onPress={() => router.push("/near-miss-history")} style={styles.historyLink} accessibilityRole="button" accessibilityLabel="View near miss history">
+        <Pressable onPress={() => router.push("/near-miss-history" as never)} style={styles.historyLink} accessibilityRole="button" accessibilityLabel="View near miss history">
           <Text style={styles.historyLinkText}>View History →</Text>
         </Pressable>
       </View>

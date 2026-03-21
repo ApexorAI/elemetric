@@ -334,7 +334,7 @@ export default function VisualiserScreen() {
         {resultUri && (
           <View style={styles.resultWrap}>
             <Text style={styles.resultLabel}>VISUALISATION RESULT</Text>
-            <Pressable onPress={() => setFullscreen(true)} activeOpacity={0.9}>
+            <Pressable onPress={() => setFullscreen(true)}>
               <Image
                 source={{ uri: resultUri }}
                 style={styles.resultImage}

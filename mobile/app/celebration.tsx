@@ -68,7 +68,7 @@ export default function Celebration() {
         });
       }
     }
-    router.replace("/(tabs)/");
+    router.replace("/(tabs)/" as never);
   };
 
   const handleViewReport = () => {
@@ -78,7 +78,7 @@ export default function Celebration() {
         params: { uri: reportUri, title: "Compliance Report", filename: "report.pdf" },
       });
     } else {
-      router.replace("/(tabs)/");
+      router.replace("/(tabs)/" as never);
     }
   };
 

@@ -152,7 +152,7 @@ export default function RootLayout() {
         if (path.startsWith("job/")) {
           router.push("/plumbing/jobs");
         } else if (path === "employer/dashboard") {
-          router.push("/employer-dashboard");
+          router.push("/employer/dashboard" as never);
         } else if (path.startsWith("invite/")) {
           router.push("/referral");
         } else if (path.startsWith("ref/")) {

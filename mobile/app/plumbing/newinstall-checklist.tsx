@@ -182,7 +182,7 @@ setGpsCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
 try {
 const [rev] = await Location.reverseGeocodeAsync({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
 if (rev) {
-const formatted = [rev.streetNumber, rev.street, rev.suburb ?? rev.city, rev.region, rev.postalCode].filter(Boolean).join(" ");
+const formatted = [rev.streetNumber, rev.street, (rev as any).suburb ?? rev.city, rev.region, rev.postalCode].filter(Boolean).join(" ");
 if (formatted) setJobAddr((prev) => (prev === "No address" || !prev) ? formatted : prev);
 }
 } catch {}
