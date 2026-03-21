@@ -620,7 +620,14 @@ ${members.length > 0 ? `<h3 style="font-size:16px;margin:0 0 10px;">Team Leaderb
           <Text style={styles.templatesBtnText}>📋 Job Templates</Text>
         </Pressable>
 
-        {/* Subcontractors — hidden until post-launch */}
+        <Pressable
+          style={styles.subsBtn}
+          onPress={() => router.push("/employer/subcontractors")}
+          accessibilityRole="button"
+          accessibilityLabel="Subcontractor Management"
+        >
+          <Text style={styles.subsBtnText}>👷 Subcontractor Management</Text>
+        </Pressable>
 
         <Pressable onPress={() => router.back()} style={styles.back}>
           <Text style={styles.backText}>← Back</Text>
@@ -909,6 +916,17 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.10)",
   },
   templatesBtnText: { color: "rgba(255,255,255,0.85)", fontWeight: "700", fontSize: 15 },
+  subsBtn: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderRadius: 14,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+  },
+  subsBtnText: { color: "rgba(255,255,255,0.85)", fontWeight: "700", fontSize: 15 },
   searchInput: {
     backgroundColor: "#0f2035",
     borderRadius: 12,
