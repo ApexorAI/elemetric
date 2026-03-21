@@ -198,22 +198,44 @@ return (
 );
 }
 
+const pct = requiredTotal > 0 ? Math.round((requiredDone / requiredTotal) * 100) : 0;
+const allDone = requiredDone >= requiredTotal && requiredTotal > 0;
+
 return (
 <View style={styles.screen}>
 <View style={styles.header}>
-<Text style={styles.brand}>ELEMETRIC</Text>
-<Text style={styles.title}>Checklist</Text>
+  {/* Step indicator */}
+  <View style={styles.stepRow}>
+    {["Job Details", "Checklist", "Photos", "AI Review"].map((s, i) => (
+      <View key={s} style={styles.stepItem}>
+        <View style={[styles.stepDot, i === 1 && styles.stepDotActive, i > 1 && styles.stepDotFuture]}>
+          {i === 1
+            ? <Text style={styles.stepDotText}>2</Text>
+            : i < 1
+            ? <Text style={styles.stepDotDone}>✓</Text>
+            : <View style={styles.stepDotInner} />
+          }
+        </View>
+        <Text style={[styles.stepLabel, i === 1 && styles.stepLabelActive]}>{s}</Text>
+        {i < 3 && <View style={[styles.stepLine, i < 1 && styles.stepLineDone]} />}
+      </View>
+    ))}
+  </View>
 
-<Text style={styles.job}>
-{jobName} • {jobAddr}
-</Text>
+  <Text style={styles.brand}>ELEMETRIC</Text>
+  <Text style={styles.title}>Checklist</Text>
+  <Text style={styles.job}>{jobName} • {jobAddr}</Text>
+  {startTime && <Text style={styles.timer}>Time on site: {elapsed}</Text>}
 
-<Text style={styles.progress}>
-Required photos: {requiredDone}/{requiredTotal}
-</Text>
-{startTime && (
-  <Text style={styles.timer}>Time on site: {elapsed}</Text>
-)}
+  {/* Progress bar */}
+  <View style={styles.progressBarWrap}>
+    <View style={styles.progressBarTrack}>
+      <View style={[styles.progressBarFill, { width: `${pct}%` as any }]} />
+    </View>
+    <Text style={styles.progressBarLabel}>
+      {requiredDone}/{requiredTotal} required {pct >= 100 ? "✓" : ""}
+    </Text>
+  </View>
 </View>
 
 <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
@@ -225,8 +247,11 @@ const photoCount = photoMap[item.id]?.length || 0;
 return (
 <Pressable
 key={item.id}
-style={styles.card}
+style={[styles.card, isChecked && styles.cardChecked]}
 onPress={() => toggleItem(item.id)}
+accessibilityRole="checkbox"
+accessibilityState={{ checked: isChecked }}
+accessibilityLabel={item.title}
 >
 <View style={styles.row}>
 <View style={[styles.checkbox, isChecked && styles.checkboxOn]}>
@@ -234,7 +259,7 @@ onPress={() => toggleItem(item.id)}
 </View>
 
 <View style={styles.textWrap}>
-<Text style={styles.item}>{item.title}</Text>
+<Text style={[styles.item, isChecked && styles.itemChecked]}>{item.title}</Text>
 <Text style={styles.sub}>
 {item.subtitle}
 {isPhoto && photoCount > 0 ? ` • ${photoCount} photo${photoCount > 1 ? "s" : ""}` : ""}
@@ -262,14 +287,26 @@ isPhoto
 );
 })}
 
-<Pressable style={styles.next} onPress={goPhotos}>
-<Text style={styles.nextText}>Next: Add Photos →</Text>
-</Pressable>
+<View style={{ height: 100 }} />
 
 <Pressable onPress={() => router.back()} style={styles.back}>
 <Text style={styles.backText}>← Back</Text>
 </Pressable>
 </ScrollView>
+
+{/* Floating action button */}
+<View style={styles.fab}>
+  <Pressable
+    style={[styles.fabBtn, !allDone && styles.fabBtnDim]}
+    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); goPhotos(); }}
+    accessibilityRole="button"
+    accessibilityLabel={allDone ? "Continue to photos" : `${requiredTotal - requiredDone} required items remaining`}
+  >
+    <Text style={styles.fabText}>
+      {allDone ? "Continue to Photos →" : `${requiredDone}/${requiredTotal} complete — Continue anyway →`}
+    </Text>
+  </Pressable>
+</View>
 </View>
 );
 }
@@ -457,5 +494,116 @@ alignItems: "center",
 
 backText: {
 color: "rgba(255,255,255,0.55)",
+},
+
+// ── Step indicator ────────────────────────────────────────────────────────
+stepRow: {
+  flexDirection: "row",
+  alignItems: "flex-start",
+  marginBottom: 12,
+},
+stepItem: {
+  flex: 1,
+  alignItems: "center",
+  position: "relative",
+},
+stepLine: {
+  position: "absolute",
+  top: 13,
+  left: "50%",
+  right: "-50%",
+  height: 2,
+  backgroundColor: "rgba(255,255,255,0.10)",
+},
+stepLineDone: {
+  backgroundColor: "rgba(249,115,22,0.50)",
+},
+stepDot: {
+  width: 28,
+  height: 28,
+  borderRadius: 14,
+  backgroundColor: "#f97316",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 1,
+},
+stepDotActive: {
+  backgroundColor: "#f97316",
+  shadowColor: "#f97316",
+  shadowOffset: { width: 0, height: 0 },
+  shadowOpacity: 0.6,
+  shadowRadius: 8,
+  elevation: 4,
+},
+stepDotFuture: {
+  backgroundColor: "rgba(255,255,255,0.08)",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.15)",
+},
+stepDotText: { color: "#07152b", fontWeight: "900", fontSize: 12 },
+stepDotDone: { color: "#07152b", fontWeight: "900", fontSize: 12 },
+stepDotInner: { width: 6, height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.25)" },
+stepLabel: { marginTop: 6, fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.25)", textAlign: "center" },
+stepLabelActive: { color: "#f97316" },
+
+// ── Progress bar ──────────────────────────────────────────────────────────
+progressBarWrap: {
+  marginTop: 10,
+  marginBottom: 4,
+  gap: 4,
+},
+progressBarTrack: {
+  height: 6,
+  backgroundColor: "rgba(255,255,255,0.10)",
+  borderRadius: 3,
+  overflow: "hidden",
+},
+progressBarFill: {
+  height: 6,
+  backgroundColor: "#22c55e",
+  borderRadius: 3,
+},
+progressBarLabel: {
+  color: "rgba(255,255,255,0.45)",
+  fontSize: 11,
+  fontWeight: "700",
+},
+
+// ── Card checked state ────────────────────────────────────────────────────
+cardChecked: {
+  borderColor: "rgba(34,197,94,0.20)",
+  backgroundColor: "rgba(34,197,94,0.04)",
+},
+itemChecked: {
+  opacity: 0.7,
+},
+
+// ── Floating action button ────────────────────────────────────────────────
+fab: {
+  position: "absolute",
+  bottom: 0,
+  left: 0,
+  right: 0,
+  paddingHorizontal: 20,
+  paddingBottom: 36,
+  paddingTop: 12,
+  backgroundColor: "rgba(7,21,43,0.95)",
+  borderTopWidth: 1,
+  borderTopColor: "rgba(255,255,255,0.07)",
+},
+fabBtn: {
+  height: 56,
+  backgroundColor: "#f97316",
+  borderRadius: 16,
+  alignItems: "center",
+  justifyContent: "center",
+},
+fabBtnDim: {
+  backgroundColor: "rgba(249,115,22,0.60)",
+},
+fabText: {
+  color: "#07152b",
+  fontWeight: "900",
+  fontSize: 15,
 },
 });
