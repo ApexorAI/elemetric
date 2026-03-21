@@ -21,6 +21,29 @@ import { supabase } from "@/lib/supabase";
 import { hashBase64, captureTimestamp } from "@/lib/photoHash";
 
 const API_BASE = "https://elemetric-ai-production.up.railway.app";
+
+// Retry a fetch up to maxAttempts times with exponential backoff
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxAttempts = 3,
+  baseDelayMs = 1500
+): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      return res;
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, baseDelayMs * attempt));
+      }
+    }
+  }
+  throw lastError;
+}
+
 const CHECKLIST_KEY = "elemetric_current_checklist";
 const REVIEW_PHOTOS_FILE = `${FileSystem.documentDirectory}review-photos.json`;
 const PHOTO_360_TOOLTIP_KEY = "elemetric_360_tooltip_shown";
@@ -627,7 +650,7 @@ await supabase.storage
 }
 
 console.log("[Photos] Sending AI review request — type:", currentJob.type, "images:", images.length);
-const res = await fetch(`${API_BASE}/review`, {
+const res = await fetchWithRetry(`${API_BASE}/review`, {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
@@ -637,7 +660,7 @@ body: JSON.stringify({
 type: currentJob.type,
 images,
 }),
-});
+}, 3, 2000);
 
 console.log("[Photos] AI review response status:", res.status);
 const text = await res.text();

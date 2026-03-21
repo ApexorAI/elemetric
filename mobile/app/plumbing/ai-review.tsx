@@ -44,6 +44,28 @@ import QRCode from "qrcode";
 
 const API_BASE = "https://elemetric-ai-production.up.railway.app";
 
+// Retry fetch with exponential backoff
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxAttempts = 3,
+  baseDelayMs = 2000
+): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      return res;
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, baseDelayMs * attempt));
+      }
+    }
+  }
+  throw lastError;
+}
+
 // Normalised result — what the rest of the screen uses
 type AIResult = {
   relevant?: boolean;
@@ -1451,14 +1473,14 @@ if (images.length < 2) {
 Alert.alert("Not Enough Photos", "Go back and add at least 2 photos.");
 return;
 }
-const res = await fetch(`${API_BASE}/review`, {
+const res = await fetchWithRetry(`${API_BASE}/review`, {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
 "X-Elemetric-Key": process.env.EXPO_PUBLIC_ELEMETRIC_API_KEY ?? "",
 },
 body: JSON.stringify({ type: currentJob.type, images }),
-});
+}, 3, 2000);
 const json = await res.json();
 if (!res.ok) throw new Error(json?.error ?? "AI request failed");
 await FileSystem.writeAsStringAsync(AI_RESULT_FILE, JSON.stringify(json), {
