@@ -12,6 +12,7 @@ import {
   UIManager,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -232,6 +233,7 @@ const CAT_ICONS: Record<string, string> = {
 
 export default function Help() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
   const [openItems, setOpenItems] = useState<Set<string>>(new Set());
 
@@ -257,7 +259,7 @@ export default function Help() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(20, insets.top + 8) }]}>
         <Text style={styles.brand}>ELEMETRIC</Text>
         <Text style={styles.title}>Help & FAQ</Text>
       </View>
@@ -308,7 +310,7 @@ export default function Help() {
                     <Pressable style={styles.faqRow} onPress={() => toggle(key)}>
                       <Text style={styles.faqQ}>{faq.q}</Text>
                       <Text style={[styles.faqChevron, open && styles.faqChevronOpen]}>
-                        {open ? "v" : ">"}
+                        {open ? "\u2228" : "\u203a"}
                       </Text>
                     </Pressable>
                     {open && (

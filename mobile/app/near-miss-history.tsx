@@ -97,7 +97,7 @@ export default function NearMissHistory() {
           removeClippedSubviews
           ListEmptyComponent={
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyIcon}>!</Text>
+              <Text style={styles.emptyIcon}>{"⚠️"}</Text>
               <Text style={styles.emptyTitle}>No reports yet</Text>
               <Text style={styles.emptyBody}>Near miss reports you submit will appear here.</Text>
               <Pressable
@@ -106,7 +106,7 @@ export default function NearMissHistory() {
                 accessibilityRole="button"
                 accessibilityLabel="File Near Miss Report"
               >
-                <Text style={styles.createBtnText}>File a Report</Text>
+                <Text style={styles.createBtnText}>File a Report {"→"}</Text>
               </Pressable>
             </View>
           }

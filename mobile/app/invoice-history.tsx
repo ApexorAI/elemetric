@@ -162,11 +162,11 @@ export default function InvoiceHistory() {
           removeClippedSubviews
           ListEmptyComponent={
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyIcon}>$</Text>
+              <Text style={styles.emptyIcon}>{"🧾"}</Text>
               <Text style={styles.emptyTitle}>No invoices yet</Text>
               <Text style={styles.emptyBody}>Generate your first invoice to see it here.</Text>
               <Pressable style={styles.createBtn} onPress={() => router.push("/invoice")} accessibilityRole="button" accessibilityLabel="Create Invoice">
-                <Text style={styles.createBtnText}>Create Invoice</Text>
+                <Text style={styles.createBtnText}>Create Invoice {"→"}</Text>
               </Pressable>
             </View>
           }

@@ -12,6 +12,7 @@ Switch,
 TextInput,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
@@ -29,6 +30,7 @@ const NOTIF_TYPES = [
 
 export default function Settings() {
 const router = useRouter();
+const insets = useSafeAreaInsets();
 const { isDark, toggleTheme } = useTheme();
 const [email, setEmail] = useState("");
 const [loading, setLoading] = useState(true);
@@ -380,7 +382,7 @@ return (
 
 return (
 <View style={styles.screen}>
-<View style={styles.header}>
+<View style={[styles.header, { paddingTop: Math.max(20, insets.top + 8) }]}>
 <Text style={styles.brand}>ELEMETRIC</Text>
 <Text style={styles.title}>Settings</Text>
 </View>
