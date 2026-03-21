@@ -288,9 +288,15 @@ export default function NearMiss() {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back">
+          <Text style={styles.backBtnText}>← Back</Text>
+        </Pressable>
         <Text style={styles.brand}>ELEMETRIC</Text>
         <Text style={styles.title}>Report a Problem I Found</Text>
         <Text style={styles.subtitle}>Pre-existing non-compliance documentation</Text>
+        <Pressable onPress={() => router.push("/near-miss-history")} style={styles.historyLink} accessibilityRole="button" accessibilityLabel="View near miss history">
+          <Text style={styles.historyLinkText}>View History →</Text>
+        </Pressable>
       </View>
 
       <ScrollView
@@ -554,4 +560,8 @@ const styles = StyleSheet.create({
 
   back: { marginTop: 6, alignItems: "center" },
   backText: { color: "rgba(255,255,255,0.55)", fontWeight: "700" },
+  backBtn: { marginBottom: 10 },
+  backBtnText: { color: "#f97316", fontWeight: "700", fontSize: 15 },
+  historyLink: { marginTop: 8 },
+  historyLinkText: { color: "#f97316", fontWeight: "700", fontSize: 13 },
 });

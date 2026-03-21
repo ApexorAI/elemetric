@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,7 +6,8 @@ import {
   Pressable,
   ScrollView,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
+import { supabase } from "@/lib/supabase";
 
 type MoreItem = {
   icon: string;
@@ -71,6 +72,23 @@ const ITEMS: MoreItem[] = [
 
 export default function MoreScreen() {
   const router = useRouter();
+  const [nearMissCount, setNearMissCount] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+          const { count } = await supabase
+            .from("near_misses")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id);
+          setNearMissCount(count ?? 0);
+        } catch {}
+      })();
+    }, [])
+  );
 
   return (
     <View style={s.screen}>
@@ -95,6 +113,11 @@ export default function MoreScreen() {
             >
               <View style={[s.iconWrap, { backgroundColor: (item.color ?? "#f97316") + "18", borderColor: (item.color ?? "#f97316") + "30" }]}>
                 <Text style={s.icon}>{item.icon}</Text>
+                {item.label === "Near Miss" && nearMissCount > 0 && (
+                  <View style={s.badge}>
+                    <Text style={s.badgeText}>{nearMissCount > 99 ? "99+" : String(nearMissCount)}</Text>
+                  </View>
+                )}
               </View>
               <Text style={[s.label, item.comingSoon && s.labelDisabled]}>{item.label}</Text>
               <Text style={s.sub} numberOfLines={2}>{item.sub}</Text>
@@ -151,8 +174,24 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 2,
+    position: "relative",
   },
   icon: { fontSize: 24 },
+  badge: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: "#ef4444",
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: "#07152b",
+  },
+  badgeText: { color: "white", fontSize: 10, fontWeight: "900" },
 
   label: { color: "white", fontSize: 15, fontWeight: "800" },
   labelDisabled: { color: "rgba(255,255,255,0.55)" },
