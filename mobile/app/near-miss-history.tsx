@@ -4,7 +4,7 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  ScrollView,
+  FlatList,
   ActivityIndicator,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -18,6 +18,32 @@ type NearMiss = {
   reporter_name: string | null;
   created_at: string;
 };
+
+const NearMissCard = React.memo(function NearMissCard({ item }: { item: NearMiss }) {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardTop}>
+        <View style={styles.alertDot} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.address} numberOfLines={1}>{item.property_address || "No address"}</Text>
+          <Text style={styles.date}>
+            {new Date(item.created_at).toLocaleDateString("en-AU", {
+              day: "numeric", month: "short", year: "numeric",
+            })}
+            {item.reporter_name ? ` · ${item.reporter_name}` : ""}
+          </Text>
+        </View>
+      </View>
+      <Text style={styles.description} numberOfLines={3}>{item.description}</Text>
+      {item.immediate_action ? (
+        <View style={styles.actionBox}>
+          <Text style={styles.actionLabel}>Action Taken</Text>
+          <Text style={styles.actionText} numberOfLines={2}>{item.immediate_action}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+});
 
 export default function NearMissHistory() {
   const router = useRouter();
@@ -56,49 +82,36 @@ export default function NearMissHistory() {
         <Text style={styles.subtitle}>{items.length} report{items.length !== 1 ? "s" : ""} on record</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-        {loading ? (
-          <ActivityIndicator color="#f97316" style={{ marginTop: 40 }} />
-        ) : items.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>⚠️</Text>
-            <Text style={styles.emptyTitle}>No reports yet</Text>
-            <Text style={styles.emptyBody}>Near miss reports you submit will appear here.</Text>
-            <Pressable
-              style={styles.createBtn}
-              onPress={() => router.push("/near-miss")}
-              accessibilityRole="button"
-              accessibilityLabel="File Near Miss Report"
-            >
-              <Text style={styles.createBtnText}>File a Report →</Text>
-            </Pressable>
-          </View>
-        ) : (
-          items.map((item) => (
-            <View key={item.id} style={styles.card}>
-              <View style={styles.cardTop}>
-                <View style={styles.alertDot} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.address} numberOfLines={1}>{item.property_address || "No address"}</Text>
-                  <Text style={styles.date}>
-                    {new Date(item.created_at).toLocaleDateString("en-AU", {
-                      day: "numeric", month: "short", year: "numeric",
-                    })}
-                    {item.reporter_name ? ` · ${item.reporter_name}` : ""}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.description} numberOfLines={3}>{item.description}</Text>
-              {item.immediate_action ? (
-                <View style={styles.actionBox}>
-                  <Text style={styles.actionLabel}>Action Taken</Text>
-                  <Text style={styles.actionText} numberOfLines={2}>{item.immediate_action}</Text>
-                </View>
-              ) : null}
+      {loading ? (
+        <ActivityIndicator color="#f97316" style={{ marginTop: 40 }} />
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <NearMissCard item={item} />}
+          contentContainerStyle={styles.body}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews
+          ListEmptyComponent={
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyIcon}>!</Text>
+              <Text style={styles.emptyTitle}>No reports yet</Text>
+              <Text style={styles.emptyBody}>Near miss reports you submit will appear here.</Text>
+              <Pressable
+                style={styles.createBtn}
+                onPress={() => router.push("/near-miss")}
+                accessibilityRole="button"
+                accessibilityLabel="File Near Miss Report"
+              >
+                <Text style={styles.createBtnText}>File a Report</Text>
+              </Pressable>
             </View>
-          ))
-        )}
-      </ScrollView>
+          }
+        />
+      )}
     </View>
   );
 }

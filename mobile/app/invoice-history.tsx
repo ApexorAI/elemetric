@@ -4,7 +4,7 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  ScrollView,
+  FlatList,
   ActivityIndicator,
   Alert,
 } from "react-native";
@@ -31,6 +31,33 @@ function statusColor(status: string): string {
   if (status === "Overdue") return "#ef4444";
   return "#f97316";
 }
+
+const InvoiceCard = React.memo(function InvoiceCard({ inv }: { inv: Invoice }) {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardTop}>
+        <View style={styles.cardLeft}>
+          <Text style={styles.invNumber}>{inv.invoice_number}</Text>
+          <Text style={styles.clientName}>{inv.client_name}</Text>
+          <Text style={styles.invDate}>
+            {new Date(inv.created_at).toLocaleDateString("en-AU", {
+              day: "numeric", month: "short", year: "numeric",
+            })}
+          </Text>
+        </View>
+        <View style={styles.cardRight}>
+          <Text style={styles.invTotal}>${inv.total.toFixed(2)}</Text>
+          <View style={[styles.statusBadge, { borderColor: statusColor(inv.status) + "55", backgroundColor: statusColor(inv.status) + "18" }]}>
+            <Text style={[styles.statusText, { color: statusColor(inv.status) }]}>{inv.status}</Text>
+          </View>
+        </View>
+      </View>
+      {inv.due_date ? (
+        <Text style={styles.dueDate}>Due: {inv.due_date}</Text>
+      ) : null}
+    </View>
+  );
+});
 
 export default function InvoiceHistory() {
   const router = useRouter();
@@ -120,45 +147,31 @@ export default function InvoiceHistory() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-        {loading ? (
-          <ActivityIndicator color="#f97316" style={{ marginTop: 40 }} />
-        ) : invoices.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>🧾</Text>
-            <Text style={styles.emptyTitle}>No invoices yet</Text>
-            <Text style={styles.emptyBody}>Generate your first invoice to see it here.</Text>
-            <Pressable style={styles.createBtn} onPress={() => router.push("/invoice")} accessibilityRole="button" accessibilityLabel="Create Invoice">
-              <Text style={styles.createBtnText}>Create Invoice →</Text>
-            </Pressable>
-          </View>
-        ) : (
-          invoices.map((inv) => (
-            <View key={inv.id} style={styles.card}>
-              <View style={styles.cardTop}>
-                <View style={styles.cardLeft}>
-                  <Text style={styles.invNumber}>{inv.invoice_number}</Text>
-                  <Text style={styles.clientName}>{inv.client_name}</Text>
-                  <Text style={styles.invDate}>
-                    {new Date(inv.created_at).toLocaleDateString("en-AU", {
-                      day: "numeric", month: "short", year: "numeric",
-                    })}
-                  </Text>
-                </View>
-                <View style={styles.cardRight}>
-                  <Text style={styles.invTotal}>${inv.total.toFixed(2)}</Text>
-                  <View style={[styles.statusBadge, { borderColor: statusColor(inv.status) + "55", backgroundColor: statusColor(inv.status) + "18" }]}>
-                    <Text style={[styles.statusText, { color: statusColor(inv.status) }]}>{inv.status}</Text>
-                  </View>
-                </View>
-              </View>
-              {inv.due_date && (
-                <Text style={styles.dueDate}>Due: {inv.due_date}</Text>
-              )}
+      {loading ? (
+        <ActivityIndicator color="#f97316" style={{ marginTop: 40 }} />
+      ) : (
+        <FlatList
+          data={invoices}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <InvoiceCard inv={item} />}
+          contentContainerStyle={styles.body}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews
+          ListEmptyComponent={
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyIcon}>$</Text>
+              <Text style={styles.emptyTitle}>No invoices yet</Text>
+              <Text style={styles.emptyBody}>Generate your first invoice to see it here.</Text>
+              <Pressable style={styles.createBtn} onPress={() => router.push("/invoice")} accessibilityRole="button" accessibilityLabel="Create Invoice">
+                <Text style={styles.createBtnText}>Create Invoice</Text>
+              </Pressable>
             </View>
-          ))
-        )}
-      </ScrollView>
+          }
+        />
+      )}
     </View>
   );
 }
