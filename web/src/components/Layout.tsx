@@ -16,6 +16,7 @@ import {
 import { useAuth } from '../lib/auth'
 import NotificationBell from './NotificationBell'
 import SessionExpiryBanner from './SessionExpiryBanner'
+import RouteProgressBar from './RouteProgressBar'
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -135,6 +136,7 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
+      <RouteProgressBar />
       {/* Desktop sidebar */}
       <div className="hidden md:flex flex-col w-60 flex-shrink-0">
         <Sidebar />
