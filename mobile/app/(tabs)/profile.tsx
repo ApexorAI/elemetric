@@ -225,19 +225,19 @@ export default function Profile() {
 
         {/* Switch to Employer — only for individual accounts */}
         {role === "individual" && (
-          <Pressable style={styles.employerBtn} onPress={() => setShowEmployerModal(true)}>
+          <Pressable style={styles.employerBtn} onPress={() => setShowEmployerModal(true)} accessibilityRole="button" accessibilityLabel="Switch to Employer Account">
             <Text style={styles.employerBtnText}>Switch to Employer Account</Text>
             <Text style={styles.employerBtnSub}>Manage a team of tradespeople</Text>
           </Pressable>
         )}
 
         {/* Edit Profile */}
-        <Pressable style={styles.editBtn} onPress={() => router.push("/settings")}>
+        <Pressable style={styles.editBtn} onPress={() => router.push("/settings")} accessibilityRole="button" accessibilityLabel="Edit Profile">
           <Text style={styles.editBtnText}>Edit Profile →</Text>
         </Pressable>
 
         {/* Sign Out */}
-        <Pressable style={styles.signOutBtn} onPress={signOut}>
+        <Pressable style={styles.signOutBtn} onPress={signOut} accessibilityRole="button" accessibilityLabel="Sign Out">
           <Text style={styles.signOutText}>Sign Out</Text>
         </Pressable>
 
@@ -250,7 +250,7 @@ export default function Profile() {
         animationType="slide"
         onRequestClose={() => setShowEmployerModal(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowEmployerModal(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowEmployerModal(false)} accessibilityRole="button" accessibilityLabel="Close employer modal">
           <Pressable style={styles.modalSheet} onPress={() => {}}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Employer Account</Text>
@@ -264,12 +264,14 @@ export default function Profile() {
               style={[styles.modalPrimaryBtn, switchingToEmployer && { opacity: 0.6 }]}
               onPress={switchToEmployer}
               disabled={switchingToEmployer}
+              accessibilityRole="button"
+              accessibilityLabel="Set Up Team"
             >
               {switchingToEmployer
                 ? <ActivityIndicator color="#07152b" size="small" />
                 : <Text style={styles.modalPrimaryBtnText}>Set Up Team</Text>}
             </Pressable>
-            <Pressable style={styles.modalSecondaryBtn} onPress={() => setShowEmployerModal(false)}>
+            <Pressable style={styles.modalSecondaryBtn} onPress={() => setShowEmployerModal(false)} accessibilityRole="button" accessibilityLabel="Dismiss employer modal">
               <Text style={styles.modalSecondaryBtnText}>Maybe Later</Text>
             </Pressable>
           </Pressable>

@@ -110,16 +110,16 @@ export default function Celebration() {
       </View>
 
       {/* View report */}
-      <Pressable style={s.viewBtn} onPress={handleViewReport}>
+      <Pressable style={s.viewBtn} onPress={handleViewReport} accessibilityRole="button" accessibilityLabel="View My Report">
         <Text style={s.viewBtnText}>View My Report</Text>
       </Pressable>
 
       {/* Share / Save row */}
       <View style={s.secondaryRow}>
-        <Pressable style={s.secondaryBtn} onPress={handleShareWithClient}>
+        <Pressable style={s.secondaryBtn} onPress={handleShareWithClient} accessibilityRole="button" accessibilityLabel="Share report with client">
           <Text style={s.secondaryBtnText}>Share with Client</Text>
         </Pressable>
-        <Pressable style={s.secondaryBtn} onPress={handleSaveToFiles}>
+        <Pressable style={s.secondaryBtn} onPress={handleSaveToFiles} accessibilityRole="button" accessibilityLabel="Save report to Files">
           <Text style={s.secondaryBtnText}>Save to Files</Text>
         </Pressable>
       </View>

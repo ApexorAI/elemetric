@@ -63,12 +63,12 @@ export default function About() {
         {/* Legal */}
         <Text style={s.sectionLabel}>LEGAL</Text>
         <View style={s.group}>
-          <Pressable style={s.row} onPress={() => openLink("https://elemetric.com.au/privacy")}>
+          <Pressable style={s.row} onPress={() => openLink("https://elemetric.com.au/privacy")} accessibilityRole="link" accessibilityLabel="Privacy Policy">
             <Text style={s.rowAction}>Privacy Policy</Text>
             <Text style={s.rowChevron}>›</Text>
           </Pressable>
           <View style={s.divider} />
-          <Pressable style={s.row} onPress={() => openLink("https://elemetric.com.au/terms")}>
+          <Pressable style={s.row} onPress={() => openLink("https://elemetric.com.au/terms")} accessibilityRole="link" accessibilityLabel="Terms and Conditions">
             <Text style={s.rowAction}>Terms & Conditions</Text>
             <Text style={s.rowChevron}>›</Text>
           </Pressable>
@@ -97,7 +97,7 @@ export default function About() {
           </Text>
         </View>
 
-        <Pressable onPress={() => router.back()} style={s.back}>
+        <Pressable onPress={() => router.back()} style={s.back} accessibilityRole="button" accessibilityLabel="Go back">
           <Text style={s.backText}>← Back</Text>
         </Pressable>
 

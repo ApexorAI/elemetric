@@ -189,11 +189,11 @@ export default function CalendarScreen() {
           <>
             {/* ── Month nav ── */}
             <View style={styles.monthNav}>
-              <Pressable style={styles.navBtn} onPress={prevMonth}>
+              <Pressable style={styles.navBtn} onPress={prevMonth} accessibilityRole="button" accessibilityLabel="Previous month">
                 <Text style={styles.navBtnText}>‹</Text>
               </Pressable>
               <Text style={styles.monthLabel}>{MONTH_NAMES[month]} {year}</Text>
-              <Pressable style={styles.navBtn} onPress={nextMonth}>
+              <Pressable style={styles.navBtn} onPress={nextMonth} accessibilityRole="button" accessibilityLabel="Next month">
                 <Text style={styles.navBtnText}>›</Text>
               </Pressable>
             </View>
@@ -223,6 +223,9 @@ export default function CalendarScreen() {
                       isSelected && styles.cellSelected,
                     ]}
                     onPress={() => setSelectedDay(day === selectedDay ? null : day)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${day} ${MONTH_NAMES[month]}, ${dayJobs.length} job${dayJobs.length !== 1 ? "s" : ""}`}
+                    accessibilityState={{ selected: isSelected }}
                   >
                     <Text style={[
                       styles.cellText,
