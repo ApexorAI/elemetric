@@ -35,6 +35,10 @@ const [loading, setLoading] = useState(true);
 const [toast, setToast] = useState<string | null>(null);
 const [signingOut, setSigningOut] = useState(false);
 const [fullName, setFullName] = useState("");
+const [editingName, setEditingName] = useState(false);
+const [editNameValue, setEditNameValue] = useState("");
+const [savingName, setSavingName] = useState(false);
+const [licenceNumber, setLicenceNumber] = useState("");
 const [role, setRole] = useState<"individual" | "employer" | "free">("individual");
 const [switchingRole, setSwitchingRole] = useState(false);
 const [secretInput, setSecretInput] = useState("");
@@ -61,7 +65,8 @@ const { data: profile } = await supabase
 .eq("user_id", user.id)
 .single();
 if (active && profile?.role) setRole(profile.role as "individual" | "employer");
-if (active && profile?.full_name) setFullName(profile.full_name);
+if (active && profile?.full_name) { setFullName(profile.full_name); setEditNameValue(profile.full_name); }
+if (active && (profile as any)?.licence_number) setLicenceNumber((profile as any).licence_number);
 if (active && profile?.notification_preferences) {
 setPrefs(profile.notification_preferences as Record<string, boolean>);
 }
@@ -93,6 +98,24 @@ if (error) throw error;
 showToast("Password reset email sent.");
 } catch (e: any) {
 Alert.alert("Error", e?.message ?? "Could not send reset email.");
+}
+};
+
+const saveName = async () => {
+const trimmed = editNameValue.trim();
+if (!trimmed) return;
+setSavingName(true);
+try {
+const { data: { user } } = await supabase.auth.getUser();
+if (!user) throw new Error("Not signed in.");
+await supabase.from("profiles").update({ full_name: trimmed }).eq("user_id", user.id);
+setFullName(trimmed);
+setEditingName(false);
+showToast("Name updated.");
+} catch (e: any) {
+Alert.alert("Error", e?.message ?? "Could not save name.");
+} finally {
+setSavingName(false);
 }
 };
 
@@ -343,11 +366,36 @@ return (
 </View>
 
 <View style={styles.group}>
-{fullName ? (
+<Pressable style={styles.row} onPress={() => { setEditingName(true); setEditNameValue(fullName); }}>
+<Text style={styles.rowLabel}>Name</Text>
+{editingName ? (
+<View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }}>
+<TextInput
+style={[styles.rowValue, { flex: 1, borderBottomWidth: 1, borderBottomColor: "#f97316", paddingVertical: 2 }]}
+value={editNameValue}
+onChangeText={setEditNameValue}
+autoFocus
+autoCapitalize="words"
+returnKeyType="done"
+onSubmitEditing={saveName}
+/>
+<Pressable onPress={saveName} disabled={savingName} style={{ paddingHorizontal: 8 }}>
+{savingName ? <ActivityIndicator size="small" color="#f97316" /> : <Text style={{ color: "#f97316", fontWeight: "700" }}>Save</Text>}
+</Pressable>
+<Pressable onPress={() => setEditingName(false)}>
+<Text style={{ color: "rgba(255,255,255,0.40)", fontWeight: "700" }}>✕</Text>
+</Pressable>
+</View>
+) : (
+<Text style={styles.rowValue} numberOfLines={1}>{fullName || "Tap to set name"}</Text>
+)}
+</Pressable>
+<View style={styles.divider} />
+{licenceNumber ? (
 <>
 <View style={styles.row}>
-<Text style={styles.rowLabel}>Name</Text>
-<Text style={styles.rowValue} numberOfLines={1}>{fullName}</Text>
+<Text style={styles.rowLabel}>Licence No.</Text>
+<Text style={styles.rowValue} numberOfLines={1}>{licenceNumber}</Text>
 </View>
 <View style={styles.divider} />
 </>
