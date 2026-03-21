@@ -6,9 +6,12 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
 
 type Invoice = {
   id: string;
@@ -33,6 +36,7 @@ export default function InvoiceHistory() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [exporting, setExporting] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -55,6 +59,46 @@ export default function InvoiceHistory() {
     }, [])
   );
 
+  const exportCSV = async () => {
+    if (invoices.length === 0) {
+      Alert.alert("No Data", "No invoices to export.");
+      return;
+    }
+    setExporting(true);
+    try {
+      const header = "Invoice Number,Client Name,Client Email,Date,Subtotal (AUD),GST (AUD),Total (AUD),Status,Due Date\n";
+      const rows = invoices.map((inv) => {
+        const date = new Date(inv.created_at).toLocaleDateString("en-AU");
+        const esc = (v: string | null | undefined) =>
+          `"${String(v ?? "").replace(/"/g, '""')}"`;
+        return [
+          esc(inv.invoice_number),
+          esc(inv.client_name),
+          esc(inv.client_email),
+          esc(date),
+          inv.subtotal.toFixed(2),
+          inv.gst_amount.toFixed(2),
+          inv.total.toFixed(2),
+          esc(inv.status),
+          esc(inv.due_date),
+        ].join(",");
+      }).join("\n");
+      const csv = header + rows;
+      const path = `${FileSystem.cacheDirectory}elemetric-invoices-${Date.now()}.csv`;
+      await FileSystem.writeAsStringAsync(path, csv, { encoding: FileSystem.EncodingType.UTF8 });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(path, { mimeType: "text/csv", dialogTitle: "Export Invoice CSV", UTI: "public.comma-separated-values-text" });
+      } else {
+        Alert.alert("CSV Saved", `Saved to: ${path}`);
+      }
+    } catch (e: any) {
+      Alert.alert("Export Error", e?.message ?? "Could not export CSV.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
@@ -63,7 +107,17 @@ export default function InvoiceHistory() {
         </Pressable>
         <Text style={styles.brand}>ELEMETRIC</Text>
         <Text style={styles.title}>Invoice History</Text>
-        <Text style={styles.subtitle}>{invoices.length} invoice{invoices.length !== 1 ? "s" : ""} on record</Text>
+        <View style={styles.subtitleRow}>
+          <Text style={styles.subtitle}>{invoices.length} invoice{invoices.length !== 1 ? "s" : ""} on record</Text>
+          {invoices.length > 0 && (
+            <Pressable onPress={exportCSV} disabled={exporting} style={styles.exportBtn} accessibilityRole="button" accessibilityLabel="Export CSV">
+              {exporting
+                ? <ActivityIndicator size="small" color="#f97316" />
+                : <Text style={styles.exportBtnText}>Export CSV</Text>
+              }
+            </Pressable>
+          )}
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
@@ -116,7 +170,10 @@ const styles = StyleSheet.create({
   backText: { color: "#f97316", fontWeight: "700", fontSize: 15 },
   brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
   title: { marginTop: 8, color: "white", fontSize: 22, fontWeight: "900" },
-  subtitle: { marginTop: 4, color: "rgba(255,255,255,0.55)", fontSize: 13 },
+  subtitle: { marginTop: 4, color: "rgba(255,255,255,0.55)", fontSize: 13, flex: 1 },
+  subtitleRow: { flexDirection: "row", alignItems: "center", marginTop: 4, gap: 12 },
+  exportBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10, backgroundColor: "rgba(249,115,22,0.12)", borderWidth: 1, borderColor: "rgba(249,115,22,0.30)" },
+  exportBtnText: { color: "#f97316", fontWeight: "700", fontSize: 12 },
   body: { padding: 20, gap: 12, paddingBottom: 60 },
   card: {
     backgroundColor: "#0f2035",
