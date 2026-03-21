@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Modal } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import Svg, { Circle, Text as SvgText } from "react-native-svg";
 import { supabase } from "@/lib/supabase";
@@ -92,6 +92,8 @@ export default function Home() {
   const [complianceScore, setComplianceScore] = useState<number | null>(null);
   const [loading,         setLoading]         = useState(true);
   const [trialDaysLeft,   setTrialDaysLeft]   = useState<number | null>(null);
+  const [scoreModalOpen,  setScoreModalOpen]  = useState(false);
+  const [typeBreakdown,   setTypeBreakdown]   = useState<{ type: string; avg: number; count: number }[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -142,7 +144,7 @@ export default function Home() {
           // Total job count + compliance score
           const { data: allJobs } = await supabase
             .from("jobs")
-            .select("confidence")
+            .select("confidence, job_type")
             .eq("user_id", user.id);
 
           if (active) {
@@ -161,6 +163,19 @@ export default function Home() {
                 allJobs.reduce((s: number, j: any) => s + (j.confidence ?? 0), 0) / allJobs.length
               );
               setComplianceScore(avg);
+
+              // Per-type breakdown
+              const byType: Record<string, { total: number; count: number }> = {};
+              allJobs.forEach((j: any) => {
+                const t = j.job_type ?? "other";
+                if (!byType[t]) byType[t] = { total: 0, count: 0 };
+                byType[t].total += j.confidence ?? 0;
+                byType[t].count += 1;
+              });
+              const breakdown = Object.entries(byType)
+                .map(([type, { total, count }]) => ({ type, avg: Math.round(total / count), count }))
+                .sort((a, b) => b.avg - a.avg);
+              setTypeBreakdown(breakdown);
             }
           }
         } catch {}
@@ -185,13 +200,19 @@ export default function Home() {
       </Text>
 
       {/* ── Compliance score ring ── */}
-      <View style={s.scoreCard}>
+      <Pressable
+        style={s.scoreCard}
+        onPress={() => complianceScore !== null && setScoreModalOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel="View compliance score breakdown"
+        accessibilityHint="Opens a breakdown of your compliance score by job type"
+      >
         <View style={s.scoreLeft}>
           <Text style={s.scoreTitle}>Compliance Score</Text>
           <Text style={s.scoreSub}>
             {complianceScore === null
               ? "Complete a job to generate your score"
-              : `Based on ${jobCount} job${jobCount === 1 ? "" : "s"}`}
+              : `Based on ${jobCount} job${jobCount === 1 ? "" : "s"} — tap to break down`}
           </Text>
           {complianceScore !== null && (
             <View style={[s.scoreBadge, {
@@ -213,7 +234,51 @@ export default function Home() {
             </View>
           )}
         </View>
-      </View>
+      </Pressable>
+
+      {/* ── Score breakdown modal ── */}
+      <Modal
+        visible={scoreModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setScoreModalOpen(false)}
+      >
+        <Pressable style={s.modalOverlay} onPress={() => setScoreModalOpen(false)} accessibilityRole="button" accessibilityLabel="Close score breakdown">
+          <Pressable style={s.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <View style={s.modalHandle} />
+            <Text style={s.modalTitle}>Compliance Breakdown</Text>
+            <Text style={s.modalSub}>Average AI confidence score by job type</Text>
+
+            <View style={s.breakdownList}>
+              {typeBreakdown.map((row) => (
+                <View key={row.type} style={s.breakdownRow}>
+                  <Text style={s.breakdownIcon}>{TYPE_ICON[row.type] ?? "📋"}</Text>
+                  <View style={s.breakdownInfo}>
+                    <Text style={s.breakdownLabel}>{TYPE_LABEL[row.type] ?? row.type}</Text>
+                    <Text style={s.breakdownCount}>{row.count} job{row.count !== 1 ? "s" : ""}</Text>
+                  </View>
+                  <View style={s.breakdownBar}>
+                    <View style={[s.breakdownFill, { width: `${row.avg}%` as any, backgroundColor: scoreColor(row.avg) }]} />
+                  </View>
+                  <Text style={[s.breakdownScore, { color: scoreColor(row.avg) }]}>{row.avg}%</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={s.modalDivider} />
+            <View style={s.modalOverallRow}>
+              <Text style={s.modalOverallLabel}>Overall average</Text>
+              <Text style={[s.modalOverallScore, { color: scoreColor(complianceScore ?? 0) }]}>
+                {complianceScore}%
+              </Text>
+            </View>
+
+            <Pressable style={s.modalClose} onPress={() => setScoreModalOpen(false)} accessibilityRole="button" accessibilityLabel="Close">
+              <Text style={s.modalCloseText}>Close</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── Trial banner ── */}
       {trialDaysLeft !== null && (
@@ -487,4 +552,75 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
   },
+
+  // Score breakdown modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.60)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: "#0f2035",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+    gap: 12,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "rgba(255,255,255,0.20)",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 8,
+  },
+  modalTitle: {
+    color: "white",
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  modalSub: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 13,
+  },
+  breakdownList: { gap: 12, marginTop: 4 },
+  breakdownRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  breakdownIcon: { fontSize: 20, width: 26 },
+  breakdownInfo: { width: 100 },
+  breakdownLabel: { color: "white", fontSize: 13, fontWeight: "700" },
+  breakdownCount: { color: "rgba(255,255,255,0.40)", fontSize: 11 },
+  breakdownBar: {
+    flex: 1,
+    height: 8,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  breakdownFill: { height: 8, borderRadius: 4 },
+  breakdownScore: { fontSize: 13, fontWeight: "900", width: 36, textAlign: "right" },
+  modalDivider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    marginVertical: 4,
+  },
+  modalOverallRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  modalOverallLabel: { color: "rgba(255,255,255,0.55)", fontSize: 14, fontWeight: "600" },
+  modalOverallScore: { fontSize: 22, fontWeight: "900" },
+  modalClose: {
+    marginTop: 8,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  modalCloseText: { color: "white", fontWeight: "700", fontSize: 15 },
 });
