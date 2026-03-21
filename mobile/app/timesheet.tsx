@@ -10,6 +10,7 @@ import {
   TextInput,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
@@ -65,6 +66,7 @@ function entryWorkedMs(entry: TimesheetEntry, nowMs?: number): number {
 
 export default function Timesheet() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [entries, setEntries] = useState<TimesheetEntry[]>([]);
   const [activeEntry, setActiveEntry] = useState<TimesheetEntry | null>(null);
@@ -290,7 +292,7 @@ export default function Timesheet() {
   return (
     <View style={styles.screen}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(52, insets.top + 12) }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Text style={styles.backText}>← Back</Text>
         </Pressable>

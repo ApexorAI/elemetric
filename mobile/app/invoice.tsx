@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -52,6 +53,7 @@ const formatCurrency = (n: number): string =>
 
 export default function InvoiceScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   // Installer / business details
   const [businessName, setBusinessName] = useState("");
@@ -345,7 +347,7 @@ body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: 
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(52, insets.top + 12) }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back">
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
