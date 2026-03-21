@@ -31,10 +31,12 @@ export default function NearMiss() {
   const [licenceNumber, setLicenceNumber] = useState("");
   const [companyName, setCompanyName] = useState("");
 
-  // Form fields — 3 fields only
+  // Form fields
   const [propertyAddress, setPropertyAddress] = useState("");
   const [description, setDescription] = useState("");
   const [immediateAction, setImmediateAction] = useState("");
+  const [severity, setSeverity] = useState<"low" | "medium" | "high" | "critical" | "">("");
+  const [category, setCategory] = useState("");
 
   // Photos
   const [photoUris, setPhotoUris] = useState<string[]>([]);
@@ -64,6 +66,14 @@ export default function NearMiss() {
               if (data.company_name) setCompanyName(data.company_name);
             }
           }
+          // Auto-fill address from current job
+          try {
+            const jobStr = await AsyncStorage.getItem("elemetric_current_job");
+            if (jobStr && active) {
+              const job = JSON.parse(jobStr);
+              if (job.jobAddr && active) setPropertyAddress(job.jobAddr);
+            }
+          } catch {}
         } catch {}
         if (active) setLoaded(true);
       })();
@@ -304,6 +314,57 @@ export default function NearMiss() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* ── Urgency banner ── */}
+        <View style={styles.urgencyBanner}>
+          <Text style={styles.urgencyIcon}>⚡</Text>
+          <Text style={styles.urgencyText}>Quick capture — fill in 60 seconds</Text>
+        </View>
+
+        {/* ── Severity ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Severity</Text>
+          <View style={styles.severityRow}>
+            {[
+              { id: "low", label: "Low", color: "#22c55e" },
+              { id: "medium", label: "Medium", color: "#f97316" },
+              { id: "high", label: "High", color: "#ef4444" },
+              { id: "critical", label: "Critical", color: "#7c3aed" },
+            ].map((s) => (
+              <Pressable
+                key={s.id}
+                style={[
+                  styles.severityBtn,
+                  severity === s.id && { backgroundColor: s.color + "25", borderColor: s.color },
+                ]}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSeverity(s.id as any); }}
+                accessibilityRole="button"
+                accessibilityLabel={s.label}
+                accessibilityState={{ selected: severity === s.id }}
+              >
+                <Text style={[styles.severityBtnText, severity === s.id && { color: s.color }]}>{s.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {/* ── Category ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Category</Text>
+          <View style={styles.categoryWrap}>
+            {["Gas leak", "Water damage", "Electrical hazard", "Structural", "Non-compliant install", "Other"].map((cat) => (
+              <Pressable
+                key={cat}
+                style={[styles.categoryChip, category === cat && styles.categoryChipActive]}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCategory(category === cat ? "" : cat); }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: category === cat }}
+              >
+                <Text style={[styles.categoryChipText, category === cat && styles.categoryChipTextActive]}>{cat}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
         {/* ── Property Address ── */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Property Address</Text>
@@ -454,6 +515,71 @@ const styles = StyleSheet.create({
   subtitle: { marginTop: 4, color: "rgba(255,255,255,0.55)", fontSize: 13 },
 
   body: { padding: 20, gap: 12, paddingBottom: 40 },
+
+  // ── Urgency banner ────────────────────────────────────────────────────────
+  urgencyBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(249,115,22,0.10)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.25)",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  urgencyIcon: { fontSize: 16 },
+  urgencyText: { color: "#f97316", fontWeight: "700", fontSize: 13 },
+
+  // ── Severity ──────────────────────────────────────────────────────────────
+  severityRow: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  severityBtn: {
+    flex: 1,
+    minWidth: "22%",
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  severityBtnText: {
+    color: "rgba(255,255,255,0.55)",
+    fontWeight: "800",
+    fontSize: 13,
+  },
+
+  // ── Category chips ────────────────────────────────────────────────────────
+  categoryWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  categoryChip: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+  },
+  categoryChipActive: {
+    borderColor: "#f97316",
+    backgroundColor: "rgba(249,115,22,0.15)",
+  },
+  categoryChipText: {
+    color: "rgba(255,255,255,0.55)",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  categoryChipTextActive: {
+    color: "#f97316",
+  },
 
   section: {
     backgroundColor: "#0f2035",
