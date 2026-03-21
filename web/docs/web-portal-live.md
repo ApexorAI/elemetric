@@ -1,8 +1,26 @@
-# Elemetric Employer Web Portal — Live
+# Elemetric Employer Web Portal — Launch Verified
 
 ## Build status
 
-Zero TypeScript errors. `npm run build` produces a clean Vite production bundle (356 ms).
+Zero TypeScript errors. `npm run build` produces a clean Vite production bundle (622 ms, 2351 modules).
+
+## Verification checklist (2026-03-22)
+
+| Check | Result |
+|---|---|
+| `npx tsc --noEmit` | PASS — 0 errors |
+| `npm run build` | PASS — clean bundle |
+| All 17 portal tasks | COMPLETE |
+| Australian English (en-AU dates, Licence) | PASS |
+| iOS zoom prevention (font-size: 16px globally) | PASS |
+| 44px minimum touch targets (global CSS) | PASS |
+| Skip link + aria-label nav | PASS |
+| Per-page ErrorBoundary isolation | PASS |
+| Session expiry warning banner | PASS |
+| Route progress bar | PASS |
+| SWR-style cache hook (`src/lib/cache.ts`) | PASS |
+| robots.txt (noindex — private portal) | PASS |
+| OG/Twitter/Apple PWA meta tags | PASS |
 
 ## Deploy
 
@@ -43,7 +61,10 @@ All SPA routes redirect to `index.html` (Netlify `[[redirects]]` rule).
 | `/analytics` | Charts (trend/pie/bar), leaderboard, date range |
 | `/compliance` | Certificate registry, near-miss reports from Supabase |
 | `/reports` | 4 PDF report types, current-month defaults |
-| `/settings` | Company profile, notifications (localStorage + Supabase), password reset |
+| `/settings` | Company profile, ABN, address, contact, compliance thresholds, 7 notification toggles |
+| `/reports` | 4 PDF report types, email modal, "what's included" previews |
+| `/notifications` | Full page with tabs (All/Unread/Alerts), type icons, load more |
+| `*` | 404 page with link back to dashboard |
 
 ## Architecture notes
 

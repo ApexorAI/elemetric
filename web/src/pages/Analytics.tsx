@@ -3,7 +3,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend,
 } from 'recharts'
-import { Download, TrendingUp, AlertTriangle, Award, RefreshCw, Star, Users, Briefcase, Mail } from 'lucide-react'
+import { Download, TrendingUp, Award, RefreshCw, Star, Users, Briefcase, Mail } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { useToast } from '../lib/toast'
 

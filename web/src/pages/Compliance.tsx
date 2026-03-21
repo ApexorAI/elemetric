@@ -40,15 +40,6 @@ interface Certificate {
   risk_rating?: string
 }
 
-interface RegulatoryUpdate {
-  id: string
-  title?: string
-  description?: string
-  effective_date?: string
-  category?: string
-  severity?: string
-  source?: string
-}
 
 interface RegulatoryAlert {
   id: string
@@ -90,8 +81,6 @@ export default function Compliance() {
   const [filterDateTo, setFilterDateTo] = useState('')
   const [filterMinScore, setFilterMinScore] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [regulatoryUpdates, setRegulatoryUpdates] = useState<RegulatoryUpdate[]>([])
-  const [regulatoryLoading, setRegulatoryLoading] = useState(false)
   const [regulatoryAlerts, setRegulatoryAlerts] = useState<RegulatoryAlert[]>([])
   const [alertsLoading, setAlertsLoading] = useState(false)
   const [reviewedAlertIds, setReviewedAlertIds] = useState<Set<string>>(() => {
@@ -124,27 +113,6 @@ export default function Compliance() {
       setError((err as Error).message)
     } finally {
       setLoading(false)
-    }
-  }, [session, profile?.team_id, apiUrl])
-
-  const fetchRegulatoryUpdates = useCallback(async () => {
-    if (!session || !profile?.team_id) return
-    setRegulatoryLoading(true)
-    try {
-      const res = await fetch(
-        `${apiUrl}/employer/regulatory-updates?team_id=${profile.team_id}`,
-        { headers: { Authorization: `Bearer ${session.access_token}` } }
-      )
-      if (res.ok) {
-        const json = await res.json()
-        const updates: RegulatoryUpdate[] = Array.isArray(json)
-          ? json
-          : (json.updates ?? json.data ?? [])
-        setRegulatoryUpdates(updates)
-      }
-    } catch { /* silently fail */ }
-    finally {
-      setRegulatoryLoading(false)
     }
   }, [session, profile?.team_id, apiUrl])
 
@@ -207,7 +175,6 @@ export default function Compliance() {
   }, [profile?.team_id])
 
   useEffect(() => { fetchCompliance() }, [fetchCompliance])
-  useEffect(() => { fetchRegulatoryUpdates() }, [fetchRegulatoryUpdates])
   useEffect(() => { fetchRegulatoryAlerts() }, [fetchRegulatoryAlerts])
   useEffect(() => { fetchNearMisses() }, [fetchNearMisses])
 

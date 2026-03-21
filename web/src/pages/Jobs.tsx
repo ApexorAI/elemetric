@@ -173,7 +173,6 @@ export default function Jobs() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
   const [jobDetail, setJobDetail] = useState<JobDetail | null>(null)
   const [jobDetailLoading, setJobDetailLoading] = useState(false)
@@ -219,7 +218,6 @@ export default function Jobs() {
       const json = await res.json()
       const list: Job[] = Array.isArray(json) ? json : (json.jobs ?? json.data ?? [])
       setJobs(list)
-      if (json.total && json.limit) setTotalPages(Math.ceil(json.total / json.limit))
       setSelectedIds(new Set())
     } catch (err) {
       setError((err as Error).message)
