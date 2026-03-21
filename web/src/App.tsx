@@ -14,6 +14,7 @@ const Analytics = lazy(() => import('./pages/Analytics'))
 const Compliance = lazy(() => import('./pages/Compliance'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Reports = lazy(() => import('./pages/Reports'))
+const Notifications = lazy(() => import('./pages/Notifications'))
 
 // Shown while supabase.auth.getSession() is in-flight.
 // Nothing else renders until this resolves — eliminates the race condition.
@@ -112,6 +113,14 @@ function AppRouter() {
             element={
               <ProtectedRoute>
                 <Layout><Reports /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <Layout><Notifications /></Layout>
               </ProtectedRoute>
             }
           />
