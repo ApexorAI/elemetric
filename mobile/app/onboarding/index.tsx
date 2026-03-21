@@ -50,6 +50,12 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
         every report signed — protecting your licence for the next 7 years.
       </Text>
 
+      <View style={styles.bpcBanner}>
+        <Text style={styles.bpcBannerText}>
+          Designed for BPC Victoria licensed tradespeople · AS/NZS 3500 series
+        </Text>
+      </View>
+
       <View style={styles.valueList}>
         <ValueRow icon="📸" text="Photograph your work on site" />
         <ValueRow icon="🤖" text="AI analyses against AS/NZS standards" />
@@ -131,8 +137,8 @@ function StepLicence({
         <Text style={styles.brand}>ELEMETRIC</Text>
         <Text style={styles.stepHeading}>Your licence{"\n"}details</Text>
         <Text style={styles.stepSub}>
-          These appear on every compliance report you generate. You can update them
-          any time in Profile.
+          These appear on every compliance report you generate. Under the Plumbing Regulations 2018 (Vic),
+          your licence number must appear on all compliance documentation. Update anytime in Profile.
         </Text>
 
         <View style={styles.fieldGroup}>
@@ -212,7 +218,7 @@ function StepHowItWorks({ onNext }: { onNext: () => void }) {
         <HowStep
           number="2"
           title="Analyse"
-          desc="Our AI checks your photos against AS/NZS standards and gives you a compliance score with flagged items."
+          desc="Our AI checks your photos against AS/NZS 3500 series standards (enforced by the BPC of Victoria) and gives you a compliance score with flagged items."
           color="#f97316"
         />
         <View style={styles.howConnector} />
@@ -274,25 +280,31 @@ function StepProtected({ onFinish, finishing }: { onFinish: () => void; finishin
 
       <Text style={styles.stepHeading}>You're{"\n"}protected.</Text>
       <Text style={styles.stepSub}>
-        Every job you complete in Elemetric builds your compliance record. If
-        anything is ever disputed — your documentation is ready.
+        Every job you complete in Elemetric builds your compliance record under
+        the BPC Victoria framework. If anything is ever disputed — your documentation is ready.
       </Text>
 
       <View style={styles.protectedStats}>
         <View style={styles.statItem}>
           <Text style={styles.statNum}>7</Text>
-          <Text style={styles.statLabel}>Year liability{"\n"}protection</Text>
+          <Text style={styles.statLabel}>Year liability{"\n"}record</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statNum}>100%</Text>
-          <Text style={styles.statLabel}>Cloud{"\n"}backed up</Text>
+          <Text style={styles.statNum}>BPC</Text>
+          <Text style={styles.statLabel}>Victoria{"\n"}compliant</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
           <Text style={styles.statNum}>AS/NZS</Text>
-          <Text style={styles.statLabel}>Standards{"\n"}aligned</Text>
+          <Text style={styles.statLabel}>3500 series{"\n"}aligned</Text>
         </View>
+      </View>
+
+      <View style={styles.bpcBanner}>
+        <Text style={styles.bpcBannerText}>
+          Reports reference AS/NZS 3500 series · Plumbing Regulations 2018 (Vic)
+        </Text>
       </View>
 
       <Pressable
@@ -482,4 +494,22 @@ const styles = StyleSheet.create({
 
   skipBtn: { marginTop: 16, alignItems: "center" },
   skipText: { color: "rgba(255,255,255,0.40)", fontSize: 14, fontWeight: "700" },
+
+  bpcBanner: {
+    backgroundColor: "rgba(249,115,22,0.08)",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.25)",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    marginVertical: 4,
+  },
+  bpcBannerText: {
+    color: "#f97316",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+    textAlign: "center",
+  },
 });
