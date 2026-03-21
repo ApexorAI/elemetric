@@ -12,10 +12,26 @@ TextInput,
 Modal,
 Share,
 Linking,
+LayoutAnimation,
+Platform,
+UIManager,
 } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedProps,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
 import { COMPLIANCE_ENGINE_KEY, type ComplianceReport as EngineReport } from "@/lib/compliance-rules";
 import Svg, { Circle } from "react-native-svg";
 import { useRouter, useFocusEffect } from "expo-router";
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -144,6 +160,20 @@ const router = useRouter();
 
 const [decoded, setDecoded] = useState<AIResult | null>(null);
 
+// Section expand/collapse state
+const [detectedExpanded, setDetectedExpanded] = useState(true);
+const [missingExpanded, setMissingExpanded] = useState(true);
+const [unclearExpanded, setUnclearExpanded] = useState(true);
+const [actionsExpandedNew, setActionsExpandedNew] = useState(true);
+
+const toggleSection = (setter: React.Dispatch<React.SetStateAction<boolean>>) => {
+  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  setter((v) => !v);
+};
+
+// Animated gauge
+const gaugeProgress = useSharedValue(0);
+
 const [jobLoaded, setJobLoaded] = useState(false);
 const [currentJob, setCurrentJob] = useState<CurrentJob>({
 type: "hotwater",
@@ -215,6 +245,17 @@ if (!toast) return;
 const t = setTimeout(() => setToast(null), 3500);
 return () => clearTimeout(t);
 }, [toast]);
+
+// Animate gauge when decoded data arrives
+useEffect(() => {
+  if (decoded?.confidence !== undefined) {
+    gaugeProgress.value = 0;
+    gaugeProgress.value = withTiming(decoded.confidence / 100, {
+      duration: 1200,
+      easing: Easing.out(Easing.cubic),
+    });
+  }
+}, [decoded?.confidence]);
 
 useFocusEffect(
 useCallback(() => {
@@ -397,6 +438,11 @@ const GAUGE_RADIUS = 70;
 const GAUGE_SW = 14;
 const GAUGE_C = 2 * Math.PI * GAUGE_RADIUS;
 const gaugeDashOffset = GAUGE_C - (confidence / 100) * GAUGE_C;
+
+// eslint-disable-next-line react-hooks/rules-of-hooks
+const animatedGaugeProps = useAnimatedProps(() => ({
+  strokeDashoffset: GAUGE_C - gaugeProgress.value * GAUGE_C,
+}));
 
 const getWhatThisMeans = () => {
   if (confidence >= 80 && missing.length === 0 && unclear.length === 0) {
@@ -1346,7 +1392,27 @@ return (
 return (
 <View style={styles.screen}>
 <View style={styles.header}>
-<Text style={styles.brand}>ELEMETRIC</Text>
+  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+    <Text style={styles.brand}>ELEMETRIC</Text>
+    {decoded && (
+      <Pressable
+        style={styles.headerShareBtn}
+        onPress={() => router.push({
+          pathname: "/share-client",
+          params: {
+            jobName: currentJob.jobName,
+            jobAddr: currentJob.jobAddr,
+            confidence: String(confidence),
+            generatedPdfUri: generatedPdfUri ?? "",
+          },
+        } as any)}
+        accessibilityRole="button"
+        accessibilityLabel="Share with client"
+      >
+        <Text style={styles.headerShareText}>Share ↑</Text>
+      </Pressable>
+    )}
+  </View>
 <Text style={styles.title}>AI Overview</Text>
 
 <View style={styles.metaCard}>
@@ -1427,13 +1493,13 @@ Alert.alert("Retry Failed", e?.message ?? "Could not connect to AI server. Check
   <View style={{ position: "relative", alignSelf: "center", marginTop: 8 }}>
     <Svg width={200} height={200}>
       <Circle cx={100} cy={100} r={GAUGE_RADIUS} stroke="rgba(255,255,255,0.08)" strokeWidth={GAUGE_SW} fill="none" />
-      <Circle
+      <AnimatedCircle
         cx={100} cy={100} r={GAUGE_RADIUS}
         stroke={gaugeColor} strokeWidth={GAUGE_SW} fill="none"
         strokeDasharray={`${GAUGE_C} ${GAUGE_C}`}
-        strokeDashoffset={gaugeDashOffset}
         strokeLinecap="round"
         rotation="-90" originX={100} originY={100}
+        animatedProps={animatedGaugeProps}
       />
     </Svg>
     <View style={styles.gaugeCenter}>
@@ -1478,115 +1544,188 @@ Alert.alert("Retry Failed", e?.message ?? "Could not connect to AI server. Check
   </View>
 ) : null}
 
-{/* ── Detected Items ── */}
-{detected.length > 0 && (
-  <View style={styles.itemsSection}>
-    <View style={styles.itemsSectionHeader}>
-      <View style={[styles.itemsSectionDot, { backgroundColor: "#22c55e" }]} />
-      <Text style={[styles.itemsSectionTitle, { color: "#22c55e" }]}>Detected ({detected.length})</Text>
+{/* ── Detected Items (expandable) ── */}
+<View style={styles.expandSection}>
+  <Pressable
+    style={[styles.expandHeader, { borderColor: "rgba(34,197,94,0.30)" }]}
+    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleSection(setDetectedExpanded); }}
+    accessibilityRole="button"
+    accessibilityLabel={`Detected items, ${detected.length} items`}
+  >
+    <View style={[styles.expandDot, { backgroundColor: "#22c55e" }]} />
+    <Text style={[styles.expandHeaderTitle, { color: "#22c55e" }]}>
+      Detected Items
+    </Text>
+    <View style={[styles.expandBadge, { backgroundColor: "rgba(34,197,94,0.15)" }]}>
+      <Text style={[styles.expandBadgeText, { color: "#22c55e" }]}>{detected.length}</Text>
     </View>
-    {detected.map((x, i) => (
-      <View key={`d-${i}`} style={styles.detectedRow}>
-        <View style={styles.detectedCheck}>
-          <Text style={styles.detectedCheckText}>✓</Text>
+    <Text style={styles.expandChevron}>{detectedExpanded ? "▲" : "▼"}</Text>
+  </Pressable>
+  {detectedExpanded && (
+    <View style={styles.expandBody}>
+      {detected.length === 0 ? (
+        <View style={styles.sectionEmpty}>
+          <Text style={styles.sectionEmptyText}>No items detected yet. Add photos and retry analysis.</Text>
         </View>
-        <Text style={styles.detectedText}>{x}</Text>
-      </View>
-    ))}
-  </View>
-)}
+      ) : (
+        detected.map((x, i) => (
+          <View key={`d-${i}`} style={styles.detectedCard}>
+            <View style={styles.detectedCardIcon}>
+              <Text style={styles.detectedCardIconText}>✓</Text>
+            </View>
+            <Text style={styles.detectedCardText}>{x}</Text>
+          </View>
+        ))
+      )}
+    </View>
+  )}
+</View>
 
-{/* ── Missing Items ── */}
-{missing.length > 0 && (
-  <View style={styles.itemsSection}>
-    <View style={styles.itemsSectionHeader}>
-      <View style={[styles.itemsSectionDot, { backgroundColor: "#ef4444" }]} />
-      <Text style={[styles.itemsSectionTitle, { color: "#ef4444" }]}>Missing — Action Required ({missing.length})</Text>
+{/* ── Missing Items (expandable) ── */}
+<View style={styles.expandSection}>
+  <Pressable
+    style={[styles.expandHeader, { borderColor: "rgba(239,68,68,0.30)" }]}
+    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleSection(setMissingExpanded); }}
+    accessibilityRole="button"
+    accessibilityLabel={`Missing items, ${missing.length} items`}
+  >
+    <View style={[styles.expandDot, { backgroundColor: "#ef4444" }]} />
+    <Text style={[styles.expandHeaderTitle, { color: "#ef4444" }]}>
+      Missing — Action Required
+    </Text>
+    <View style={[styles.expandBadge, { backgroundColor: "rgba(239,68,68,0.15)" }]}>
+      <Text style={[styles.expandBadgeText, { color: "#ef4444" }]}>{missing.length}</Text>
     </View>
-    {missing.map((x, i) => (
-      <View key={`m-${i}`} style={styles.missingCard}>
-        <View style={styles.missingCardInner}>
-          <View style={styles.missingIcon}>
-            <Text style={styles.missingIconText}>✗</Text>
-          </View>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={styles.missingTitle}>{x}</Text>
-            <Text style={styles.missingHint}>{getItemAction(x, "missing")}</Text>
-          </View>
+    <Text style={styles.expandChevron}>{missingExpanded ? "▲" : "▼"}</Text>
+  </Pressable>
+  {missingExpanded && (
+    <View style={styles.expandBody}>
+      {missing.length === 0 ? (
+        <View style={styles.sectionEmpty}>
+          <Text style={[styles.sectionEmptyText, { color: "#22c55e" }]}>
+            All items accounted for — great documentation!
+          </Text>
         </View>
-        <Pressable
-          style={styles.retakeBtn}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.push({ pathname: "/plumbing/photos", params: { focusItem: x } });
-          }}
-          accessibilityRole="button"
-          accessibilityLabel={`Retake photo for ${x}`}
-        >
-          <Text style={styles.retakeBtnText}>Retake Photo →</Text>
-        </Pressable>
-      </View>
-    ))}
-  </View>
-)}
+      ) : (
+        missing.map((x, i) => (
+          <View key={`m-${i}`} style={styles.missingCard}>
+            <View style={styles.missingCardInner}>
+              <View style={styles.missingIcon}>
+                <Text style={styles.missingIconText}>!</Text>
+              </View>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={styles.missingTitle}>{x}</Text>
+                <Text style={styles.missingHint}>{getItemAction(x, "missing")}</Text>
+              </View>
+            </View>
+            <Pressable
+              style={styles.retakeBtn}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push({ pathname: "/plumbing/photos", params: { focusItem: x } });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Retake photo for ${x}`}
+            >
+              <Text style={styles.retakeBtnText}>Retake Photo →</Text>
+            </Pressable>
+          </View>
+        ))
+      )}
+    </View>
+  )}
+</View>
 
-{/* ── Unclear Items ── */}
-{unclear.length > 0 && (
-  <View style={styles.itemsSection}>
-    <View style={styles.itemsSectionHeader}>
-      <View style={[styles.itemsSectionDot, { backgroundColor: "#f97316" }]} />
-      <Text style={[styles.itemsSectionTitle, { color: "#f97316" }]}>Unclear — Improve Photo ({unclear.length})</Text>
+{/* ── Unclear Items (expandable) ── */}
+<View style={styles.expandSection}>
+  <Pressable
+    style={[styles.expandHeader, { borderColor: "rgba(249,115,22,0.30)" }]}
+    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleSection(setUnclearExpanded); }}
+    accessibilityRole="button"
+    accessibilityLabel={`Unclear items, ${unclear.length} items`}
+  >
+    <View style={[styles.expandDot, { backgroundColor: "#f97316" }]} />
+    <Text style={[styles.expandHeaderTitle, { color: "#f97316" }]}>
+      Unclear — Improve Photo
+    </Text>
+    <View style={[styles.expandBadge, { backgroundColor: "rgba(249,115,22,0.15)" }]}>
+      <Text style={[styles.expandBadgeText, { color: "#f97316" }]}>{unclear.length}</Text>
     </View>
-    {unclear.map((x, i) => (
-      <View key={`u-${i}`} style={styles.unclearCard}>
-        <View style={styles.unclearCardInner}>
-          <View style={styles.unclearIcon}>
-            <Text style={styles.unclearIconText}>!</Text>
-          </View>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={styles.unclearTitle}>{x}</Text>
-            <Text style={styles.unclearHint}>{getItemAction(x, "unclear")}</Text>
-          </View>
+    <Text style={styles.expandChevron}>{unclearExpanded ? "▲" : "▼"}</Text>
+  </Pressable>
+  {unclearExpanded && (
+    <View style={styles.expandBody}>
+      {unclear.length === 0 ? (
+        <View style={styles.sectionEmpty}>
+          <Text style={[styles.sectionEmptyText, { color: "#22c55e" }]}>
+            All photos are clear — nothing to improve.
+          </Text>
         </View>
-        <Pressable
-          style={styles.retakeBtnOrange}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.push({ pathname: "/plumbing/photos", params: { focusItem: x } });
-          }}
-          accessibilityRole="button"
-          accessibilityLabel={`Retake photo for ${x}`}
-        >
-          <Text style={styles.retakeBtnText}>Improve Photo →</Text>
-        </Pressable>
-      </View>
-    ))}
-  </View>
-)}
+      ) : (
+        unclear.map((x, i) => (
+          <View key={`u-${i}`} style={styles.unclearCard}>
+            <View style={styles.unclearCardInner}>
+              <View style={styles.unclearIcon}>
+                <Text style={styles.unclearIconText}>?</Text>
+              </View>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={styles.unclearTitle}>{x}</Text>
+                <Text style={styles.unclearHint}>{getItemAction(x, "unclear")}</Text>
+              </View>
+            </View>
+            <Pressable
+              style={styles.retakeBtnOrange}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push({ pathname: "/plumbing/photos", params: { focusItem: x } });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Improve photo for ${x}`}
+            >
+              <Text style={styles.retakeBtnText}>Improve Photo →</Text>
+            </Pressable>
+          </View>
+        ))
+      )}
+    </View>
+  )}
+</View>
 
 {/* ── Recommended Actions (expandable) ── */}
-{!!action && (
+<View style={styles.expandSection}>
   <Pressable
-    style={styles.actionsCard}
-    onPress={() => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setActionsExpanded(v => !v);
-    }}
+    style={[styles.expandHeader, { borderColor: "rgba(255,255,255,0.12)" }]}
+    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleSection(setActionsExpandedNew); }}
     accessibilityRole="button"
-    accessibilityLabel="Toggle recommended actions"
+    accessibilityLabel="Recommended actions"
   >
-    <View style={styles.actionsHeader}>
-      <View style={styles.actionsIconWrap}>
-        <Text style={styles.actionsIcon}>⚡</Text>
-      </View>
-      <Text style={styles.actionsTitle}>Recommended Actions</Text>
-      <Text style={styles.actionsChevron}>{actionsExpanded ? "▲" : "▼"}</Text>
-    </View>
-    {actionsExpanded && (
-      <Text style={styles.actionsBody}>{action}</Text>
-    )}
+    <View style={[styles.expandDot, { backgroundColor: "#60a5fa" }]} />
+    <Text style={[styles.expandHeaderTitle, { color: "#60a5fa" }]}>
+      Recommended Actions
+    </Text>
+    <Text style={styles.expandChevron}>{actionsExpandedNew ? "▲" : "▼"}</Text>
   </Pressable>
-)}
+  {actionsExpandedNew && (
+    <View style={styles.expandBody}>
+      {!action ? (
+        <View style={styles.sectionEmpty}>
+          <Text style={[styles.sectionEmptyText, { color: "#22c55e" }]}>
+            No actions required — your documentation is complete.
+          </Text>
+        </View>
+      ) : (
+        action.split(/\n|\.(?=\s)/).filter(s => s.trim()).map((a, i) => (
+          <View key={`a-${i}`} style={styles.actionCard}>
+            <View style={styles.actionCardNum}>
+              <Text style={styles.actionCardNumText}>{i + 1}</Text>
+            </View>
+            <Text style={styles.actionCardText}>{a.trim()}</Text>
+          </View>
+        ))
+      )}
+    </View>
+  )}
+</View>
 
 {showLegacyAnalysis && (
   <View style={styles.card}>
@@ -2674,6 +2813,145 @@ toastText: { color: "white", fontWeight: "900", fontSize: 15 },
   dayTimelineDotLast: { backgroundColor: "#f97316", borderColor: "#f97316" },
   dayTimelineLabel: { color: "rgba(255,255,255,0.55)", fontSize: 11, fontWeight: "800", marginTop: 4 },
   dayTimelineDate: { color: "rgba(255,255,255,0.30)", fontSize: 9 },
+
+  // ── Header share button ───────────────────────────────────────────────────
+  headerShareBtn: {
+    backgroundColor: "rgba(249,115,22,0.18)",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.40)",
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+  },
+  headerShareText: {
+    color: "#f97316",
+    fontWeight: "900",
+    fontSize: 13,
+  },
+
+  // ── Expandable sections ───────────────────────────────────────────────────
+  expandSection: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    overflow: "hidden",
+  },
+  expandHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.06)",
+  },
+  expandHeaderTitle: {
+    flex: 1,
+    fontWeight: "900",
+    fontSize: 14,
+    letterSpacing: 0.2,
+  },
+  expandDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    flexShrink: 0,
+  },
+  expandBadge: {
+    borderRadius: 8,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    minWidth: 24,
+    alignItems: "center",
+  },
+  expandBadgeText: {
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  expandChevron: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  expandBody: {
+    gap: 0,
+  },
+
+  // ── Detected item card ────────────────────────────────────────────────────
+  detectedCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(34,197,94,0.10)",
+    backgroundColor: "rgba(34,197,94,0.04)",
+  },
+  detectedCardIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(34,197,94,0.22)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  detectedCardIconText: {
+    color: "#22c55e",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  detectedCardText: {
+    color: "rgba(255,255,255,0.88)",
+    fontSize: 14,
+    fontWeight: "600",
+    flex: 1,
+    lineHeight: 20,
+  },
+
+  // ── Section empty state ───────────────────────────────────────────────────
+  sectionEmpty: {
+    padding: 16,
+  },
+  sectionEmptyText: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+  },
+
+  // ── Action item card ──────────────────────────────────────────────────────
+  actionCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(96,165,250,0.10)",
+  },
+  actionCardNum: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(96,165,250,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  actionCardNumText: {
+    color: "#60a5fa",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  actionCardText: {
+    color: "rgba(255,255,255,0.82)",
+    fontSize: 14,
+    lineHeight: 21,
+    flex: 1,
+  },
 });
 
 const loadingStyles = StyleSheet.create({
