@@ -453,6 +453,42 @@ body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: 
         {/* ── Line Items ── */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Line Items</Text>
+
+          {/* Quick-add chips */}
+          <Text style={styles.quickAddLabel}>QUICK ADD</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickAddRow}>
+            {[
+              { desc: "Labour (per hour)", price: "120.00" },
+              { desc: "Call-out fee", price: "150.00" },
+              { desc: "Hot water system install", price: "450.00" },
+              { desc: "Materials", price: "" },
+              { desc: "Travel charge", price: "80.00" },
+              { desc: "Report / compliance documentation", price: "75.00" },
+            ].map((q) => (
+              <Pressable
+                key={q.desc}
+                style={styles.quickAddChip}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  const hasBlankLine = lineItems.some(l => !l.description.trim());
+                  if (hasBlankLine) {
+                    setLineItems(prev => prev.map((l, i) =>
+                      !l.description.trim() && !prev.slice(0, i).some(x => !x.description.trim())
+                        ? { ...l, description: q.desc, unitPrice: q.price }
+                        : l
+                    ));
+                  } else {
+                    setLineItems(prev => [...prev, { id: String(Date.now()), description: q.desc, qty: "1", unitPrice: q.price }]);
+                  }
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Add ${q.desc}`}
+              >
+                <Text style={styles.quickAddChipText}>+ {q.desc}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
           {lineItems.map((item, idx) => (
             <View key={item.id} style={styles.lineItem}>
               <View style={styles.lineItemRow}>
@@ -681,6 +717,34 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   addLineBtnText: { color: "rgba(255,255,255,0.85)", fontWeight: "700", fontSize: 15 },
+
+  // ── Quick-add chips ───────────────────────────────────────────────────────
+  quickAddLabel: {
+    color: "rgba(255,255,255,0.30)",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  quickAddRow: {
+    marginBottom: 12,
+    marginHorizontal: -4,
+  },
+  quickAddChip: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.30)",
+    backgroundColor: "rgba(249,115,22,0.08)",
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    marginHorizontal: 4,
+  },
+  quickAddChipText: {
+    color: "#f97316",
+    fontSize: 12,
+    fontWeight: "700",
+  },
 
   totalsCard: {
     backgroundColor: "#0f2035",
