@@ -10,6 +10,7 @@ TextInput,
 } from "react-native";
 import { SkeletonTimelineCard } from "@/components/SkeletonLoader";
 import { useFocusEffect, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 
@@ -66,6 +67,7 @@ return "Hot Water";
 
 export default function LiabilityTimeline() {
 const router = useRouter();
+const insets = useSafeAreaInsets();
 const [jobs, setJobs] = useState<Job[]>([]);
 const [loading, setLoading] = useState(true);
 const [search, setSearch] = useState("");
@@ -162,7 +164,7 @@ return (
 
 return (
 <View style={styles.screen}>
-<View style={styles.header}>
+<View style={[styles.header, { paddingTop: Math.max(20, insets.top + 8) }]}>
 <Text style={styles.brand}>ELEMETRIC</Text>
 <Text style={styles.title}>Liability Timeline</Text>
 <Text style={styles.subtitle}>7-year compliance liability window</Text>

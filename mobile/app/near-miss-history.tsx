@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
 
 type NearMiss = {
@@ -47,6 +48,7 @@ const NearMissCard = React.memo(function NearMissCard({ item }: { item: NearMiss
 
 export default function NearMissHistory() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<NearMiss[]>([]);
 
@@ -73,7 +75,7 @@ export default function NearMissHistory() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(52, insets.top + 12) }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back">
           <Text style={styles.backText}>← Back</Text>
         </Pressable>

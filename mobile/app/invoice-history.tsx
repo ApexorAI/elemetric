@@ -9,6 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
@@ -61,6 +62,7 @@ const InvoiceCard = React.memo(function InvoiceCard({ inv }: { inv: Invoice }) {
 
 export default function InvoiceHistory() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [exporting, setExporting] = useState(false);
@@ -128,7 +130,7 @@ export default function InvoiceHistory() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(52, insets.top + 12) }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back">
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
