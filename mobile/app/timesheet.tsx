@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   Share,
+  TextInput,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -14,6 +15,8 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 
 const STORAGE_KEY = "elemetric_timesheet_entries";
+const RATE_KEY = "elemetric_hourly_rate";
+const JOB_KEY = "elemetric_current_job";
 
 type BreakEntry = { start: number; end: number | null };
 
@@ -24,6 +27,8 @@ type TimesheetEntry = {
   clockOut: number | null;
   breaks: BreakEntry[];
   notes: string;
+  jobAddress?: string;
+  jobId?: string;
 };
 
 function formatDuration(ms: number): string {
@@ -65,6 +70,9 @@ export default function Timesheet() {
   const [activeEntry, setActiveEntry] = useState<TimesheetEntry | null>(null);
   const [onBreak, setOnBreak] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [hourlyRate, setHourlyRate] = useState("");
+  const [editingRate, setEditingRate] = useState(false);
+  const [currentJobAddress, setCurrentJobAddress] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Live timer
@@ -82,9 +90,12 @@ export default function Timesheet() {
     useCallback(() => {
       (async () => {
         try {
-          const raw = await AsyncStorage.getItem(STORAGE_KEY);
+          const [raw, rateRaw, jobRaw] = await Promise.all([
+            AsyncStorage.getItem(STORAGE_KEY),
+            AsyncStorage.getItem(RATE_KEY),
+            AsyncStorage.getItem(JOB_KEY),
+          ]);
           const all: TimesheetEntry[] = raw ? JSON.parse(raw) : [];
-          // Check if there's an active (unclosed) entry
           const open = all.find((e) => e.clockOut === null);
           setEntries(all.filter((e) => e.clockOut !== null));
           if (open) {
@@ -94,6 +105,13 @@ export default function Timesheet() {
           } else {
             setActiveEntry(null);
             setOnBreak(false);
+          }
+          if (rateRaw) setHourlyRate(rateRaw);
+          if (jobRaw) {
+            try {
+              const job = JSON.parse(jobRaw);
+              setCurrentJobAddress(job.address ?? job.property_address ?? null);
+            } catch {}
           }
         } catch {}
       })();
@@ -106,6 +124,13 @@ export default function Timesheet() {
     } catch {}
   };
 
+  const saveRate = async (rate: string) => {
+    const trimmed = rate.trim();
+    setHourlyRate(trimmed);
+    setEditingRate(false);
+    try { await AsyncStorage.setItem(RATE_KEY, trimmed); } catch {}
+  };
+
   const clockIn = async () => {
     if (activeEntry) return;
     const entry: TimesheetEntry = {
@@ -115,6 +140,7 @@ export default function Timesheet() {
       clockOut: null,
       breaks: [],
       notes: "",
+      jobAddress: currentJobAddress ?? undefined,
     };
     setActiveEntry(entry);
     setOnBreak(false);
@@ -185,18 +211,22 @@ export default function Timesheet() {
   const exportCSV = async () => {
     const allClosed = entries.filter((e) => e.clockOut !== null);
     if (allClosed.length === 0) { Alert.alert("No Data", "No completed entries to export."); return; }
-    const header = "Date,Clock In,Clock Out,Break (min),Worked (hrs),Notes\n";
+    const rate = parseFloat(hourlyRate) || 0;
+    const header = "Date,Job,Clock In,Clock Out,Break (min),Worked (hrs),Pay ($),Notes\n";
     const rows = allClosed.map((e) => {
       const breakMs = e.breaks.reduce((s, b) => s + Math.max(0, (b.end ?? 0) - b.start), 0);
       const breakMin = Math.round(breakMs / 60000);
       const workedMs = entryWorkedMs(e);
       const workedHrs = (workedMs / 3600000).toFixed(2);
+      const pay = rate > 0 ? (parseFloat(workedHrs) * rate).toFixed(2) : "";
       return [
         e.date,
+        (e.jobAddress || "").replace(/,/g, ";"),
         formatTime(e.clockIn),
         e.clockOut ? formatTime(e.clockOut) : "",
         breakMin,
         workedHrs,
+        pay,
         (e.notes || "").replace(/,/g, ";"),
       ].join(",");
     });
@@ -228,6 +258,18 @@ export default function Timesheet() {
       .filter((e) => e.clockIn >= weekAgo && e.clockOut !== null)
       .reduce((s, e) => s + entryWorkedMs(e), 0);
   })();
+
+  const totalThisMonth = (() => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    return entries
+      .filter((e) => e.clockIn >= monthStart && e.clockOut !== null)
+      .reduce((s, e) => s + entryWorkedMs(e), 0);
+  })();
+
+  const rate = parseFloat(hourlyRate) || 0;
+  const weeklyPay = rate > 0 ? (totalThisWeek / 3600000) * rate : null;
+  const monthlyPay = rate > 0 ? (totalThisMonth / 3600000) * rate : null;
 
   return (
     <View style={styles.screen}>
@@ -291,10 +333,60 @@ export default function Timesheet() {
           )}
         </View>
 
-        {/* Weekly summary */}
-        <View style={styles.weekCard}>
-          <Text style={styles.weekLabel}>THIS WEEK</Text>
-          <Text style={styles.weekHours}>{(totalThisWeek / 3600000).toFixed(1)} hrs</Text>
+        {/* Job link indicator */}
+        {currentJobAddress && !isClocked && (
+          <View style={styles.jobLinkCard}>
+            <Text style={styles.jobLinkLabel}>LINKED JOB</Text>
+            <Text style={styles.jobLinkAddress} numberOfLines={1}>{currentJobAddress}</Text>
+            <Text style={styles.jobLinkSub}>Next clock-in will be tagged to this job</Text>
+          </View>
+        )}
+
+        {/* Hourly rate */}
+        <View style={styles.rateCard}>
+          <View style={styles.rateRow}>
+            <View>
+              <Text style={styles.rateLabel}>HOURLY RATE</Text>
+              {editingRate ? (
+                <TextInput
+                  style={styles.rateInput}
+                  value={hourlyRate}
+                  onChangeText={setHourlyRate}
+                  keyboardType="decimal-pad"
+                  placeholder="e.g. 45.00"
+                  placeholderTextColor="rgba(255,255,255,0.25)"
+                  autoFocus
+                  onBlur={() => saveRate(hourlyRate)}
+                  onSubmitEditing={() => saveRate(hourlyRate)}
+                />
+              ) : (
+                <Text style={styles.rateValue}>
+                  {hourlyRate ? `$${parseFloat(hourlyRate).toFixed(2)}/hr` : "Not set"}
+                </Text>
+              )}
+            </View>
+            <Pressable onPress={() => setEditingRate(true)} hitSlop={8} style={styles.editRateBtn}>
+              <Text style={styles.editRateBtnText}>{editingRate ? "" : "Edit"}</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Summary cards */}
+        <View style={styles.summaryRow}>
+          <View style={[styles.weekCard, styles.summaryCard]}>
+            <Text style={styles.weekLabel}>THIS WEEK</Text>
+            <Text style={styles.weekHours}>{(totalThisWeek / 3600000).toFixed(1)} hrs</Text>
+            {weeklyPay !== null && (
+              <Text style={styles.payEstimate}>${weeklyPay.toFixed(2)}</Text>
+            )}
+          </View>
+          <View style={[styles.weekCard, styles.summaryCard]}>
+            <Text style={styles.weekLabel}>THIS MONTH</Text>
+            <Text style={styles.weekHours}>{(totalThisMonth / 3600000).toFixed(1)} hrs</Text>
+            {monthlyPay !== null && (
+              <Text style={styles.payEstimate}>${monthlyPay.toFixed(2)}</Text>
+            )}
+          </View>
         </View>
 
         {/* Export button */}
@@ -313,6 +405,7 @@ export default function Timesheet() {
               const breakMin = Math.round(
                 entry.breaks.reduce((s, b) => s + Math.max(0, (b.end ?? 0) - b.start), 0) / 60000
               );
+              const entryPay = rate > 0 ? (worked / 3600000) * rate : null;
               return (
                 <View key={entry.id} style={styles.entryCard}>
                   <View style={styles.entryTop}>
@@ -321,6 +414,9 @@ export default function Timesheet() {
                       <Text style={styles.deleteText}>✕</Text>
                     </Pressable>
                   </View>
+                  {entry.jobAddress && (
+                    <Text style={styles.entryJob} numberOfLines={1}>{entry.jobAddress}</Text>
+                  )}
                   <View style={styles.entryStats}>
                     <View style={styles.entryStat}>
                       <Text style={styles.entryStatLabel}>CLOCKED IN</Text>
@@ -338,6 +434,12 @@ export default function Timesheet() {
                       <View style={styles.entryStat}>
                         <Text style={styles.entryStatLabel}>BREAK</Text>
                         <Text style={styles.entryStatValue}>{breakMin}m</Text>
+                      </View>
+                    )}
+                    {entryPay !== null && (
+                      <View style={styles.entryStat}>
+                        <Text style={styles.entryStatLabel}>PAY</Text>
+                        <Text style={[styles.entryStatValue, { color: "#f97316" }]}>${entryPay.toFixed(2)}</Text>
                       </View>
                     )}
                   </View>
@@ -452,18 +554,63 @@ const styles = StyleSheet.create({
   },
   clockOutBtnText: { color: "white", fontWeight: "900", fontSize: 14 },
 
+  jobLinkCard: {
+    backgroundColor: "rgba(249,115,22,0.06)",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.25)",
+    padding: 14,
+    gap: 3,
+  },
+  jobLinkLabel: { color: "#f97316", fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  jobLinkAddress: { color: "white", fontWeight: "700", fontSize: 14 },
+  jobLinkSub: { color: "rgba(255,255,255,0.40)", fontSize: 12 },
+
+  rateCard: {
+    backgroundColor: "#0f2035",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.07)",
+    padding: 14,
+  },
+  rateRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  rateLabel: { color: "rgba(255,255,255,0.35)", fontWeight: "800", fontSize: 11, letterSpacing: 1, marginBottom: 4 },
+  rateValue: { color: "white", fontWeight: "700", fontSize: 16 },
+  rateInput: {
+    color: "white",
+    fontWeight: "700",
+    fontSize: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f97316",
+    paddingVertical: 2,
+    minWidth: 100,
+  },
+  editRateBtn: {
+    backgroundColor: "rgba(249,115,22,0.12)",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.30)",
+  },
+  editRateBtnText: { color: "#f97316", fontWeight: "800", fontSize: 13 },
+
+  summaryRow: { flexDirection: "row", gap: 12 },
+  summaryCard: { flex: 1 },
+
   weekCard: {
     backgroundColor: "#0f2035",
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.07)",
     padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    gap: 4,
   },
   weekLabel: { color: "rgba(255,255,255,0.35)", fontWeight: "800", fontSize: 11, letterSpacing: 1 },
-  weekHours: { color: "white", fontWeight: "900", fontSize: 26 },
+  weekHours: { color: "white", fontWeight: "900", fontSize: 24 },
+  payEstimate: { color: "#22c55e", fontWeight: "700", fontSize: 14, marginTop: 2 },
+
+  entryJob: { color: "rgba(249,115,22,0.80)", fontSize: 12, fontWeight: "600" },
 
   exportBtn: {
     backgroundColor: "rgba(255,255,255,0.06)",
