@@ -28,16 +28,16 @@ const API_BASE = "https://elemetric-ai-production.up.railway.app";
 const SIGNATURE_KEY = "elemetric_signature_svg";
 
 const CHECKS = [
-{ id: "copper",       label: "Copper pipe joints brazed correctly" },
-{ id: "isolation",    label: "Isolation valves installed at fixtures" },
-{ id: "plv",          label: "Pressure limiting valve installed" },
-{ id: "tempering",    label: "Tempering valve installed to AS 3500" },
-{ id: "hws",          label: "Hot water system compliant with AS 3500" },
-{ id: "hammer",       label: "Water hammer arrestors installed" },
-{ id: "supports",     label: "Pipe supports at correct intervals" },
-{ id: "penetrations", label: "All penetrations sealed" },
-{ id: "pressure",     label: "System pressure tested" },
-{ id: "leaks",        label: "No visible leaks on completion" },
+{ id: "copper",       label: "Copper pipe joints brazed correctly",          standard: "AS/NZS 3500.4:2025 §5.3" },
+{ id: "isolation",    label: "Isolation valves installed at fixtures",        standard: "AS/NZS 3500.4:2025 §3.8" },
+{ id: "plv",          label: "Pressure limiting valve installed",             standard: "AS/NZS 3500.4:2025 §4.4" },
+{ id: "tempering",    label: "Tempering valve installed to AS 3500",          standard: "AS/NZS 3500.4:2025 §6.6" },
+{ id: "hws",          label: "Hot water system compliant with AS 3500",       standard: "AS/NZS 3500.4:2025 §6.2" },
+{ id: "hammer",       label: "Water hammer arrestors installed",               standard: "AS/NZS 3500.4:2025 §5.5" },
+{ id: "supports",     label: "Pipe supports at correct intervals",            standard: "AS/NZS 3500.4:2025 §5.4" },
+{ id: "penetrations", label: "All penetrations sealed",                       standard: "AS/NZS 3500.4:2025 §5.6" },
+{ id: "pressure",     label: "System pressure tested",                        standard: "AS/NZS 3500.4:2025 §7.2" },
+{ id: "leaks",        label: "No visible leaks on completion",                standard: "AS/NZS 3500.4:2025 §4.1" },
 ] as const;
 
 const NEWINSTALL_HINTS: Record<string, string> = {
@@ -547,6 +547,7 @@ const entry = checks[check.id];
 return (
 <View key={check.id} style={styles.checkCard}>
 <Text style={styles.checkLabel}>{check.label}</Text>
+<Text style={styles.itemStandard}>{check.standard}</Text>
 {NEWINSTALL_HINTS[check.id] && <Text style={styles.itemHint}>{NEWINSTALL_HINTS[check.id]}</Text>}
 <StatusButtons id={check.id} status={entry.status} onSet={setStatus} />
 <TextInput
@@ -705,6 +706,7 @@ padding: 14,
 gap: 10,
 },
 checkLabel: { color: "white", fontWeight: "700", fontSize: 15, lineHeight: 22 },
+itemStandard: { color: "rgba(249,115,22,0.7)", fontSize: 10, fontWeight: "700", letterSpacing: 0.3, marginTop: 1 },
 itemHint: { color: "rgba(255,255,255,0.35)", fontSize: 12, fontStyle: "italic", marginTop: 2, lineHeight: 16 },
 statusRow: { flexDirection: "row", gap: 8 },
 statusBtn: {

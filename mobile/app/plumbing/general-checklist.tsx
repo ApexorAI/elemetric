@@ -54,11 +54,11 @@ const TYPE_API_MAP: Record<string, { apiType: string; apiSubtype?: string }> = {
 };
 
 const SECTIONS = [
-{ id: "overview",     label: "Site Overview" },
-{ id: "work_area",    label: "Work Area / Installation" },
-{ id: "equipment",    label: "Equipment / Materials" },
-{ id: "completion",   label: "Completed Work" },
-{ id: "compliance",   label: "Labels / Documentation" },
+{ id: "overview",     label: "Site Overview",             standard: "AS/NZS 5149.1:2016 §4.1" },
+{ id: "work_area",    label: "Work Area / Installation",  standard: "AS/NZS 5149.1:2016 §5.2" },
+{ id: "equipment",    label: "Equipment / Materials",     standard: "AS/NZS 5149.1:2016 §5.4" },
+{ id: "completion",   label: "Completed Work",            standard: "AS/NZS 5149.1:2016 §6.1" },
+{ id: "compliance",   label: "Labels / Documentation",    standard: "AS/NZS 5149.1:2016 §2.4" },
 ] as const;
 
 type Section = { photoUris: string[]; notes: string };
@@ -776,6 +776,7 @@ const entry = sections[sec.id];
 return (
 <View key={sec.id} style={styles.sectionCard}>
 <Text style={styles.sectionCardTitle}>{sec.label}</Text>
+<Text style={styles.itemStandard}>{sec.standard}</Text>
 {SECTION_HINTS[sec.id] && <Text style={styles.itemHint}>{SECTION_HINTS[sec.id]}</Text>}
 
 <Pressable style={styles.addPhotoBtn} onPress={() => addPhoto(sec.id)}>
@@ -934,6 +935,7 @@ padding: 16,
 gap: 10,
 },
 sectionTitle: { color: "white", fontWeight: "700", fontSize: 15 },
+itemStandard: { color: "rgba(249,115,22,0.7)", fontSize: 10, fontWeight: "700", letterSpacing: 0.3, marginTop: 1 },
 itemHint: { color: "rgba(255,255,255,0.35)", fontSize: 12, fontStyle: "italic", marginTop: 2, lineHeight: 16 },
 fieldLabel: {
 color: "rgba(255,255,255,0.35)",

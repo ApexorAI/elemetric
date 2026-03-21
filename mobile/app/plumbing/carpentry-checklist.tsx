@@ -31,19 +31,19 @@ const API_BASE = "https://elemetric-ai-production.up.railway.app";
 // ── Checklist data ─────────────────────────────────────────────────────────────
 
 const CHECKS = [
-  { id: "framing_plumb",    label: "Wall framing plumb, square and true" },
-  { id: "stud_spacing",     label: "Stud spacing correct per engineer / plans" },
-  { id: "structural_conn",  label: "Structural connections and fixings correct" },
-  { id: "blocking_nogging", label: "Blocking and nogging installed as required" },
-  { id: "bracing",          label: "Bracing adequate and compliant — AS 1684" },
-  { id: "roof_framing",     label: "Roof framing / truss installation correct" },
-  { id: "floor_framing",    label: "Floor framing and joists secure" },
-  { id: "lintel_correct",   label: "Lintels correct size and bearing length" },
-  { id: "door_window",      label: "Door and window frames level, plumb and square" },
-  { id: "fixing_schedule",  label: "Fixing schedule followed — nail / bolt sizes correct" },
-  { id: "decking_flooring", label: "Decking or flooring laid correctly" },
-  { id: "finish_trim",      label: "Finishing and trim installed to standard" },
-  { id: "site_clean",       label: "Site cleanup completed" },
+  { id: "framing_plumb",    label: "Wall framing plumb, square and true",                standard: "AS 1684.2:2010 §3.2" },
+  { id: "stud_spacing",     label: "Stud spacing correct per engineer / plans",           standard: "AS 1684.2:2010 §4.4" },
+  { id: "structural_conn",  label: "Structural connections and fixings correct",          standard: "AS 1684.2:2010 §2.4" },
+  { id: "blocking_nogging", label: "Blocking and nogging installed as required",          standard: "AS 1684.2:2010 §4.5" },
+  { id: "bracing",          label: "Bracing adequate and compliant — AS 1684",           standard: "AS 1684.2:2010 §8.3" },
+  { id: "roof_framing",     label: "Roof framing / truss installation correct",           standard: "AS 1684.2:2010 §6.2" },
+  { id: "floor_framing",    label: "Floor framing and joists secure",                    standard: "AS 1684.2:2010 §5.2" },
+  { id: "lintel_correct",   label: "Lintels correct size and bearing length",             standard: "AS 1684.2:2010 §4.9" },
+  { id: "door_window",      label: "Door and window frames level, plumb and square",     standard: "NCC 2022 §3.4.1" },
+  { id: "fixing_schedule",  label: "Fixing schedule followed — nail / bolt sizes correct",standard: "AS 1684.2:2010 App B" },
+  { id: "decking_flooring", label: "Decking or flooring laid correctly",                 standard: "AS 1684.4:2010 §2.3" },
+  { id: "finish_trim",      label: "Finishing and trim installed to standard",            standard: "NCC 2022 Vol 2" },
+  { id: "site_clean",       label: "Site cleanup completed",                              standard: "Safe Work Australia" },
 ] as const;
 
 const CARPENTRY_HINTS: Record<string, string> = {
@@ -802,6 +802,7 @@ ${allPhotoMeta.length > 0 ? `
           return (
             <View key={c.id} style={styles.checkItem}>
               <Text style={styles.checkLabel}>{c.label}</Text>
+              <Text style={styles.itemStandard}>{c.standard}</Text>
               {CARPENTRY_HINTS[c.id] && <Text style={styles.itemHint}>{CARPENTRY_HINTS[c.id]}</Text>}
               <StatusButtons id={c.id} status={entry.status} onSet={setStatus} />
               <TextInput
@@ -987,6 +988,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   checkLabel: { color: "white", fontSize: 15, fontWeight: "700", lineHeight: 22 },
+  itemStandard: { color: "rgba(249,115,22,0.7)", fontSize: 10, fontWeight: "700", letterSpacing: 0.3, marginTop: 1 },
   itemHint: { color: "rgba(255,255,255,0.35)", fontSize: 12, fontStyle: "italic", marginTop: 2, lineHeight: 16 },
 
   statusRow: { flexDirection: "row", gap: 8 },

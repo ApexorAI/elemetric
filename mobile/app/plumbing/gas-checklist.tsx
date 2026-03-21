@@ -32,31 +32,31 @@ const API_BASE = "https://elemetric-ai-production.up.railway.app";
 // ── Checklist data ─────────────────────────────────────────────────────────────
 
 const INSTALLATION_CHECKS = [
-{ id: "gastight",      label: "Gastight AS/NZS 5601.1" },
-{ id: "accessible",    label: "Accessible for servicing" },
-{ id: "isolation",     label: "Isolation valve present" },
-{ id: "electrical",    label: "Electrically safe" },
-{ id: "certification", label: "Evidence of certification" },
-{ id: "restrained",    label: "Adequately restrained" },
-{ id: "ventilation",   label: "Ventilation adequate" },
-{ id: "clearances",    label: "Clearances OK" },
-{ id: "cowl",          label: "Cowl and flue terminal OK" },
-{ id: "flue",          label: "Flue supported and sealed" },
-{ id: "scorching",     label: "Scorching and overheating check" },
-{ id: "heat_exchanger","label": "Heat exchanger OK" },
-{ id: "gas_tight",     label: "Gas fitting line tested and gas tight" },
-{ id: "cleaned",       label: "Appliance cleaned of dust and debris" },
-{ id: "pressures",     label: "Gas supply and appliance operating pressures correct" },
-{ id: "flames",        label: "Burner flames normal" },
-{ id: "operating",     label: "Appliance operating correctly including all safety devices" },
+{ id: "gastight",      label: "Gastight AS/NZS 5601.1",                                  standard: "AS/NZS 5601.1:2022 §5.2" },
+{ id: "accessible",    label: "Accessible for servicing",                                 standard: "AS/NZS 5601.1:2022 §5.4" },
+{ id: "isolation",     label: "Isolation valve present",                                  standard: "AS/NZS 5601.1:2022 §4.3" },
+{ id: "electrical",    label: "Electrically safe",                                        standard: "AS/NZS 5601.1:2022 §6.1" },
+{ id: "certification", label: "Evidence of certification",                                standard: "AS/NZS 5601.1:2022 §2.4" },
+{ id: "restrained",    label: "Adequately restrained",                                    standard: "AS/NZS 5601.1:2022 §5.6" },
+{ id: "ventilation",   label: "Ventilation adequate",                                     standard: "AS/NZS 5601.1:2022 §6.2" },
+{ id: "clearances",    label: "Clearances OK",                                            standard: "AS/NZS 5601.1:2022 §5.5" },
+{ id: "cowl",          label: "Cowl and flue terminal OK",                                standard: "AS/NZS 5601.1:2022 §7.3" },
+{ id: "flue",          label: "Flue supported and sealed",                                standard: "AS/NZS 5601.1:2022 §7.2" },
+{ id: "scorching",     label: "Scorching and overheating check",                          standard: "AS/NZS 5601.1:2022 §5.8" },
+{ id: "heat_exchanger",label: "Heat exchanger OK",                                        standard: "AS/NZS 5601.1:2022 §5.9" },
+{ id: "gas_tight",     label: "Gas fitting line tested and gas tight",                    standard: "AS/NZS 5601.1:2022 §5.2" },
+{ id: "cleaned",       label: "Appliance cleaned of dust and debris",                     standard: "AS/NZS 5601.1:2022 §5.10" },
+{ id: "pressures",     label: "Gas supply and appliance operating pressures correct",     standard: "AS/NZS 5601.1:2022 §4.2" },
+{ id: "flames",        label: "Burner flames normal",                                     standard: "AS/NZS 5601.1:2022 §5.11" },
+{ id: "operating",     label: "Appliance operating correctly including all safety devices",standard: "AS/NZS 5601.1:2022 §5.12" },
 ] as const;
 
 const SERVICING_CHECKS = [
-{ id: "serviced",       label: "Serviced this visit" },
-{ id: "operating_test", label: "Operating test" },
-{ id: "spillage",       label: "Spillage test" },
-{ id: "co_test",        label: "CO test" },
-{ id: "pressure_test",  label: "Pressure test" },
+{ id: "serviced",       label: "Serviced this visit", standard: "AS/NZS 5601.1:2022 §5.12" },
+{ id: "operating_test", label: "Operating test",       standard: "AS/NZS 5601.1:2022 §5.12" },
+{ id: "spillage",       label: "Spillage test",        standard: "AS/NZS 5601.1:2022 §5.13" },
+{ id: "co_test",        label: "CO test",              standard: "AS/NZS 5601.1:2022 §5.14" },
+{ id: "pressure_test",  label: "Pressure test",        standard: "AS/NZS 5601.1:2022 §5.2" },
 ] as const;
 
 const GAS_HINTS: Record<string, string> = {
@@ -1029,6 +1029,7 @@ const entry = installChecks[check.id];
 return (
 <View key={check.id} style={styles.checkCard}>
 <Text style={styles.checkLabel}>{check.label}</Text>
+<Text style={styles.itemStandard}>{check.standard}</Text>
 {GAS_HINTS[check.id] && <Text style={styles.itemHint}>{GAS_HINTS[check.id]}</Text>}
 <StatusButtons id={check.id} status={entry.status} onSet={setInstallStatus} />
 <TextInput
@@ -1072,6 +1073,7 @@ const entry = serviceChecks[check.id];
 return (
 <View key={check.id} style={styles.checkCard}>
 <Text style={styles.checkLabel}>{check.label}</Text>
+<Text style={styles.itemStandard}>{check.standard}</Text>
 {GAS_HINTS[check.id] && <Text style={styles.itemHint}>{GAS_HINTS[check.id]}</Text>}
 <StatusButtons id={check.id} status={entry.status} onSet={setServiceStatus} />
 <TextInput
@@ -1265,6 +1267,7 @@ padding: 14,
 gap: 10,
 },
 checkLabel: { color: "white", fontWeight: "700", fontSize: 15, lineHeight: 22 },
+itemStandard: { color: "rgba(249,115,22,0.7)", fontSize: 10, fontWeight: "700", letterSpacing: 0.3, marginTop: 1 },
 itemHint: { color: "rgba(255,255,255,0.35)", fontSize: 12, fontStyle: "italic", marginTop: 2, lineHeight: 16 },
 
 statusRow:       { flexDirection: "row", gap: 8 },

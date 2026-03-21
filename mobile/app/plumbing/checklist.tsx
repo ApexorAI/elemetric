@@ -17,6 +17,7 @@ title: string;
 subtitle: string;
 kind: "photo" | "info";
 hint?: string;
+standard?: string;
 };
 
 type CurrentJob = {
@@ -38,6 +39,7 @@ title: "Existing system (before)",
 subtitle: "Photo required",
 kind: "photo",
 hint: "Photo of the old unit before you remove or disconnect anything.",
+standard: "AS/NZS 3500.1:2025 §3.1",
 },
 {
 id: "ptr",
@@ -45,6 +47,7 @@ title: "PTR valve installed",
 subtitle: "Photo required",
 kind: "photo",
 hint: "The small valve on the side of the hot water unit with a pipe going to the floor. It pops open if pressure gets too high.",
+standard: "AS/NZS 3500.1:2025 §6.4",
 },
 {
 id: "tempering",
@@ -52,6 +55,7 @@ title: "Tempering valve",
 subtitle: "Photo required",
 kind: "photo",
 hint: "The valve that mixes cold water in so the hot water at the tap is never scalding. Usually under the unit or at the first outlet.",
+standard: "AS/NZS 3500.1:2025 §6.6",
 },
 {
 id: "plate",
@@ -59,6 +63,7 @@ title: "Compliance plate / label",
 subtitle: "Photo required",
 kind: "photo",
 hint: "The label stuck to the side of the unit showing make, model, serial number, and gas/electrical rating.",
+standard: "AS/NZS 3500.1:2025 §6.2",
 },
 {
 id: "isolation",
@@ -66,6 +71,7 @@ title: "Isolation valve",
 subtitle: "Photo required",
 kind: "photo",
 hint: "The tap that turns the water supply to the unit on or off. Show it clearly labelled or tagged.",
+standard: "AS/NZS 3500.1:2025 §3.8",
 },
 {
 id: "pressure",
@@ -73,6 +79,7 @@ title: "Confirm: Pressure test completed",
 subtitle: "Confirmation",
 kind: "info",
 hint: "Confirm you've pressure tested the installation before signing off.",
+standard: "AS/NZS 3500.1:2025 §4.2",
 },
 ];
 
@@ -232,6 +239,7 @@ onPress={() => toggleItem(item.id)}
 {item.subtitle}
 {isPhoto && photoCount > 0 ? ` • ${photoCount} photo${photoCount > 1 ? "s" : ""}` : ""}
 </Text>
+{item.standard && <Text style={styles.itemStandard}>{item.standard}</Text>}
 {item.hint && <Text style={styles.itemHint}>{item.hint}</Text>}
 </View>
 
@@ -384,6 +392,13 @@ fontSize: 13,
 marginTop: 2,
 },
 
+itemStandard: {
+color: "rgba(249,115,22,0.7)",
+fontSize: 10,
+fontWeight: "700",
+letterSpacing: 0.3,
+marginTop: 2,
+},
 itemHint: {
 color: "rgba(255,255,255,0.35)",
 fontSize: 12,

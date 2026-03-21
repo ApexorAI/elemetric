@@ -31,18 +31,18 @@ const API_BASE = "https://elemetric-ai-production.up.railway.app";
 // ── Checklist data ─────────────────────────────────────────────────────────────
 
 const CHECKS = [
-  { id: "rcd",            label: "RCD protection installed and tested" },
-  { id: "circuit_breaker",label: "Circuit breaker ratings correct" },
-  { id: "earth",          label: "Earth continuity tested" },
-  { id: "polarity",       label: "Polarity correct" },
-  { id: "insulation",     label: "Insulation resistance tested" },
-  { id: "connections",    label: "All connections secure and terminations correct" },
-  { id: "cable_support",  label: "Cable support and protection adequate" },
-  { id: "switchboard",    label: "Switchboard labelling complete" },
-  { id: "no_damage",      label: "No visible damage to cables or fittings" },
-  { id: "smoke_alarm",    label: "Smoke alarm installed and tested where required" },
-  { id: "safety_switch",  label: "Safety switch tested and operational" },
-  { id: "test_recorded",  label: "Test results recorded" },
+  { id: "rcd",            label: "RCD protection installed and tested",             standard: "AS/NZS 3000:2018 §2.6.3" },
+  { id: "circuit_breaker",label: "Circuit breaker ratings correct",                 standard: "AS/NZS 3000:2018 §2.5.2" },
+  { id: "earth",          label: "Earth continuity tested",                         standard: "AS/NZS 3000:2018 §5.4" },
+  { id: "polarity",       label: "Polarity correct",                                standard: "AS/NZS 3000:2018 §8.3.2" },
+  { id: "insulation",     label: "Insulation resistance tested",                    standard: "AS/NZS 3000:2018 §8.3.3" },
+  { id: "connections",    label: "All connections secure and terminations correct",  standard: "AS/NZS 3000:2018 §3.1.3" },
+  { id: "cable_support",  label: "Cable support and protection adequate",            standard: "AS/NZS 3000:2018 §3.9" },
+  { id: "switchboard",    label: "Switchboard labelling complete",                  standard: "AS/NZS 3000:2018 §2.10" },
+  { id: "no_damage",      label: "No visible damage to cables or fittings",         standard: "AS/NZS 3000:2018 §3.1.1" },
+  { id: "smoke_alarm",    label: "Smoke alarm installed and tested where required",  standard: "NCC 2022 Spec E2.2a" },
+  { id: "safety_switch",  label: "Safety switch tested and operational",             standard: "AS/NZS 3000:2018 §2.6.3" },
+  { id: "test_recorded",  label: "Test results recorded",                            standard: "AS/NZS 3017:2022 §3.2" },
 ] as const;
 
 const ELECTRICAL_HINTS: Record<string, string> = {
@@ -901,6 +901,7 @@ ${allPhotoMeta.length > 0 ? `
             return (
               <View key={check.id} style={styles.checkCard}>
                 <Text style={styles.checkLabel}>{check.label}</Text>
+                <Text style={styles.itemStandard}>{check.standard}</Text>
                 {ELECTRICAL_HINTS[check.id] && <Text style={styles.itemHint}>{ELECTRICAL_HINTS[check.id]}</Text>}
                 <StatusButtons id={check.id} status={entry.status} onSet={setStatus} />
                 <TextInput
@@ -1115,6 +1116,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   checkLabel: { color: "white", fontWeight: "700", fontSize: 15, lineHeight: 22 },
+  itemStandard: { color: "rgba(249,115,22,0.7)", fontSize: 10, fontWeight: "700", letterSpacing: 0.3, marginTop: 1 },
   itemHint: { color: "rgba(255,255,255,0.35)", fontSize: 12, fontStyle: "italic", marginTop: 2, lineHeight: 16 },
 
   statusRow: { flexDirection: "row", gap: 8 },

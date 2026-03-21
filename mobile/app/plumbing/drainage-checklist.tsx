@@ -28,16 +28,16 @@ const API_BASE = "https://elemetric-ai-production.up.railway.app";
 const SIGNATURE_KEY = "elemetric_signature_svg";
 
 const CHECKS = [
-{ id: "fall",       label: "Drain fall correct minimum 1 in 60" },
-{ id: "joints",     label: "Pipe joints sealed and watertight" },
-{ id: "bedding",    label: "Pipe bedding and support adequate" },
-{ id: "inspection", label: "Inspection opening accessible" },
-{ id: "trap",       label: "Trap installed where required" },
-{ id: "vent",       label: "Vent pipe installed correctly" },
-{ id: "water_test", label: "Drain tested with water test" },
-{ id: "leaks",      label: "No evidence of leaks" },
-{ id: "backflow",   label: "Backflow prevention installed where required" },
-{ id: "overflow",   label: "Overflow relief gully installed correctly" },
+{ id: "fall",       label: "Drain fall correct minimum 1 in 60",          standard: "AS/NZS 3500.2:2025 §3.5" },
+{ id: "joints",     label: "Pipe joints sealed and watertight",            standard: "AS/NZS 3500.2:2025 §4.2" },
+{ id: "bedding",    label: "Pipe bedding and support adequate",            standard: "AS/NZS 3500.2:2025 §3.3" },
+{ id: "inspection", label: "Inspection opening accessible",               standard: "AS/NZS 3500.2:2025 §5.1" },
+{ id: "trap",       label: "Trap installed where required",               standard: "AS/NZS 3500.2:2025 §5.3" },
+{ id: "vent",       label: "Vent pipe installed correctly",               standard: "AS/NZS 3500.2:2025 §6.1" },
+{ id: "water_test", label: "Drain tested with water test",                standard: "AS/NZS 3500.2:2025 §7.3" },
+{ id: "leaks",      label: "No evidence of leaks",                        standard: "AS/NZS 3500.2:2025 §4.1" },
+{ id: "backflow",   label: "Backflow prevention installed where required", standard: "AS/NZS 3500.2:2025 §3.9" },
+{ id: "overflow",   label: "Overflow relief gully installed correctly",    standard: "AS/NZS 3500.2:2025 §3.7" },
 ] as const;
 
 const DRAINAGE_HINTS: Record<string, string> = {
@@ -635,6 +635,7 @@ const entry = checks[check.id];
 return (
 <View key={check.id} style={styles.checkCard}>
 <Text style={styles.checkLabel}>{check.label}</Text>
+<Text style={styles.itemStandard}>{check.standard}</Text>
 {DRAINAGE_HINTS[check.id] && <Text style={styles.itemHint}>{DRAINAGE_HINTS[check.id]}</Text>}
 <StatusButtons id={check.id} status={entry.status} onSet={setStatus} />
 <TextInput
@@ -805,6 +806,7 @@ padding: 14,
 gap: 10,
 },
 checkLabel: { color: "white", fontWeight: "700", fontSize: 15, lineHeight: 22 },
+itemStandard: { color: "rgba(249,115,22,0.7)", fontSize: 10, fontWeight: "700", letterSpacing: 0.3, marginTop: 1 },
 itemHint: { color: "rgba(255,255,255,0.35)", fontSize: 12, fontStyle: "italic", marginTop: 2, lineHeight: 16 },
 statusRow: { flexDirection: "row", gap: 8 },
 statusBtn: {
