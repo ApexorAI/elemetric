@@ -1,10 +1,51 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, BarChart, Bar,
+  BarChart, Bar,
 } from 'recharts'
-import { Download, TrendingUp, AlertTriangle, Award, RefreshCw } from 'lucide-react'
+import { Download, TrendingUp, AlertTriangle, Award, RefreshCw, Star } from 'lucide-react'
 import { useAuth } from '../lib/auth'
+
+function ComplianceGauge({ score, loading }: { score: number | null; loading: boolean }) {
+  const r = 80
+  const circ = 2 * Math.PI * r
+  const s = score ?? 0
+  const color = s >= 85 ? '#16a34a' : s >= 70 ? '#d97706' : '#dc2626'
+  const label = s >= 85 ? 'Excellent' : s >= 70 ? 'Good' : 'Needs Attention'
+  const dash = (s / 100) * circ
+
+  return (
+    <div className="flex flex-col items-center justify-center">
+      <div className="relative inline-flex items-center justify-center">
+        <svg width="200" height="200" className="-rotate-90">
+          <circle cx="100" cy="100" r={r} fill="none" stroke="#e5e7eb" strokeWidth="14" />
+          {!loading && (
+            <circle
+              cx="100" cy="100" r={r}
+              fill="none"
+              stroke={color}
+              strokeWidth="14"
+              strokeDasharray={`${dash} ${circ}`}
+              strokeLinecap="round"
+              style={{ transition: 'stroke-dasharray 1s ease' }}
+            />
+          )}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          {loading ? (
+            <div className="w-16 h-8 bg-gray-200 rounded animate-pulse" />
+          ) : (
+            <>
+              <span className="text-4xl font-bold" style={{ color }}>{s}%</span>
+              <span className="text-xs font-medium text-gray-500 mt-1">{label}</span>
+            </>
+          )}
+        </div>
+      </div>
+      <p className="text-sm font-semibold text-gray-700 mt-2">Team Average Score</p>
+    </div>
+  )
+}
 
 interface OverviewData {
   avg_compliance_score?: number
@@ -83,8 +124,6 @@ export default function Analytics() {
     )
   }
 
-  const PIE_COLORS = ['#FF6B00', '#07152B', '#2563eb', '#16a34a', '#d97706', '#9333ea']
-
   const trendData = trends.map((t) => ({
     label: t.week ?? t.date ?? t.label ?? '',
     score: t.avg_score ?? t.score ?? 0,
@@ -153,6 +192,28 @@ export default function Analytics() {
           </button>
         </div>
       )}
+
+      {/* Compliance Score Gauge */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6 flex flex-col sm:flex-row items-center gap-8">
+        <ComplianceGauge
+          score={overview?.avg_compliance_score != null ? Math.round(overview.avg_compliance_score) : null}
+          loading={loading}
+        />
+        <div className="flex-1 space-y-3 w-full">
+          <h2 className="font-semibold text-gray-800">Score Thresholds</h2>
+          {[
+            { label: 'Excellent', range: '85–100%', color: '#16a34a', bg: '#f0fdf4' },
+            { label: 'Good', range: '70–84%', color: '#d97706', bg: '#fffbeb' },
+            { label: 'Needs Attention', range: 'Below 70%', color: '#dc2626', bg: '#fef2f2' },
+          ].map(({ label, range, color, bg }) => (
+            <div key={label} className="flex items-center gap-3 p-3 rounded-lg" style={{ backgroundColor: bg }}>
+              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+              <span className="text-sm font-medium" style={{ color }}>{label}</span>
+              <span className="text-sm text-gray-500 ml-auto">{range}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Overview stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -236,9 +297,9 @@ export default function Analytics() {
           )}
         </div>
 
-        {/* Trade Breakdown */}
+        {/* Trade Breakdown — horizontal bar */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h2 className="font-semibold text-gray-800 mb-4">Trade Type Breakdown</h2>
+          <h2 className="font-semibold text-gray-800 mb-4">Jobs by Trade Type</h2>
           {loading ? (
             <div className="h-72 bg-gray-100 rounded-lg animate-pulse" />
           ) : tradeData.length === 0 ? (
@@ -247,22 +308,13 @@ export default function Analytics() {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={288}>
-              <PieChart>
-                <Pie
-                  data={tradeData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                  labelLine={false}
-                >
-                  {tradeData.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
+              <BarChart data={tradeData} layout="vertical" margin={{ top: 0, right: 10, bottom: 0, left: 90 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                <XAxis type="number" tick={{ fontSize: 11 }} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={85} />
                 <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-              </PieChart>
+                <Bar dataKey="value" fill="#07152B" radius={[0, 4, 4, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           )}
         </div>
@@ -323,6 +375,9 @@ export default function Analytics() {
                   <span className="flex-1 text-sm font-medium text-gray-800 truncate">
                     {member.name}
                   </span>
+                  {member.score >= 90 && (
+                    <Star size={14} style={{ color: '#16a34a', fill: '#16a34a' }} className="flex-shrink-0" />
+                  )}
                   <span className="text-xs text-gray-500">{member.jobs} jobs</span>
                   <span
                     className="text-xs px-2 py-0.5 rounded-full font-semibold"
