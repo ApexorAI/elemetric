@@ -957,7 +957,8 @@ body { margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; color: 
     <div style="color:rgba(255,255,255,0.45);font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;font-family:Helvetica,Arial,sans-serif;">Property Address</div>
     <div style="color:white;font-size:16px;font-weight:700;margin-bottom:20px;font-family:Helvetica,Arial,sans-serif;">${currentJob.jobAddr}</div>
     <div style="color:rgba(255,255,255,0.45);font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;font-family:Helvetica,Arial,sans-serif;">Plumber</div>
-    <div style="color:white;font-size:15px;font-weight:700;margin-bottom:20px;font-family:Helvetica,Arial,sans-serif;">${installerName || "Not entered"}</div>
+    <div style="color:white;font-size:15px;font-weight:700;margin-bottom:4px;font-family:Helvetica,Arial,sans-serif;">${installerName || "Not entered"}</div>
+    ${profile.licenceNumber ? `<div style="color:rgba(255,255,255,0.45);font-size:11px;font-family:Helvetica,Arial,sans-serif;margin-bottom:20px;">Lic. ${profile.licenceNumber}${profile.companyName ? ` · ${profile.companyName}` : ""}</div>` : '<div style="margin-bottom:20px;"></div>'}
     <div style="color:rgba(255,255,255,0.45);font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;font-family:Helvetica,Arial,sans-serif;">Date</div>
     <div style="color:white;font-size:15px;font-weight:700;font-family:Helvetica,Arial,sans-serif;">${reportDateShort}</div>
   </div>
@@ -1017,49 +1018,17 @@ ${engineReport ? `
 <div style="background:#f8fafc;border-left:4px solid #f97316;padding:16px;margin-bottom:20px;border-radius:0 6px 6px 0;">
   <div style="font-family:Helvetica,Arial,sans-serif;font-size:11px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Executive Summary</div>
   <table style="width:100%;border-collapse:collapse;">
-    <tr><td style="padding:4px 0;width:180px;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Job Type</td><td style="font-family:Helvetica,Arial,sans-serif;">${currentJob.type}</td></tr>
-    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Date</td><td style="font-family:Helvetica,Arial,sans-serif;">${reportDate}</td></tr>
-    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Address</td><td style="font-family:Helvetica,Arial,sans-serif;">${currentJob.jobAddr}</td></tr>
-    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Plumber</td><td style="font-family:Helvetica,Arial,sans-serif;">${installerName || "Not entered"}</td></tr>
-    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">AI Confidence</td><td style="font-family:Helvetica,Arial,sans-serif;">${confidence}%</td></tr>
-${currentJob.startTime ? `<tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Time on Site</td><td style="font-family:Helvetica,Arial,sans-serif;">${(() => { const diff = Math.floor((Date.now() - new Date(currentJob.startTime).getTime()) / 1000); const h = Math.floor(diff/3600); const m = Math.floor((diff%3600)/60); const s = diff%60; return h > 0 ? `${h}h ${m}m` : `${m}m ${s}s`; })()}</td></tr>` : ""}
-    <tr><td style="padding:4px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;">Overall Status</td><td style="font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:${relevant ? "#16a34a" : "#d97706"};">${relevant ? "RELEVANT PHOTO SET" : "REVIEW REQUIRED"}</td></tr>
+    <tr><td style="padding:5px 0;width:180px;font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:#374151;">Job Name</td><td style="font-family:Helvetica,Arial,sans-serif;color:#111827;">${currentJob.jobName}</td></tr>
+    <tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:#374151;">Address</td><td style="font-family:Helvetica,Arial,sans-serif;color:#111827;">${currentJob.jobAddr}</td></tr>
+    <tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:#374151;">Job Type</td><td style="font-family:Helvetica,Arial,sans-serif;color:#111827;">${(JOB_TYPE_META[currentJob.type] ?? JOB_TYPE_META.hotwater).label}</td></tr>
+    <tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:#374151;">Standard</td><td style="font-family:Helvetica,Arial,sans-serif;color:#111827;">${(JOB_TYPE_META[currentJob.type] ?? JOB_TYPE_META.hotwater).standard}</td></tr>
+    <tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:#374151;">Plumber</td><td style="font-family:Helvetica,Arial,sans-serif;color:#111827;">${installerName || "Not entered"}</td></tr>
+    <tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:#374151;">Licence No.</td><td style="font-family:Helvetica,Arial,sans-serif;color:#111827;">${profile.licenceNumber || "Not entered"}</td></tr>
+    <tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:#374151;">Company</td><td style="font-family:Helvetica,Arial,sans-serif;color:#111827;">${profile.companyName || "Not entered"}</td></tr>
+    <tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:#374151;">Report Date</td><td style="font-family:Helvetica,Arial,sans-serif;color:#111827;">${reportDate}</td></tr>
+    <tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:#374151;">AI Confidence</td><td style="font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:${coverBadgeColor};">${confidence}% — ${coverBadgeLabel}</td></tr>
+    ${currentJob.startTime ? `<tr><td style="padding:5px 0;font-family:Helvetica,Arial,sans-serif;font-weight:bold;color:#374151;">Time on Site</td><td style="font-family:Helvetica,Arial,sans-serif;color:#111827;">${(() => { const diff = Math.floor((Date.now() - new Date(currentJob.startTime!).getTime()) / 1000); const h = Math.floor(diff/3600); const m = Math.floor((diff%3600)/60); return h > 0 ? `${h}h ${m}m` : `${m}m`; })()}</td></tr>` : ""}
   </table>
-</div>
-<hr style="border:none;border-top:2px solid #f97316;margin:20px 0;"/>
-
-<div style="margin-bottom: 18px;">
-<div style="font-family:Helvetica,Arial,sans-serif;font-size: 19px; font-weight: bold; margin-bottom: 10px;">Job Summary</div>
-<table style="width:100%; border-collapse: collapse;">
-<tr>
-<td style="padding: 6px 0; width: 150px;"><strong>Job Name</strong></td>
-<td style="padding: 6px 0;">${currentJob.jobName}</td>
-</tr>
-<tr>
-<td style="padding: 6px 0;"><strong>Address</strong></td>
-<td style="padding: 6px 0;">${currentJob.jobAddr}</td>
-</tr>
-<tr>
-<td style="padding: 6px 0;"><strong>Job Type</strong></td>
-<td style="padding: 6px 0;">${currentJob.type}</td>
-</tr>
-<tr>
-<td style="padding: 6px 0;"><strong>Installer</strong></td>
-<td style="padding: 6px 0;">${installerName || "Not entered"}</td>
-</tr>
-<tr>
-<td style="padding: 6px 0;"><strong>Licence No.</strong></td>
-<td style="padding: 6px 0;">${profile.licenceNumber || "Not entered"}</td>
-</tr>
-<tr>
-<td style="padding: 6px 0;"><strong>Company</strong></td>
-<td style="padding: 6px 0;">${profile.companyName || "Not entered"}</td>
-</tr>
-<tr>
-<td style="padding: 6px 0;"><strong>Report Date</strong></td>
-<td style="padding: 6px 0;">${reportDate}</td>
-</tr>
-</table>
 </div>
 
 ${(currentJob.type === "hotwater" || currentJob.type === "newinstall") && (waterPressureMeter || waterPressureFixture || hotWaterTemp || coldWaterTemp || flowRate || pipeMaterial || pipeSize) ? `
