@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import NotificationBell from './NotificationBell'
+import SessionExpiryBanner from './SessionExpiryBanner'
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -202,6 +203,8 @@ export default function Layout({ children }: LayoutProps) {
             </button>
           </div>
         </header>
+
+        <SessionExpiryBanner />
 
         {/* Page content */}
         <main className="flex-1 overflow-auto bg-gray-50">

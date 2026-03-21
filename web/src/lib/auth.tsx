@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 
-interface Profile {
+export interface Profile {
   id: string
   role: string
   team_id: string | null
@@ -19,17 +19,28 @@ interface AuthContextType {
   session: Session | null
   profile: Profile | null
   loading: boolean
+  isNewUser: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
+function writeAuditLog(action: string, userId: string) {
+  try {
+    const key = 'elemetric_audit_log'
+    const existing: unknown[] = JSON.parse(localStorage.getItem(key) ?? '[]')
+    existing.unshift({ action, userId, ts: new Date().toISOString() })
+    localStorage.setItem(key, JSON.stringify(existing.slice(0, 100)))
+  } catch { /* non-critical */ }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isNewUser, setIsNewUser] = useState(false)
 
   // Tracks whether the initial getSession() call has already resolved.
   // onAuthStateChange must not reset loading — only getSession() does that on startup.
@@ -43,8 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', userId)
         .single()
       if (error) throw error
-      setProfile(data as Profile)
-      return data as Profile
+      const p = data as Profile
+      setProfile(p)
+      // Flag new users who haven't completed onboarding (no company name set)
+      setIsNewUser(!p.company_name)
+      return p
     } catch {
       setProfile(null)
       return null
@@ -106,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ),
           }
         }
+        writeAuditLog('sign_in', data.user.id)
       }
       return { error: null }
     } catch (err) {
@@ -114,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
+    if (user) writeAuditLog('sign_out', user.id)
     await supabase.auth.signOut()
     setProfile(null)
     setUser(null)
@@ -121,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, isNewUser, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   )
