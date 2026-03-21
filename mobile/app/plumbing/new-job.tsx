@@ -9,12 +9,13 @@ import {
   Alert,
   FlatList,
   ActivityIndicator,
-
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import * as Haptics from "expo-haptics";
 import { supabase } from "@/lib/supabase";
+
+const FLOW_STEPS = ["Job Details", "Checklist", "Photos", "AI Review"];
 
 type Suggestion = { display: string; short: string };
 
@@ -230,10 +231,44 @@ export default function NewJob() {
 
   const typeLabel = TYPE_LABELS[type] ?? "New Job";
 
+  const TYPE_ICONS: Record<string, string> = {
+    hotwater: "🚿", gas: "🔥", drainage: "🪣", newinstall: "🔧",
+    electrical: "⚡", hvac: "❄️", carpentry: "🪚",
+    powerpoint: "🔌", lighting: "💡", switchboard: "🔋",
+    splitsystem: "🌬️", ducted: "🌡️", framing: "🏗️",
+    decking: "🪵", door: "🚪", window: "🪟", flooring: "🏠",
+  };
+  const jobIcon = TYPE_ICONS[type] ?? "🔧";
+
   return (
     <View style={styles.screen}>
+      {/* Progress indicator */}
+      <View style={styles.progressWrap}>
+        {FLOW_STEPS.map((step, i) => (
+          <View key={step} style={styles.progressItem}>
+            <View style={[
+              styles.progressDot,
+              i === 0 && styles.progressDotActive,
+              i > 0 && styles.progressDotFuture,
+            ]}>
+              {i === 0
+                ? <Text style={styles.progressDotText}>1</Text>
+                : <View style={styles.progressDotInner} />
+              }
+            </View>
+            <Text style={[
+              styles.progressLabel,
+              i === 0 && styles.progressLabelActive,
+            ]}>{step}</Text>
+            {i < FLOW_STEPS.length - 1 && (
+              <View style={styles.progressLine} />
+            )}
+          </View>
+        ))}
+      </View>
+
       <View style={styles.header}>
-        <Text style={styles.brand}>ELEMETRIC</Text>
+        <Text style={styles.jobIcon}>{jobIcon}</Text>
         <Text style={styles.title}>Job Details</Text>
         <Text style={styles.subtitle}>{typeLabel}</Text>
       </View>
@@ -292,16 +327,36 @@ export default function NewJob() {
 
         {/* Floor plan upload hidden until post-launch */}
 
+        {/* What's next card */}
+        <View style={styles.nextCard}>
+          <Text style={styles.nextTitle}>What happens next</Text>
+          {[
+            { step: "2", label: "Checklist", desc: "Complete the job-type checklist" },
+            { step: "3", label: "Photos", desc: "Capture site photos for AI analysis" },
+            { step: "4", label: "AI Review", desc: "Get your compliance score & report" },
+          ].map((s) => (
+            <View key={s.step} style={styles.nextRow}>
+              <View style={styles.nextStepBadge}>
+                <Text style={styles.nextStepNum}>{s.step}</Text>
+              </View>
+              <View style={styles.nextRowText}>
+                <Text style={styles.nextRowLabel}>{s.label}</Text>
+                <Text style={styles.nextRowDesc}>{s.desc}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
         <Pressable
           style={[styles.button, checking && { opacity: 0.6 }]}
-          onPress={onContinue}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onContinue(); }}
           disabled={checking}
           accessibilityRole="button"
           accessibilityLabel="Continue to checklist"
         >
           {checking
             ? <ActivityIndicator color="#0b1220" />
-            : <Text style={styles.buttonText}>Continue →</Text>
+            : <Text style={styles.buttonText}>Continue to Checklist →</Text>
           }
         </Pressable>
 
@@ -315,10 +370,120 @@ export default function NewJob() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#07152b" },
-  header: { paddingTop: 20, paddingHorizontal: 20, paddingBottom: 8 },
-  brand: { color: "#f97316", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
-  title: { marginTop: 8, color: "white", fontSize: 22, fontWeight: "900" },
-  subtitle: { marginTop: 4, color: "rgba(255,255,255,0.55)", fontSize: 13 },
+
+  // ── Progress indicator ─────────────────────────────────────────────────────
+  progressWrap: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingTop: 54,
+    paddingHorizontal: 20,
+    paddingBottom: 4,
+  },
+  progressItem: {
+    flex: 1,
+    alignItems: "center",
+    position: "relative",
+  },
+  progressLine: {
+    position: "absolute",
+    top: 13,
+    left: "50%",
+    right: "-50%",
+    height: 2,
+    backgroundColor: "rgba(255,255,255,0.10)",
+  },
+  progressDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#f97316",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1,
+  },
+  progressDotActive: {
+    backgroundColor: "#f97316",
+    shadowColor: "#f97316",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  progressDotFuture: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+  },
+  progressDotText: {
+    color: "#07152b",
+    fontWeight: "900",
+    fontSize: 12,
+  },
+  progressDotInner: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.25)",
+  },
+  progressLabel: {
+    marginTop: 6,
+    fontSize: 10,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.25)",
+    textAlign: "center",
+  },
+  progressLabelActive: {
+    color: "#f97316",
+  },
+
+  // ── Header ─────────────────────────────────────────────────────────────────
+  header: { paddingTop: 12, paddingHorizontal: 20, paddingBottom: 8 },
+  jobIcon: { fontSize: 36, marginBottom: 4 },
+  title: { color: "white", fontSize: 26, fontWeight: "900" },
+  subtitle: { marginTop: 2, color: "rgba(255,255,255,0.55)", fontSize: 13 },
+
+  // ── What's next card ───────────────────────────────────────────────────────
+  nextCard: {
+    marginTop: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    padding: 16,
+    gap: 12,
+  },
+  nextTitle: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  nextRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  nextStepBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "rgba(249,115,22,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.30)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  nextStepNum: {
+    color: "#f97316",
+    fontWeight: "900",
+    fontSize: 11,
+  },
+  nextRowText: { flex: 1 },
+  nextRowLabel: { color: "rgba(255,255,255,0.80)", fontWeight: "700", fontSize: 13 },
+  nextRowDesc: { color: "rgba(255,255,255,0.40)", fontSize: 12, marginTop: 1 },
 
   body: { padding: 20, paddingBottom: 60 },
   label: {
