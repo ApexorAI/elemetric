@@ -30,7 +30,6 @@ export default function Entry() {
       if (event === "INITIAL_SESSION") {
         sessionRef.value = session;
         sessionRef.resolved = true;
-        console.log("[Auth] INITIAL_SESSION →", session ? `session found (user: ${session.user.id})` : "no session");
       }
     });
 
@@ -54,10 +53,8 @@ export default function Entry() {
         } catch {
           // Profile fetch failed — go home, login guard will catch real auth issues
         }
-        console.log("[Auth] Session valid → navigating to /home");
         router.replace("/home");
       } else {
-        console.log("[Auth] No session → navigating to /login");
         router.replace("/login");
       }
     };
@@ -70,14 +67,10 @@ export default function Entry() {
           return;
         }
         // INITIAL_SESSION hasn't fired yet — fall back to getSession()
-        console.log("[Auth] INITIAL_SESSION not yet fired — falling back to getSession()");
         try {
-          const { data: { session }, error } = await supabase.auth.getSession();
-          if (error) console.warn("[Auth] getSession error:", error.message);
-          console.log("[Auth] getSession() →", session ? `session found (user: ${session.user.id})` : "no session");
+          const { data: { session } } = await supabase.auth.getSession();
           await navigate(session);
         } catch (e) {
-          console.error("[Auth] getSession failed:", e);
           const seen = await AsyncStorage.getItem(ONBOARDING_KEY);
           router.replace(!seen ? "/welcome" : "/login");
         }
