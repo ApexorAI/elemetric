@@ -24,6 +24,8 @@ import { sendLocalNotification } from "@/lib/notifications";
 import * as Haptics from "expo-haptics";
 import QRCode from "qrcode";
 
+const API_BASE = "https://elemetric-ai-production.up.railway.app";
+
 // Normalised result — what the rest of the screen uses
 type AIResult = {
   relevant?: boolean;
