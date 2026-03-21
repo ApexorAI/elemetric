@@ -7,6 +7,7 @@ import {
   ScrollView,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
 
 type MoreItem = {
@@ -72,6 +73,7 @@ const ITEMS: MoreItem[] = [
 
 export default function MoreScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [nearMissCount, setNearMissCount] = useState(0);
 
   useFocusEffect(
@@ -92,7 +94,7 @@ export default function MoreScreen() {
 
   return (
     <View style={s.screen}>
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: Math.max(52, insets.top + 12) }]}>
         <Text style={s.brand}>ELEMETRIC</Text>
         <Text style={s.title}>More</Text>
       </View>

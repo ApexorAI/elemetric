@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Modal } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Text as SvgText } from "react-native-svg";
 import { supabase } from "@/lib/supabase";
 import { SkeletonHomeCard } from "@/components/SkeletonLoader";
@@ -85,6 +86,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 export default function Home() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [firstName,       setFirstName]       = useState<string | null>(null);
   const [recentJobs,      setRecentJobs]      = useState<RecentJob[]>([]);
@@ -188,7 +190,7 @@ export default function Home() {
   return (
     <ScrollView
       style={s.screen}
-      contentContainerStyle={s.body}
+      contentContainerStyle={[s.body, { paddingTop: Math.max(52, insets.top + 12) }]}
       showsVerticalScrollIndicator={false}
     >
       {/* ── Wordmark ── */}

@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ── Tools tab — unlocked after first PDF report (Stage 2) ────────────────────
 
@@ -38,11 +39,12 @@ const TOOLS: Tool[] = [
 
 export default function ToolsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
     <ScrollView
       style={s.screen}
-      contentContainerStyle={s.body}
+      contentContainerStyle={[s.body, { paddingTop: Math.max(52, insets.top + 12) }]}
       showsVerticalScrollIndicator={false}
     >
       <Text style={s.wordmark}>ELEMETRIC</Text>

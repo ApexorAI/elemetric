@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { View } from "react-native";
 import { Stack, useRouter } from "expo-router";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { registerForPushNotifications } from "@/lib/notifications";
 import { ThemeProvider } from "@/lib/theme";
 import { supabase } from "@/lib/supabase";
@@ -174,19 +175,21 @@ export default function RootLayout() {
   }, [router]);
 
   return (
-    <ErrorBoundary>
-      <ThemeProvider>
-        <View style={{ flex: 1, backgroundColor: "#07152b" }}>
-          <OfflineBanner />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              animation: "fade",
-              contentStyle: { backgroundColor: "#07152b" },
-            }}
-          />
-        </View>
-      </ThemeProvider>
-    </ErrorBoundary>
+    <SafeAreaProvider>
+      <ErrorBoundary>
+        <ThemeProvider>
+          <View style={{ flex: 1, backgroundColor: "#07152b" }}>
+            <OfflineBanner />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                animation: "fade",
+                contentStyle: { backgroundColor: "#07152b" },
+              }}
+            />
+          </View>
+        </ThemeProvider>
+      </ErrorBoundary>
+    </SafeAreaProvider>
   );
 }
