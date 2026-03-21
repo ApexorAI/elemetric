@@ -344,26 +344,24 @@ ${tradies.length > 0 ? `
               <View style={styles.card}>
                 <Text style={styles.sectionTitle}>Compliance Trend</Text>
                 <Text style={styles.sectionSub}>Average confidence score per month</Text>
-                {passport.trend.map((t) => (
-                  <View key={t.month} style={styles.trendRow}>
-                    <Text style={styles.trendMonth}>{t.month}</Text>
-                    <View style={styles.trendBarWrap}>
-                      <View
-                        style={[
-                          styles.trendBar,
-                          {
-                            width: `${t.avgConfidence}%` as any,
-                            backgroundColor: complianceColor(t.avgConfidence),
-                          },
-                        ]}
-                      />
-                    </View>
-                    <Text style={[styles.trendScore, { color: complianceColor(t.avgConfidence) }]}>
-                      {t.avgConfidence}%
-                    </Text>
-                    <Text style={styles.trendJobCount}>{t.jobCount}j</Text>
-                  </View>
-                ))}
+                {/* Column chart */}
+                <View style={styles.trendChart}>
+                  {passport.trend.map((t, i) => {
+                    const maxScore = Math.max(...passport.trend.map(x => x.avgConfidence), 100);
+                    const barH = Math.max(6, (t.avgConfidence / maxScore) * 80);
+                    const col = complianceColor(t.avgConfidence);
+                    return (
+                      <View key={`${t.month}-${i}`} style={styles.trendCol}>
+                        <Text style={[styles.trendColScore, { color: col }]}>{t.avgConfidence}%</Text>
+                        <View style={styles.trendColTrack}>
+                          <View style={[styles.trendColBar, { height: barH, backgroundColor: col }]} />
+                        </View>
+                        <Text style={styles.trendColMonth} numberOfLines={1}>{t.month.slice(0, 3)}</Text>
+                        <Text style={styles.trendColJobs}>{t.jobCount}j</Text>
+                      </View>
+                    );
+                  })}
+                </View>
               </View>
             )}
 
@@ -604,7 +602,51 @@ const styles = StyleSheet.create({
   sectionTitle: { color: "white", fontWeight: "900", fontSize: 15 },
   sectionSub: { color: "rgba(255,255,255,0.55)", fontSize: 13, marginBottom: 8 },
 
-  // Trend bars
+  // Trend column chart
+  trendChart: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 6,
+    paddingTop: 12,
+    height: 130,
+  },
+  trendCol: {
+    flex: 1,
+    alignItems: "center",
+    gap: 4,
+    height: 130,
+    justifyContent: "flex-end",
+  },
+  trendColScore: {
+    fontSize: 9,
+    fontWeight: "800",
+    textAlign: "center",
+    height: 12,
+  },
+  trendColTrack: {
+    width: "100%",
+    height: 80,
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  trendColBar: {
+    width: "70%",
+    borderRadius: 3,
+    minHeight: 6,
+  },
+  trendColMonth: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 9,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  trendColJobs: {
+    color: "rgba(255,255,255,0.25)",
+    fontSize: 9,
+    textAlign: "center",
+  },
+
+  // Trend bars (legacy horizontal — kept for fallback)
   trendRow: {
     flexDirection: "row",
     alignItems: "center",
