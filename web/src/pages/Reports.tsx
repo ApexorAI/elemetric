@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { FileDown, FileText, User, MapPin, Shield, Loader, AlertCircle, Mail, Check, ChevronRight, Calendar, BarChart2, Award, BookOpen } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { useToast } from '../lib/toast'
@@ -483,10 +484,10 @@ export default function Reports() {
           <p className="font-semibold text-gray-800 text-sm">Scheduled Reports</p>
           <p className="text-xs text-gray-500 mt-0.5">Automatically email the monthly compliance report to your inbox on the 1st of each month. Configure in Settings.</p>
         </div>
-        <a href="/settings" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex-shrink-0">
+        <Link to="/settings" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex-shrink-0">
           <Award size={14} />
           Go to Settings
-        </a>
+        </Link>
       </div>
 
       <EmailModal
