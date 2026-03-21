@@ -271,6 +271,22 @@ export default function Timesheet() {
   const weeklyPay = rate > 0 ? (totalThisWeek / 3600000) * rate : null;
   const monthlyPay = rate > 0 ? (totalThisMonth / 3600000) * rate : null;
 
+  // 7-day bar chart data
+  const weekBarData = (() => {
+    const days: { label: string; hrs: number; iso: string }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const iso = d.toISOString().split("T")[0];
+      const label = d.toLocaleDateString("en-AU", { weekday: "short" });
+      const dayEntries = entries.filter((e) => e.date === iso && e.clockOut !== null);
+      const hrs = dayEntries.reduce((s, e) => s + entryWorkedMs(e) / 3600000, 0);
+      days.push({ label, hrs, iso });
+    }
+    return days;
+  })();
+  const maxHrs = Math.max(...weekBarData.map((d) => d.hrs), 1);
+
   return (
     <View style={styles.screen}>
       {/* Header */}
@@ -386,6 +402,37 @@ export default function Timesheet() {
             {monthlyPay !== null && (
               <Text style={styles.payEstimate}>${monthlyPay.toFixed(2)}</Text>
             )}
+          </View>
+        </View>
+
+        {/* 7-day bar chart */}
+        <View style={styles.chartCard}>
+          <Text style={styles.chartTitle}>7-DAY OVERVIEW</Text>
+          <View style={styles.chartBars}>
+            {weekBarData.map((d) => {
+              const today = new Date().toISOString().split("T")[0];
+              const isToday = d.iso === today;
+              const barH = d.hrs > 0 ? Math.max(6, (d.hrs / maxHrs) * 72) : 4;
+              return (
+                <View key={d.iso} style={styles.chartBarCol}>
+                  <Text style={styles.chartBarValue}>
+                    {d.hrs > 0 ? `${d.hrs.toFixed(1)}h` : ""}
+                  </Text>
+                  <View style={styles.chartBarTrack}>
+                    <View
+                      style={[
+                        styles.chartBarFill,
+                        { height: barH, backgroundColor: isToday ? "#f97316" : "#22c55e" },
+                        d.hrs === 0 && styles.chartBarEmpty,
+                      ]}
+                    />
+                  </View>
+                  <Text style={[styles.chartBarLabel, isToday && styles.chartBarLabelToday]}>
+                    {d.label}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
         </View>
 
@@ -641,4 +688,64 @@ const styles = StyleSheet.create({
 
   emptyState: { alignItems: "center", paddingVertical: 32 },
   emptyText: { color: "rgba(255,255,255,0.35)", fontSize: 14, textAlign: "center" },
+
+  // ── 7-day bar chart ───────────────────────────────────────────────────────
+  chartCard: {
+    backgroundColor: "#0f2035",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.07)",
+    padding: 16,
+  },
+  chartTitle: {
+    color: "rgba(255,255,255,0.30)",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+    marginBottom: 16,
+  },
+  chartBars: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 6,
+    height: 100,
+  },
+  chartBarCol: {
+    flex: 1,
+    alignItems: "center",
+    gap: 4,
+    height: 100,
+    justifyContent: "flex-end",
+  },
+  chartBarValue: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 9,
+    fontWeight: "700",
+    textAlign: "center",
+    height: 12,
+  },
+  chartBarTrack: {
+    width: "100%",
+    height: 72,
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  chartBarFill: {
+    width: "70%",
+    borderRadius: 3,
+    minHeight: 4,
+  },
+  chartBarEmpty: {
+    backgroundColor: "rgba(255,255,255,0.10)",
+    height: 4,
+  },
+  chartBarLabel: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 10,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  chartBarLabelToday: {
+    color: "#f97316",
+  },
 });
