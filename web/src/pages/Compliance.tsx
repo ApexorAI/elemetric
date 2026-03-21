@@ -242,8 +242,11 @@ export default function Compliance() {
   const tradeTyes = [...new Set(certs.map((c) => c.job_type).filter(Boolean))]
   const plumbers = [...new Set(certs.map((c) => c.plumber_name).filter(Boolean))]
 
+  const unreviewed = regulatoryAlerts.filter((a) => !reviewedAlertIds.has(a.id))
+  const reviewedList = regulatoryAlerts.filter((a) => reviewedAlertIds.has(a.id))
+
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-gray-900">Compliance</h1>
       </div>
@@ -308,103 +311,184 @@ export default function Compliance() {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6 mb-6">
-        {/* Risk Donut */}
+      {/* 3-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+        {/* Column 1 — Risk Overview */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h2 className="font-semibold text-gray-800 mb-4">Jobs by Risk Level</h2>
+          <h2 className="font-semibold text-gray-800 mb-4">Risk Overview</h2>
           {loading ? (
-            <div className="h-64 bg-gray-100 rounded-lg animate-pulse" />
+            <div className="h-48 bg-gray-100 rounded-lg animate-pulse" />
           ) : riskData.length === 0 ? (
-            <div className="h-64 flex items-center justify-center">
-              <div className="text-center">
-                <Shield size={32} className="mx-auto text-green-300 mb-2" />
-                <p className="text-gray-400 text-sm">No risk data available</p>
-              </div>
+            <div className="h-48 flex flex-col items-center justify-center gap-2">
+              <Shield size={28} className="text-green-300" />
+              <p className="text-gray-400 text-sm">No risk data yet</p>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={256}>
+            <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie
-                  data={riskData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={65}
-                  outerRadius={100}
-                  dataKey="value"
-                >
-                  {riskData.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
+                <Pie data={riskData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} dataKey="value">
+                  {riskData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                 </Pie>
                 <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                <Legend
-                  formatter={(value) => <span style={{ fontSize: 12, color: '#6b7280' }}>{value}</span>}
-                />
+                <Legend formatter={(value) => <span style={{ fontSize: 12, color: '#6b7280' }}>{value}</span>} />
               </PieChart>
             </ResponsiveContainer>
           )}
-        </div>
-
-        {/* Risk Alerts */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-800">Risk Alerts</h2>
-            {alerts.length > 0 && (
-              <span
-                className="text-xs px-2 py-0.5 rounded-full font-semibold text-white"
-                style={{ backgroundColor: '#dc2626' }}
-              >
-                {alerts.length}
-              </span>
-            )}
-          </div>
-          <div className="overflow-y-auto max-h-72 divide-y divide-gray-50">
-            {loading ? (
-              <div className="p-4 space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-14 bg-gray-100 rounded-lg animate-pulse" />
+          {/* Risk breakdown list */}
+          {!loading && (stats?.high_risk != null || stats?.medium_risk != null || stats?.low_risk != null) && (
+            <div className="mt-4 space-y-2">
+              {[
+                { label: 'High Risk', value: stats?.high_risk ?? 0, color: '#dc2626', bg: '#fef2f2' },
+                { label: 'Medium Risk', value: stats?.medium_risk ?? 0, color: '#d97706', bg: '#fffbeb' },
+                { label: 'Low Risk', value: stats?.low_risk ?? 0, color: '#16a34a', bg: '#f0fdf4' },
+              ].map(({ label, value, color, bg }) => (
+                <div key={label} className="flex items-center justify-between p-2.5 rounded-lg" style={{ backgroundColor: bg }}>
+                  <span className="text-sm font-medium" style={{ color }}>{label}</span>
+                  <span className="text-sm font-bold" style={{ color }}>{value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Risk Alerts */}
+          {alerts.length > 0 && (
+            <div className="mt-4 border-t border-gray-100 pt-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-gray-700">Risk Alerts</h3>
+                <span className="text-xs px-2 py-0.5 rounded-full font-semibold text-white" style={{ backgroundColor: '#dc2626' }}>{alerts.length}</span>
+              </div>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {alerts.slice(0, 5).map((alert) => (
+                  <div key={alert.id} className="flex items-start gap-2 p-2 bg-red-50 rounded-lg">
+                    <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" style={{ color: (alert.compliance_score ?? 100) < 50 ? '#dc2626' : '#d97706' }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-800 truncate">{alert.plumber_name ?? 'Unknown'} — {alert.job_type}</p>
+                      <p className="text-xs text-gray-500 truncate">{alert.suburb ?? alert.address}</p>
+                    </div>
+                    <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0" style={{ backgroundColor: '#fef2f2', color: '#dc2626' }}>{alert.compliance_score ?? '?'}%</span>
+                  </div>
                 ))}
               </div>
-            ) : alerts.length === 0 ? (
+            </div>
+          )}
+        </div>
+
+        {/* Column 2 — Regulatory Alerts */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-gray-800">Regulatory Alerts</h2>
+              {unreviewed.length > 0 && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-bold text-white" style={{ backgroundColor: '#FF6B00' }}>
+                  {unreviewed.length} new
+                </span>
+              )}
+            </div>
+            {regulatoryAlerts.length > 0 && (
+              <span className="text-xs text-gray-400">{reviewedList.length}/{regulatoryAlerts.length} reviewed</span>
+            )}
+          </div>
+          <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
+            {alertsLoading ? (
+              <div className="p-4 space-y-3">
+                {[1, 2].map((i) => <div key={i} className="h-20 bg-gray-100 rounded-lg animate-pulse" />)}
+              </div>
+            ) : unreviewed.length === 0 ? (
               <div className="p-8 text-center">
-                <Shield size={28} className="mx-auto text-green-300 mb-2" />
-                <p className="text-sm text-gray-500">No active risk alerts</p>
+                <Bell size={28} className="mx-auto text-green-300 mb-2" />
+                <p className="text-sm text-gray-500">No new regulatory alerts</p>
               </div>
             ) : (
-              alerts.map((alert) => (
-                <div key={alert.id} className="px-4 py-3">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle
-                      size={16}
-                      className="flex-shrink-0 mt-0.5"
-                      style={{
-                        color:
-                          (alert.compliance_score ?? 100) < 50
-                            ? '#dc2626'
-                            : '#d97706',
-                      }}
-                    />
+              unreviewed.map((alert) => (
+                <div key={alert.id} className="px-4 py-4">
+                  <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800">
-                        {alert.plumber_name ?? 'Unknown'} — {alert.job_type}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {alert.suburb ?? alert.address}
-                      </p>
-                      {alert.issues && alert.issues.length > 0 && (
-                        <p className="text-xs text-red-600 mt-1">
-                          {alert.issues.slice(0, 2).join(', ')}
-                        </p>
+                      <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                        {alert.alert_type && <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: '#fff7ed', color: '#FF6B00' }}>{alert.alert_type}</span>}
+                        {alert.standard_reference && <span className="text-xs px-2 py-0.5 rounded-full font-mono bg-gray-100 text-gray-600">{alert.standard_reference}</span>}
+                        {alert.severity && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: alert.severity === 'high' ? '#fef2f2' : alert.severity === 'medium' ? '#fffbeb' : '#f3f4f6', color: alert.severity === 'high' ? '#dc2626' : alert.severity === 'medium' ? '#d97706' : '#6b7280' }}>
+                            {alert.severity}
+                          </span>
+                        )}
+                      </div>
+                      {alert.description && <p className="text-sm text-gray-700">{alert.description}</p>}
+                      {alert.change_date && <p className="text-xs text-gray-400 mt-1">Changed: {new Date(alert.change_date).toLocaleDateString('en-AU')}</p>}
+                      {alert.affected_job_types && alert.affected_job_types.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-1">Affects: {alert.affected_job_types.join(', ')}</p>
                       )}
                     </div>
-                    <span
-                      className="text-xs px-2 py-0.5 rounded-full font-semibold flex-shrink-0"
-                      style={{
-                        backgroundColor: '#fef2f2',
-                        color: '#dc2626',
-                      }}
+                    <button
+                      onClick={() => handleMarkReviewed(alert.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex-shrink-0"
                     >
-                      {alert.compliance_score ?? '?'}%
+                      Mark Reviewed
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          {reviewedList.length > 0 && (
+            <div className="border-t border-gray-100">
+              <div className="px-4 py-2 flex items-center justify-between">
+                <h3 className="text-xs font-medium text-gray-500">History</h3>
+                <span className="text-xs text-gray-400">{reviewedList.length} reviewed</span>
+              </div>
+              <div className="max-h-32 overflow-y-auto divide-y divide-gray-50">
+                {reviewedList.map((alert) => (
+                  <div key={alert.id} className="px-4 py-2 opacity-60">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {alert.standard_reference && <span className="text-xs font-mono text-gray-400">{alert.standard_reference}</span>}
+                      <span className="text-xs text-gray-500 truncate">{alert.description}</span>
+                      <span className="ml-auto text-xs text-green-600">✓ Reviewed</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Column 3 — Near Miss Reports */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+            <div>
+              <h2 className="font-semibold text-gray-800">Near Miss Reports</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Jobs scoring 60–69%</p>
+            </div>
+            {nearMisses.length > 0 && (
+              <span className="text-xs px-2 py-0.5 rounded-full font-semibold text-white" style={{ backgroundColor: '#d97706' }}>{nearMisses.length}</span>
+            )}
+          </div>
+          <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
+            {nearMissLoading ? (
+              <div className="p-4 space-y-3">
+                {[1, 2, 3].map((i) => <div key={i} className="h-14 bg-gray-100 rounded-lg animate-pulse" />)}
+              </div>
+            ) : nearMisses.length === 0 ? (
+              <div className="p-8 text-center">
+                <Shield size={28} className="mx-auto text-green-300 mb-2" />
+                <p className="text-sm text-gray-500 font-medium">No near misses</p>
+                <p className="text-xs text-gray-400 mt-1">Your team is scoring comfortably above threshold</p>
+              </div>
+            ) : (
+              nearMisses.map((nm) => (
+                <div key={nm.id} className="px-4 py-3">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle size={16} className="flex-shrink-0 mt-0.5" style={{ color: '#d97706' }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800">{nm.job_type ?? 'Unknown job type'}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {nm.suburb ?? nm.address ?? '—'}
+                        {nm.created_at && ` · ${new Date(nm.created_at).toLocaleDateString('en-AU')}`}
+                      </p>
+                      {nm.missing && nm.missing.length > 0 && (
+                        <p className="text-xs text-amber-600 mt-1">Missing: {nm.missing.slice(0, 3).join(', ')}</p>
+                      )}
+                    </div>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-semibold flex-shrink-0" style={{ backgroundColor: '#fffbeb', color: '#d97706' }}>
+                      {nm.compliance_score}%
                     </span>
                   </div>
                 </div>
@@ -595,238 +679,6 @@ export default function Compliance() {
         </div>
       </div>
 
-      {/* Regulatory Alerts */}
-      {(() => {
-        const unreviewed = regulatoryAlerts.filter((a) => !reviewedAlertIds.has(a.id))
-        const reviewed = regulatoryAlerts.filter((a) => reviewedAlertIds.has(a.id))
-        return (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 mt-6">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <h2 className="font-semibold text-gray-800">Regulatory Alerts</h2>
-                {unreviewed.length > 0 && (
-                  <span className="text-xs px-2 py-0.5 rounded-full font-bold text-white" style={{ backgroundColor: '#FF6B00' }}>
-                    {unreviewed.length} new
-                  </span>
-                )}
-              </div>
-              {regulatoryAlerts.length > 0 && (
-                <span className="text-xs text-gray-400">{reviewed.length}/{regulatoryAlerts.length} reviewed</span>
-              )}
-            </div>
-            <div className="divide-y divide-gray-50">
-              {alertsLoading ? (
-                <div className="p-4 space-y-3">
-                  {[1, 2].map((i) => <div key={i} className="h-20 bg-gray-100 rounded-lg animate-pulse" />)}
-                </div>
-              ) : unreviewed.length === 0 && !alertsLoading ? (
-                <div className="p-8 text-center">
-                  <Bell size={28} className="mx-auto text-green-300 mb-2" />
-                  <p className="text-sm text-gray-500">No new regulatory alerts</p>
-                </div>
-              ) : (
-                unreviewed.map((alert) => (
-                  <div key={alert.id} className="px-5 py-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          {alert.alert_type && (
-                            <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: '#fff7ed', color: '#FF6B00' }}>
-                              {alert.alert_type}
-                            </span>
-                          )}
-                          {alert.standard_reference && (
-                            <span className="text-xs px-2 py-0.5 rounded-full font-mono bg-gray-100 text-gray-600">
-                              {alert.standard_reference}
-                            </span>
-                          )}
-                          {alert.severity && (
-                            <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                              style={{
-                                backgroundColor: alert.severity === 'high' ? '#fef2f2' : alert.severity === 'medium' ? '#fffbeb' : '#f3f4f6',
-                                color: alert.severity === 'high' ? '#dc2626' : alert.severity === 'medium' ? '#d97706' : '#6b7280',
-                              }}
-                            >{alert.severity}</span>
-                          )}
-                        </div>
-                        {alert.description && <p className="text-sm text-gray-700">{alert.description}</p>}
-                        {alert.change_date && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            Changed: {new Date(alert.change_date).toLocaleDateString()}
-                          </p>
-                        )}
-                        {alert.affected_job_types && alert.affected_job_types.length > 0 && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            Affects: {alert.affected_job_types.join(', ')}
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleMarkReviewed(alert.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex-shrink-0"
-                      >
-                        Mark Reviewed
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-            {reviewed.length > 0 && (
-              <div className="border-t border-gray-100">
-                <div className="px-5 py-3 flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-gray-500">Regulatory Update History</h3>
-                  <span className="text-xs text-gray-400">{reviewed.length} reviewed</span>
-                </div>
-                <div className="divide-y divide-gray-50">
-                  {reviewed.map((alert) => (
-                    <div key={alert.id} className="px-5 py-3 opacity-60">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {alert.alert_type && <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{alert.alert_type}</span>}
-                        {alert.standard_reference && <span className="text-xs font-mono text-gray-400">{alert.standard_reference}</span>}
-                        <span className="text-xs text-gray-500">{alert.description}</span>
-                        <span className="ml-auto text-xs text-green-600">✓ Reviewed</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )
-      })()}
-
-      {/* Near Miss Reports */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mt-6">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <div>
-            <h2 className="font-semibold text-gray-800">Near Miss Reports</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Jobs scoring 60–69% — just above the compliance threshold</p>
-          </div>
-          {nearMisses.length > 0 && (
-            <span
-              className="text-xs px-2 py-0.5 rounded-full font-semibold text-white"
-              style={{ backgroundColor: '#d97706' }}
-            >
-              {nearMisses.length}
-            </span>
-          )}
-        </div>
-        <div className="divide-y divide-gray-50">
-          {nearMissLoading ? (
-            <div className="p-4 space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-14 bg-gray-100 rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : nearMisses.length === 0 ? (
-            <div className="p-8 text-center">
-              <Shield size={28} className="mx-auto text-green-300 mb-2" />
-              <p className="text-sm text-gray-500">No near miss reports — your team is scoring comfortably above threshold</p>
-            </div>
-          ) : (
-            nearMisses.map((nm) => (
-              <div key={nm.id} className="px-4 py-3">
-                <div className="flex items-start gap-3">
-                  <AlertCircle size={16} className="flex-shrink-0 mt-0.5" style={{ color: '#d97706' }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800">
-                      {nm.job_type ?? 'Unknown job type'}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {nm.suburb ?? nm.address ?? '—'}
-                      {nm.created_at && ` · ${new Date(nm.created_at).toLocaleDateString()}`}
-                    </p>
-                    {nm.missing && nm.missing.length > 0 && (
-                      <p className="text-xs text-amber-600 mt-1">
-                        Missing: {nm.missing.slice(0, 3).join(', ')}
-                      </p>
-                    )}
-                  </div>
-                  <span
-                    className="text-xs px-2 py-0.5 rounded-full font-semibold flex-shrink-0"
-                    style={{ backgroundColor: '#fffbeb', color: '#d97706' }}
-                  >
-                    {nm.compliance_score}%
-                  </span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Regulatory Updates */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mt-6">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-800">Regulatory Updates</h2>
-          {regulatoryUpdates.length > 0 && (
-            <span
-              className="text-xs px-2 py-0.5 rounded-full font-semibold text-white"
-              style={{ backgroundColor: '#07152B' }}
-            >
-              {regulatoryUpdates.length}
-            </span>
-          )}
-        </div>
-        <div className="divide-y divide-gray-50">
-          {regulatoryLoading ? (
-            <div className="p-4 space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : regulatoryUpdates.length === 0 ? (
-            <div className="p-8 text-center">
-              <Bell size={28} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-sm text-gray-500">No regulatory updates at this time</p>
-            </div>
-          ) : (
-            regulatoryUpdates.map((update) => (
-              <div key={update.id} className="px-5 py-4">
-                <div className="flex items-start gap-3">
-                  <div
-                    className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
-                    style={{
-                      backgroundColor:
-                        update.severity === 'high'
-                          ? '#dc2626'
-                          : update.severity === 'medium'
-                          ? '#d97706'
-                          : '#6b7280',
-                    }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold text-gray-800">
-                        {update.title ?? 'Regulatory Update'}
-                      </p>
-                      {update.category && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                          {update.category}
-                        </span>
-                      )}
-                    </div>
-                    {update.description && (
-                      <p className="text-sm text-gray-600 mt-1">{update.description}</p>
-                    )}
-                    <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                      {update.effective_date && (
-                        <p className="text-xs text-gray-400">
-                          Effective: {new Date(update.effective_date).toLocaleDateString()}
-                        </p>
-                      )}
-                      {update.source && (
-                        <p className="text-xs text-gray-400">Source: {update.source}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
     </div>
   )
 }
