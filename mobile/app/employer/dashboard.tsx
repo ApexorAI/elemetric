@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -57,6 +58,7 @@ function periodStart(p: Period): Date {
 
 export default function EmployerDashboard() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
   const [teamName, setTeamName] = useState("");
@@ -324,7 +326,7 @@ ${members.length > 0 ? `<h3 style="font-size:16px;margin:0 0 10px;">Team Leaderb
   if (errorMsg) {
     return (
       <View style={styles.screen}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: Math.max(52, insets.top + 12) }]}>
           <Text style={styles.brand}>ELEMETRIC</Text>
           <Text style={styles.title}>Manage My Team</Text>
         </View>
