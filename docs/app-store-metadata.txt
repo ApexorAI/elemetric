@@ -1,0 +1,175 @@
+================================================================================
+ELEMETRIC — APP STORE SUBMISSION METADATA
+================================================================================
+Last updated: 2026-03-22
+Platform: iOS (App Store Connect)
+Bundle ID: com.elemetric.app
+--------------------------------------------------------------------------------
+
+APP NAME (30 chars max)
+-----------------------
+Elemetric: Compliance Docs
+
+
+SUBTITLE (30 chars max)
+-----------------------
+Built for Licensed Tradespeople
+
+
+CATEGORY
+--------
+Primary:   Business
+Secondary: Productivity
+
+
+KEYWORDS (100 chars max, comma-separated)
+-----------------------------------------
+plumber,compliance,AS/NZS,BPC,trades,checklist,pdf report,gas,electrical,plumbing,licence
+
+
+DESCRIPTION (4000 chars max)
+-----------------------------
+Elemetric is the compliance documentation app built for licensed Australian tradespeople — plumbers, gas fitters, electricians, HVAC technicians, and carpenters working under BPC Victoria and Australian Standards.
+
+Stop relying on paper checklists. Photograph your work on site, let our AI analyse it against AS/NZS 3500, AS/NZS 5601, and AS/NZS 3000 series standards, and generate a tamper-evident PDF compliance report in under 60 seconds.
+
+WHAT ELEMETRIC DOES:
+• Photo-first compliance workflow — photograph every stage of your work
+• AI review against AS/NZS 3500 series (plumbing), AS/NZS 5601.1:2022 (gas), AS/NZS 3000:2018 (electrical), AS/NZS 1684:2010 (carpentry)
+• Structured rule engine for AS/NZS 3500.4:2025 (heated water services) — depth of cover, bedding thickness, trench width, contamination zones, corrosion protection, freezing conditions, roof space clearance
+• Tamper-evident PDF compliance certificate with QR code verification
+• Share reports directly with clients, building surveyors, or the BPC via PDF, WhatsApp, or SMS
+• 7-year liability record — all documentation stored securely to Supabase cloud
+• Invoice generator — send professional invoices pre-filled with job details
+• Near miss reporting — log site hazards for WHS compliance
+• Property passport — searchable compliance history per address
+• Compliance chatbot — ask questions about BPC requirements, AS/NZS clauses, and licence obligations
+• Employer portal — manage subcontractors, verify licences, ABN, and insurance expiry
+• Client portal — share reports with property owners without requiring an account
+• Timesheet — log hours, calculate weekly pay, link to jobs
+• Training mode — practice compliance photo reviews with AI coaching
+• Full accessibility support — VoiceOver and dynamic type
+
+WHO IT'S FOR:
+Elemetric is built for licensed tradespeople in Victoria and nationally — particularly those working under BPC (Building and Plumbing Commission of Victoria) oversight. It's equally useful for plumbers, gas fitters, electricians, HVAC technicians, and carpenters who need to produce and store compliant job documentation.
+
+STANDARDS COVERED:
+• AS/NZS 3500.1:2025 — Plumbing and drainage: Water services
+• AS/NZS 3500.2:2025 — Plumbing and drainage: Sanitary plumbing and drainage
+• AS/NZS 3500.4:2025 — Plumbing and drainage: Heated water services
+• AS/NZS 5601.1:2022 — Gas installations
+• AS/NZS 3000:2018 — Wiring rules
+• AS 1684.2:2010 — Residential timber-framed construction
+• AS/NZS 5149.1:2016 — Refrigerating systems
+
+COMPLIANCE DISCLAIMER:
+Elemetric is a documentation aid. Final compliance responsibility rests solely with the licensed tradesperson. Reports reference AS/NZS standards as enforced under Australian building legislation.
+
+Elemetric — elemetric.com.au
+
+
+PROMOTIONAL TEXT (170 chars max — can be changed without new review)
+----------------------------------------------------------------------
+New: AS/NZS 3500.4:2025 structured rule engine. Depth of cover, bedding, trench width — checked before you photograph.
+
+
+WHAT'S NEW (this version — 4000 chars max)
+-------------------------------------------
+Version 2.0
+
+• AS/NZS 3500.4:2025 rule engine — 8 deterministic checks before you photograph: depth of cover (Cl. 4.10), bedding thickness (Cl. 4.7), trench width (Cl. 4.7), contamination zone (Cl. 4.8), corrosion protection (Cl. 4.9), freezing (Cl. 4.11), roof space clearance (Cl. 4.11), and external wall clearance (Cl. 4.11)
+• Enhanced PDF — compliance engine results table injected before AI analysis; BPC Victoria statement in every footer
+• Share with Client — plain English compliance summary via WhatsApp, SMS, or system share sheet
+• Chatbot improvements — persistent BPC regulatory banner and 8 suggested questions
+• Home screen — tap your compliance score ring to see a per-trade-type breakdown
+• Job history — sort button (newest/oldest), summary bar, relative dates, COMPLIANT/REVIEW/HIGH RISK badges
+• Settings — inline profile name editing with live Supabase save
+• Onboarding — BPC regulatory framing on all 4 steps
+• Demo mode — 6 App Store quality screenshot jobs loaded via hidden field
+
+
+SUPPORT URL
+-----------
+https://elemetric.com.au/support
+
+
+MARKETING URL
+-------------
+https://elemetric.com.au
+
+
+PRIVACY POLICY URL
+------------------
+https://elemetric.com.au/privacy
+
+
+VERSION
+-------
+2.0.0
+
+
+BUILD
+-----
+To be set at export time
+
+
+AGE RATING
+----------
+4+ (no objectionable content)
+
+
+PRICING
+-------
+Free with in-app purchase (subscription)
+• Free Trial: 14 days, all features
+• Pro Monthly: AUD $19.99/month
+• Pro Annual: AUD $149.99/year
+
+
+IN-APP PURCHASES
+----------------
+1. Elemetric Pro Monthly
+   Product ID: com.elemetric.app.pro_monthly
+   Price: AUD $19.99
+   Type: Auto-renewable subscription
+
+2. Elemetric Pro Annual
+   Product ID: com.elemetric.app.pro_annual
+   Price: AUD $149.99
+   Type: Auto-renewable subscription
+
+
+APP STORE SCREENSHOTS — RECOMMENDED SHOTS (6.7" iPhone)
+---------------------------------------------------------
+Use ELEMETRIC DEMO secret in Settings to load 6 sample jobs first.
+
+Screen 1: Home screen — compliance score ring (92%), "Rheem 315L Hot Water Service" in recent jobs
+Screen 2: AI Overview — Drainage Inspection (95%) with green COMPLIANT badge, detected items list
+Screen 3: Compliance Engine — AS/NZS 3500.4:2025 rule results, all PASS with green badges
+Screen 4: Job History — sort button, COMPLIANT/REVIEW badges, summary bar "6 jobs · Avg 88% · 4 compliant"
+Screen 5: Share with Client — compliance summary card with WhatsApp/SMS/Copy buttons
+Screen 6: Chatbot — BPC banner, 8 suggested question chips, sample answer about 7-year liability
+
+
+LOCALISATION
+------------
+English (Australia) — primary
+English (UK), English (US) — secondary (same content)
+
+
+APP REVIEW NOTES
+----------------
+• Demo mode: In the Settings screen, type "ELEMETRIC DEMO" in the small field at the bottom (below Sign Out) to load 6 sample jobs for review. No real account required if you use email: demo@elemetric.com.au / password: ElemetricDemo2026
+• The app uses the Expo/React Native framework
+• Push notifications require user permission — the prompt appears on first login
+• Camera permission is required for compliance photo capture
+• The AI backend is hosted on Railway (https://elemetric-ai-production.up.railway.app) — an internet connection is required for AI analysis and PDF generation
+
+
+CONTACT
+-------
+Developer: Elemetric Pty Ltd
+Email: cayde@elemetric.com.au
+Website: https://elemetric.com.au
+
+================================================================================
