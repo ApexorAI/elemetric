@@ -1,8 +1,26 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, type ElementType } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Briefcase, Users, TrendingUp, AlertTriangle, RefreshCw, Plus, UserPlus, FileDown, Building2, TrendingDown } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import OnboardingWizard, { ONBOARDING_KEY } from '../components/OnboardingWizard'
+
+// Animated counter hook — counts from 0 to target over ~800ms
+function useCounter(target: number, active: boolean): number {
+  const [value, setValue] = useState(0)
+  useEffect(() => {
+    if (!active || target === 0) { setValue(target); return }
+    let start: number | null = null
+    const duration = 800
+    const step = (ts: number) => {
+      if (!start) start = ts
+      const progress = Math.min((ts - start) / duration, 1)
+      setValue(Math.round(progress * target))
+      if (progress < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }, [target, active])
+  return value
+}
 
 interface DashboardData {
   team?: {
@@ -55,13 +73,54 @@ function ScoreBadge({ score }: { score: number }) {
   )
 }
 
+function AnimatedStatCard({
+  label, numValue, displayValue, suffix, icon: Icon, color, trend, countersActive, hasPrev,
+}: {
+  label: string
+  numValue: number
+  displayValue: string | null
+  suffix?: string
+  icon: ElementType
+  color: string
+  trend: { dir: 'up' | 'down' | 'flat'; pct: number }
+  countersActive: boolean
+  hasPrev: boolean
+}) {
+  const animated = useCounter(numValue, countersActive)
+  const shown = displayValue ?? `${animated}${suffix ?? ''}`
+  return (
+    <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm text-gray-500">{label}</p>
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${color}18` }}>
+          <Icon size={18} style={{ color }} />
+        </div>
+      </div>
+      <div className="flex items-end gap-2">
+        <p className="text-2xl font-bold text-gray-900">{shown}</p>
+        {trend.dir !== 'flat' && hasPrev && (
+          <span
+            className="flex items-center gap-0.5 text-xs font-medium mb-0.5"
+            style={{ color: trend.dir === 'up' ? '#16a34a' : '#dc2626' }}
+          >
+            {trend.dir === 'up' ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+            {trend.pct > 0 ? `${trend.pct}%` : (trend.dir === 'up' ? 'up' : 'down')}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const { session, profile } = useAuth()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState(new Date())
+  const [isFresh, setIsFresh] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [countersActive, setCountersActive] = useState(false)
   const prevData = useRef<DashboardData | null>(null)
   const navigate = useNavigate()
   const apiUrl = import.meta.env.VITE_API_URL
@@ -81,6 +140,11 @@ export default function Dashboard() {
       prevData.current = data
       setData(json)
       setLastRefresh(new Date())
+      setIsFresh(true)
+      setCountersActive(false)
+      // Re-enable counters on next tick so animation re-triggers
+      setTimeout(() => setCountersActive(true), 50)
+      setTimeout(() => setIsFresh(false), 60000)
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -104,11 +168,10 @@ export default function Dashboard() {
     }
   }, [loading, data])
 
-  function getTrend(curr?: number, prev?: number): 'up' | 'down' | 'flat' {
-    if (curr == null || prev == null) return 'flat'
-    if (curr > prev) return 'up'
-    if (curr < prev) return 'down'
-    return 'flat'
+  function getTrend(curr?: number, prev?: number): { dir: 'up' | 'down' | 'flat'; pct: number } {
+    if (curr == null || prev == null || prev === 0) return { dir: 'flat', pct: 0 }
+    const pct = Math.round(((curr - prev) / prev) * 100)
+    return { dir: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat', pct: Math.abs(pct) }
   }
 
   const prev = prevData.current?.team
@@ -117,30 +180,33 @@ export default function Dashboard() {
   const stats = [
     {
       label: 'Jobs This Week',
-      value: curr?.total_jobs_this_week ?? 0,
+      numValue: curr?.total_jobs_this_week ?? 0,
+      displayValue: null as string | null,
       icon: Briefcase,
       color: '#FF6B00',
       trend: getTrend(curr?.total_jobs_this_week, prev?.total_jobs_this_week),
     },
     {
       label: 'Avg Compliance Score',
-      value: curr?.avg_compliance_score != null
-        ? `${Math.round(curr.avg_compliance_score)}%`
-        : '—',
+      numValue: curr?.avg_compliance_score != null ? Math.round(curr.avg_compliance_score) : 0,
+      displayValue: curr?.avg_compliance_score != null ? null : '—',
       icon: TrendingUp,
       color: '#16a34a',
       trend: getTrend(curr?.avg_compliance_score, prev?.avg_compliance_score),
+      suffix: '%',
     },
     {
       label: 'Team Members',
-      value: curr?.team_members ?? 0,
+      numValue: curr?.team_members ?? 0,
+      displayValue: null as string | null,
       icon: Users,
       color: '#2563eb',
       trend: getTrend(curr?.team_members, prev?.team_members),
     },
     {
       label: 'Active Jobs',
-      value: curr?.active_jobs ?? 0,
+      numValue: curr?.active_jobs ?? 0,
+      displayValue: null as string | null,
       icon: AlertTriangle,
       color: '#d97706',
       trend: getTrend(curr?.active_jobs, prev?.active_jobs),
@@ -185,7 +251,10 @@ export default function Dashboard() {
               BPC Referenced Standards — AS/NZS 3500 Series
             </span>
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 flex items-center gap-1.5">
+            {isFresh && (
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+            )}
             Last updated {lastRefresh.toLocaleTimeString()}
           </p>
         </div>
@@ -214,35 +283,19 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {loading
           ? [1, 2, 3, 4].map((i) => <SkeletonCard key={i} />)
-          : stats.map(({ label, value, icon: Icon, color, trend }) => (
-              <div
+          : stats.map(({ label, numValue, displayValue, icon: Icon, color, trend, suffix }) => (
+              <AnimatedStatCard
                 key={label}
-                className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm text-gray-500">{label}</p>
-                  <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: `${color}18` }}
-                  >
-                    <Icon size={18} style={{ color }} />
-                  </div>
-                </div>
-                <div className="flex items-end gap-2">
-                  <p className="text-2xl font-bold text-gray-900">{value}</p>
-                  {trend !== 'flat' && prevData.current && (
-                    <span
-                      className="flex items-center gap-0.5 text-xs font-medium mb-0.5"
-                      style={{ color: trend === 'up' ? '#16a34a' : '#dc2626' }}
-                    >
-                      {trend === 'up'
-                        ? <TrendingUp size={13} />
-                        : <TrendingDown size={13} />}
-                      {trend === 'up' ? 'up' : 'down'}
-                    </span>
-                  )}
-                </div>
-              </div>
+                label={label}
+                numValue={numValue}
+                displayValue={displayValue}
+                suffix={suffix}
+                icon={Icon}
+                color={color}
+                trend={trend}
+                countersActive={countersActive}
+                hasPrev={!!prevData.current}
+              />
             ))}
       </div>
 
