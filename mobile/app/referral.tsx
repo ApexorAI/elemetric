@@ -13,6 +13,8 @@ import {
 import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
 
+const API_BASE = "https://elemetric-ai-production.up.railway.app";
+
 // expo-clipboard may not be installed — use Share as fallback
 let Clipboard: { setStringAsync: (text: string) => Promise<void> } | null = null;
 try {
@@ -27,6 +29,7 @@ export default function Referral() {
   const [totalReferrals, setTotalReferrals] = useState(0);
   const [pending, setPending] = useState(0);
   const [earned, setEarned] = useState(0);
+  const [activeReferrals, setActiveReferrals] = useState(0);
   const [copied, setCopied] = useState(false);
 
   // Timeout ref for cleanup on unmount — prevents state update on unmounted component
@@ -56,7 +59,22 @@ export default function Referral() {
       let code = profile?.referral_code ?? "";
 
       if (!code && generateIfMissing) {
-        code = Math.random().toString(36).substring(2, 10).toUpperCase();
+        // Try server-side generation for unique, validated code
+        try {
+          const res = await fetch(`${API_BASE}/referral/generate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: user.id, email: user.email }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            code = data.referral_code ?? data.code ?? "";
+          }
+        } catch {}
+        // Fallback: generate locally if server unavailable
+        if (!code) {
+          code = Math.random().toString(36).substring(2, 10).toUpperCase();
+        }
         await supabase.from("profiles").update({ referral_code: code }).eq("user_id", user.id);
       }
 
@@ -71,10 +89,10 @@ export default function Referral() {
         if (refs) {
           setTotalReferrals(refs.length);
           setPending(refs.filter((r: any) => r.status === "pending").length);
+          const paid = refs.filter((r: any) => r.status === "paid");
+          setActiveReferrals(paid.length);
           setEarned(
-            refs
-              .filter((r: any) => r.status === "paid")
-              .reduce((s: number, r: any) => s + (r.commission_amount ?? 0), 0)
+            paid.reduce((s: number, r: any) => s + (r.commission_amount ?? 0), 0)
           );
         }
       }
@@ -226,6 +244,23 @@ export default function Referral() {
           </View>
         </View>
 
+        {/* Monthly recurring earnings estimate */}
+        <View style={styles.earningsCard}>
+          <View style={styles.earningsRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.earningsLabel}>EST. MONTHLY RECURRING</Text>
+              <Text style={styles.earningsValue}>
+                ${(activeReferrals * 5.80).toFixed(2)}
+                <Text style={styles.earningsPer}>/mo</Text>
+              </Text>
+              <Text style={styles.earningsSub}>
+                Based on {activeReferrals} active referral{activeReferrals !== 1 ? "s" : ""} × $5.80 commission
+              </Text>
+            </View>
+            <Text style={styles.earningsIcon}>📈</Text>
+          </View>
+        </View>
+
         {/* Leaderboard coming soon */}
         <View style={styles.emptyCard}>
           <Text style={styles.emptyText}>Leaderboard coming soon</Text>
@@ -321,6 +356,27 @@ const styles = StyleSheet.create({
   statValue: { color: "white", fontSize: 28, fontWeight: "900" },
   statLabel: { color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: "700" },
   statDivider: { width: 1, height: 40, backgroundColor: "rgba(255,255,255,0.07)" },
+
+  earningsCard: {
+    backgroundColor: "rgba(34,197,94,0.06)",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(34,197,94,0.25)",
+    padding: 16,
+  },
+  earningsRow: { flexDirection: "row", alignItems: "center" },
+  earningsLabel: {
+    color: "rgba(34,197,94,0.8)",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  earningsValue: { color: "#22c55e", fontSize: 32, fontWeight: "900" },
+  earningsPer: { color: "rgba(34,197,94,0.7)", fontSize: 16, fontWeight: "700" },
+  earningsSub: { color: "rgba(255,255,255,0.45)", fontSize: 12, marginTop: 4 },
+  earningsIcon: { fontSize: 32 },
 
   emptyCard: {
     backgroundColor: "#0f2035",
