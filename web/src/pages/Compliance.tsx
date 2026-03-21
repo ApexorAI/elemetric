@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Shield, AlertTriangle, Search, Filter, X, Bell, RefreshCw, AlertCircle } from 'lucide-react'
+import { Shield, AlertTriangle, Search, Filter, X, Bell, RefreshCw, AlertCircle, ExternalLink, Download, Copy, Check } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
@@ -30,11 +30,14 @@ interface Certificate {
   job_id?: string
   plumber_name?: string
   job_type?: string
+  address?: string
   suburb?: string
   cert_number?: string
   issued_at?: string
   expiry_date?: string
   status?: string
+  compliance_score?: number
+  risk_rating?: string
 }
 
 interface RegulatoryUpdate {
@@ -83,6 +86,10 @@ export default function Compliance() {
   const [search, setSearch] = useState('')
   const [filterTrade, setFilterTrade] = useState('')
   const [filterPlumber, setFilterPlumber] = useState('')
+  const [filterDateFrom, setFilterDateFrom] = useState('')
+  const [filterDateTo, setFilterDateTo] = useState('')
+  const [filterMinScore, setFilterMinScore] = useState('')
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const [regulatoryUpdates, setRegulatoryUpdates] = useState<RegulatoryUpdate[]>([])
   const [regulatoryLoading, setRegulatoryLoading] = useState(false)
   const [regulatoryAlerts, setRegulatoryAlerts] = useState<RegulatoryAlert[]>([])
@@ -220,10 +227,16 @@ export default function Compliance() {
       c.plumber_name?.toLowerCase().includes(search.toLowerCase()) ||
       c.job_type?.toLowerCase().includes(search.toLowerCase()) ||
       c.suburb?.toLowerCase().includes(search.toLowerCase()) ||
-      c.cert_number?.toLowerCase().includes(search.toLowerCase())
+      c.address?.toLowerCase().includes(search.toLowerCase()) ||
+      c.cert_number?.toLowerCase().includes(search.toLowerCase()) ||
+      c.id?.toLowerCase().includes(search.toLowerCase())
     const matchTrade = !filterTrade || c.job_type === filterTrade
     const matchPlumber = !filterPlumber || c.plumber_name === filterPlumber
-    return matchSearch && matchTrade && matchPlumber
+    const issueDate = c.issued_at ? new Date(c.issued_at) : null
+    const matchDateFrom = !filterDateFrom || (issueDate != null && issueDate >= new Date(filterDateFrom))
+    const matchDateTo = !filterDateTo || (issueDate != null && issueDate <= new Date(filterDateTo + 'T23:59:59'))
+    const matchScore = !filterMinScore || (c.compliance_score != null && c.compliance_score >= Number(filterMinScore))
+    return matchSearch && matchTrade && matchPlumber && matchDateFrom && matchDateTo && matchScore
   })
 
   const tradeTyes = [...new Set(certs.map((c) => c.job_type).filter(Boolean))]
@@ -405,42 +418,42 @@ export default function Compliance() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="px-5 py-4 border-b border-gray-100">
           <h2 className="font-semibold text-gray-800 mb-3">Certificate Registry</h2>
-          <div className="flex flex-wrap gap-3 items-center">
+          <div className="flex flex-wrap gap-2 items-center">
             <div className="flex items-center gap-2 flex-1 min-w-40 border border-gray-200 rounded-lg px-3 py-2">
               <Search size={15} className="text-gray-400" />
               <input
                 type="text"
-                placeholder="Search certificates..."
+                placeholder="Search by address, job ID, cert number..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="flex-1 text-sm outline-none text-gray-700"
+                style={{ fontSize: '16px' }}
               />
             </div>
-            <select
-              value={filterTrade}
-              onChange={(e) => setFilterTrade(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 outline-none"
-            >
+            <select value={filterTrade} onChange={(e) => setFilterTrade(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 outline-none">
               <option value="">All Trade Types</option>
-              {tradeTyes.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
+              {tradeTyes.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
-            <select
-              value={filterPlumber}
-              onChange={(e) => setFilterPlumber(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 outline-none"
-            >
+            <select value={filterPlumber} onChange={(e) => setFilterPlumber(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 outline-none">
               <option value="">All Plumbers</option>
-              {plumbers.map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
+              {plumbers.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
-            {(search || filterTrade || filterPlumber) && (
-              <button
-                onClick={() => { setSearch(''); setFilterTrade(''); setFilterPlumber('') }}
-                className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
-              >
+            <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)}
+              title="Issued from" className="text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 outline-none" />
+            <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)}
+              title="Issued to" className="text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 outline-none" />
+            <select value={filterMinScore} onChange={(e) => setFilterMinScore(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 outline-none">
+              <option value="">Min Score</option>
+              <option value="90">90%+</option>
+              <option value="80">80%+</option>
+              <option value="70">70%+</option>
+            </select>
+            {(search || filterTrade || filterPlumber || filterDateFrom || filterDateTo || filterMinScore) && (
+              <button onClick={() => { setSearch(''); setFilterTrade(''); setFilterPlumber(''); setFilterDateFrom(''); setFilterDateTo(''); setFilterMinScore('') }}
+                className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
                 <X size={14} /> Clear
               </button>
             )}
@@ -452,13 +465,13 @@ export default function Compliance() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cert #</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Plumber</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Trade Type</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Suburb</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Issued</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Expires</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cert ID</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Job Type</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Address</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Score</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Risk</th>
+                <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -466,9 +479,7 @@ export default function Compliance() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
                     {Array.from({ length: 7 }).map((_, j) => (
-                      <td key={j} className="px-5 py-4">
-                        <div className="h-4 bg-gray-100 rounded" />
-                      </td>
+                      <td key={j} className="px-4 py-4"><div className="h-4 bg-gray-100 rounded" /></td>
                     ))}
                   </tr>
                 ))
@@ -482,26 +493,54 @@ export default function Compliance() {
               ) : (
                 filteredCerts.map((cert) => (
                   <tr key={cert.id} className="hover:bg-gray-50">
-                    <td className="px-5 py-3 font-mono text-xs text-gray-600">{cert.cert_number ?? '—'}</td>
-                    <td className="px-5 py-3 font-medium text-gray-800">{cert.plumber_name ?? '—'}</td>
-                    <td className="px-5 py-3 text-gray-600">{cert.job_type ?? '—'}</td>
-                    <td className="px-5 py-3 text-gray-600">{cert.suburb ?? '—'}</td>
-                    <td className="px-5 py-3 text-gray-600 text-xs">
+                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{cert.cert_number ?? cert.id.slice(0, 8)}</td>
+                    <td className="px-4 py-3 text-gray-700 text-xs">{cert.job_type ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 text-xs max-w-36 truncate">{cert.address ?? cert.suburb ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">
                       {cert.issued_at ? new Date(cert.issued_at).toLocaleDateString() : '—'}
                     </td>
-                    <td className="px-5 py-3 text-gray-600 text-xs">
-                      {cert.expiry_date ? new Date(cert.expiry_date).toLocaleDateString() : '—'}
+                    <td className="px-4 py-3">
+                      {cert.compliance_score != null ? (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                          style={{
+                            backgroundColor: cert.compliance_score >= 80 ? '#f0fdf4' : cert.compliance_score >= 60 ? '#fffbeb' : '#fef2f2',
+                            color: cert.compliance_score >= 80 ? '#16a34a' : cert.compliance_score >= 60 ? '#d97706' : '#dc2626',
+                          }}>{cert.compliance_score}%</span>
+                      ) : <span className="text-gray-400 text-xs">—</span>}
                     </td>
-                    <td className="px-5 py-3">
-                      <span
-                        className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{
-                          backgroundColor: cert.status === 'valid' ? '#f0fdf4' : '#fef2f2',
-                          color: cert.status === 'valid' ? '#16a34a' : '#dc2626',
-                        }}
-                      >
-                        {cert.status ?? 'unknown'}
-                      </span>
+                    <td className="px-4 py-3">
+                      {cert.risk_rating ? (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                          style={{
+                            backgroundColor: cert.risk_rating === 'high' ? '#fef2f2' : cert.risk_rating === 'medium' ? '#fffbeb' : '#f0fdf4',
+                            color: cert.risk_rating === 'high' ? '#dc2626' : cert.risk_rating === 'medium' ? '#d97706' : '#16a34a',
+                          }}>{cert.risk_rating}</span>
+                      ) : <span className="text-gray-400 text-xs">—</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1 justify-end">
+                        <a
+                          href={`${import.meta.env.VITE_API_URL}/verify-certificate?id=${cert.id}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors" title="Verify"
+                        ><ExternalLink size={13} /></a>
+                        <a
+                          href={`${import.meta.env.VITE_API_URL}/employer/report/${profile?.team_id}/certificate/${cert.id}?token=${session?.access_token}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors" title="Download PDF"
+                        ><Download size={13} /></a>
+                        <button
+                          onClick={async () => {
+                            const url = `${import.meta.env.VITE_API_URL}/verify-certificate?id=${cert.id}`
+                            await navigator.clipboard.writeText(url).catch(() => {})
+                            setCopiedId(cert.id)
+                            setTimeout(() => setCopiedId(null), 2000)
+                          }}
+                          className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors" title="Copy verification URL"
+                        >
+                          {copiedId === cert.id ? <Check size={13} style={{ color: '#16a34a' }} /> : <Copy size={13} />}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -525,21 +564,30 @@ export default function Compliance() {
           ) : (
             filteredCerts.map((cert) => (
               <div key={cert.id} className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-medium text-gray-800 text-sm">{cert.plumber_name}</p>
-                    <p className="text-xs text-gray-500">{cert.job_type} — {cert.suburb}</p>
-                    <p className="text-xs font-mono text-gray-400 mt-0.5">{cert.cert_number}</p>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-gray-800 text-sm">{cert.job_type ?? '—'}</p>
+                    <p className="text-xs text-gray-500 truncate">{cert.address ?? cert.suburb ?? '—'}</p>
+                    <p className="text-xs font-mono text-gray-400 mt-0.5">{cert.cert_number ?? cert.id.slice(0, 8)}</p>
+                    {cert.compliance_score != null && (
+                      <span className="inline-flex mt-1 text-xs px-2 py-0.5 rounded-full font-semibold"
+                        style={{
+                          backgroundColor: cert.compliance_score >= 80 ? '#f0fdf4' : cert.compliance_score >= 60 ? '#fffbeb' : '#fef2f2',
+                          color: cert.compliance_score >= 80 ? '#16a34a' : cert.compliance_score >= 60 ? '#d97706' : '#dc2626',
+                        }}>{cert.compliance_score}%</span>
+                    )}
                   </div>
-                  <span
-                    className="text-xs px-2 py-0.5 rounded-full font-medium"
-                    style={{
-                      backgroundColor: cert.status === 'valid' ? '#f0fdf4' : '#fef2f2',
-                      color: cert.status === 'valid' ? '#16a34a' : '#dc2626',
-                    }}
-                  >
-                    {cert.status ?? 'unknown'}
-                  </span>
+                  <div className="flex flex-col gap-1">
+                    <a href={`${import.meta.env.VITE_API_URL}/verify-certificate?id=${cert.id}`} target="_blank" rel="noopener noreferrer"
+                      className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"><ExternalLink size={13} /></a>
+                    <button onClick={async () => {
+                        const url = `${import.meta.env.VITE_API_URL}/verify-certificate?id=${cert.id}`
+                        await navigator.clipboard.writeText(url).catch(() => {})
+                        setCopiedId(cert.id); setTimeout(() => setCopiedId(null), 2000)
+                      }} className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">
+                      {copiedId === cert.id ? <Check size={13} style={{ color: '#16a34a' }} /> : <Copy size={13} />}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
