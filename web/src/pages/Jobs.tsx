@@ -1,7 +1,25 @@
 import { useEffect, useState, useCallback, useRef, memo } from 'react'
-import { Search, Filter, Download, Plus, X, ChevronLeft, ChevronRight, FileText, RefreshCw, CheckCircle } from 'lucide-react'
+import { Search, Filter, Download, Plus, X, ChevronLeft, ChevronRight, FileText, RefreshCw, CheckCircle, CheckCircle2, XCircle, AlertCircle, Lightbulb, Share2, MapPin, Calendar, Wrench, ZoomIn } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import PDFViewer from '../components/PDFViewer'
+import { supabase } from '../lib/supabase'
+
+interface JobDetail {
+  id: string
+  job_type?: string
+  address?: string
+  suburb?: string
+  compliance_score?: number
+  risk_level?: string
+  detected?: string[]
+  missing?: string[]
+  unclear?: string[]
+  recommended_actions?: string[]
+  photos?: string[]
+  created_at?: string
+  plumber_name?: string
+  status?: string
+}
 
 interface Job {
   id: string
@@ -135,6 +153,10 @@ export default function Jobs() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
+  const [jobDetail, setJobDetail] = useState<JobDetail | null>(null)
+  const [jobDetailLoading, setJobDetailLoading] = useState(false)
+  const [jobDetailTab, setJobDetailTab] = useState<'overview' | 'photos'>('overview')
+  const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null)
   const [pdfJobId, setPdfJobId] = useState<string | null>(null)
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [assignLoading, setAssignLoading] = useState(false)
@@ -196,6 +218,35 @@ export default function Jobs() {
       }
     } catch { /* silently fail */ }
   }, [session, profile?.team_id, apiUrl])
+
+  const handleSelectJob = async (job: Job) => {
+    setSelectedJob(job)
+    setJobDetailTab('overview')
+    setJobDetail(null)
+    setJobDetailLoading(true)
+    try {
+      const { data } = await supabase
+        .from('analyses')
+        .select('id, job_type, address, suburb, compliance_score, risk_level, detected, missing, unclear, recommended_actions, photos, created_at, status')
+        .eq('id', job.id)
+        .single()
+      if (data) setJobDetail(data as JobDetail)
+    } catch { /* silently fail — show basic info */ } finally {
+      setJobDetailLoading(false)
+    }
+  }
+
+  const handleShareSummary = async () => {
+    if (!selectedJob || !session) return
+    try {
+      await fetch(`${apiUrl}/compliance-summary`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ job_id: selectedJob.id }),
+      })
+      await navigator.clipboard.writeText(`${window.location.origin}/verify/${selectedJob.id}`)
+    } catch { /* silently fail */ }
+  }
 
   useEffect(() => { fetchJobs() }, [fetchJobs])
   useEffect(() => { fetchMembers() }, [fetchMembers])
@@ -456,7 +507,7 @@ export default function Jobs() {
                 filteredJobs.map((job) => (
                   <tr
                     key={job.id}
-                    onClick={() => setSelectedJob(job)}
+                    onClick={() => handleSelectJob(job)}
                     className="hover:bg-gray-50 cursor-pointer transition-colors"
                   >
                     <td className="px-5 py-3 text-gray-600 text-xs">
@@ -475,7 +526,7 @@ export default function Jobs() {
                     </td>
                     <td className="px-5 py-3">
                       <button
-                        onClick={(e) => { e.stopPropagation(); setSelectedJob(job) }}
+                        onClick={(e) => { e.stopPropagation(); handleSelectJob(job) }}
                         className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
                       >
                         View
@@ -504,7 +555,7 @@ export default function Jobs() {
             filteredJobs.map((job) => (
               <div
                 key={job.id}
-                onClick={() => setSelectedJob(job)}
+                onClick={() => handleSelectJob(job)}
                 className="p-4 hover:bg-gray-50 cursor-pointer"
               >
                 <div className="flex items-start justify-between gap-2">
@@ -553,64 +604,220 @@ export default function Jobs() {
       {selectedJob && (
         <div className="fixed inset-0 z-40 flex">
           <div className="flex-1 bg-black/30" onClick={() => setSelectedJob(null)} />
-          <div className="w-full max-w-md bg-white shadow-2xl flex flex-col overflow-hidden">
-            <div
-              className="flex items-center justify-between px-5 py-4 flex-shrink-0"
-              style={{ backgroundColor: '#07152B' }}
-            >
-              <span className="text-white font-semibold">Job Details</span>
-              <button
-                onClick={() => setSelectedJob(null)}
-                className="text-white/60 hover:text-white"
-              >
+          <div className="w-full max-w-lg bg-white shadow-2xl flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ backgroundColor: '#07152B' }}>
+              <div className="flex items-center gap-3 min-w-0">
+                <Wrench size={18} style={{ color: '#FF6B00' }} className="flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-white font-semibold truncate">{selectedJob.job_type ?? 'Job Details'}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <MapPin size={11} style={{ color: 'rgba(255,255,255,0.5)' }} />
+                    <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                      {selectedJob.address ?? selectedJob.suburb ?? '—'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setSelectedJob(null)} className="text-white/60 hover:text-white flex-shrink-0 ml-3">
                 <X size={20} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-5 space-y-4">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Plumber</p>
-                <p className="font-semibold text-gray-800">{selectedJob.plumber_name ?? '—'}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Job Type</p>
-                  <p className="text-gray-800">{selectedJob.job_type ?? '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Status</p>
+
+            {/* Score + Risk bar */}
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-6 flex-shrink-0">
+              {/* Score ring */}
+              {(() => {
+                const s = selectedJob.compliance_score ?? 0
+                const color = s >= 80 ? '#16a34a' : s >= 60 ? '#d97706' : '#dc2626'
+                const r = 28, circ = 2 * Math.PI * r, dash = (s / 100) * circ
+                return (
+                  <div className="relative inline-flex items-center justify-center flex-shrink-0">
+                    <svg width="72" height="72" className="-rotate-90">
+                      <circle cx="36" cy="36" r={r} fill="none" stroke="#e5e7eb" strokeWidth="6" />
+                      <circle cx="36" cy="36" r={r} fill="none" stroke={color} strokeWidth="6"
+                        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" />
+                    </svg>
+                    <span className="absolute text-sm font-bold" style={{ color }}>{s}%</span>
+                  </div>
+                )
+              })()}
+              <div className="flex-1 space-y-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
                   <StatusBadge status={selectedJob.status} />
+                  {(jobDetail?.risk_level ?? (selectedJob.compliance_score != null && selectedJob.compliance_score < 60 ? 'high' : selectedJob.compliance_score != null && selectedJob.compliance_score < 80 ? 'medium' : 'low')) && (
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                      style={{
+                        backgroundColor: (jobDetail?.risk_level ?? (selectedJob.compliance_score != null && selectedJob.compliance_score < 60 ? 'high' : 'low')) === 'high' ? '#fef2f2' : (jobDetail?.risk_level ?? 'low') === 'medium' ? '#fffbeb' : '#f0fdf4',
+                        color: (jobDetail?.risk_level ?? (selectedJob.compliance_score != null && selectedJob.compliance_score < 60 ? 'high' : 'low')) === 'high' ? '#dc2626' : (jobDetail?.risk_level ?? 'low') === 'medium' ? '#d97706' : '#16a34a',
+                      }}
+                    >
+                      {(jobDetail?.risk_level ?? (selectedJob.compliance_score != null && selectedJob.compliance_score < 60 ? 'High' : selectedJob.compliance_score != null && selectedJob.compliance_score < 80 ? 'Medium' : 'Low'))} Risk
+                    </span>
+                  )}
                 </div>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Address</p>
-                <p className="text-gray-800">{selectedJob.address ?? selectedJob.suburb ?? '—'}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Compliance Score</p>
-                  <ScoreBadge score={selectedJob.compliance_score} />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Date</p>
-                  <p className="text-sm text-gray-800">
-                    {selectedJob.created_at
-                      ? new Date(selectedJob.created_at).toLocaleDateString()
-                      : '—'}
-                  </p>
-                </div>
+                <p className="text-xs text-gray-500 flex items-center gap-1">
+                  <Calendar size={11} />
+                  {selectedJob.created_at ? new Date(selectedJob.created_at).toLocaleDateString() : '—'}
+                </p>
+                <p className="text-xs text-gray-500">{selectedJob.plumber_name ?? '—'}</p>
               </div>
             </div>
-            <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
+
+            {/* Tabs */}
+            <div className="flex border-b border-gray-100 flex-shrink-0">
+              {(['overview', 'photos'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setJobDetailTab(tab)}
+                  className="flex-1 py-2.5 text-sm font-medium capitalize transition-colors"
+                  style={jobDetailTab === tab ? { color: '#FF6B00', borderBottom: '2px solid #FF6B00' } : { color: '#6b7280' }}
+                >
+                  {tab === 'photos'
+                    ? `Photos${jobDetail?.photos?.length ? ` (${jobDetail.photos.length})` : ''}`
+                    : 'Overview'}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab content */}
+            <div className="flex-1 overflow-y-auto">
+              {jobDetailLoading ? (
+                <div className="p-5 space-y-3">
+                  {[1, 2, 3].map((i) => <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse" />)}
+                </div>
+              ) : jobDetailTab === 'overview' ? (
+                <div className="p-5 space-y-5">
+                  {/* Detected items */}
+                  {(jobDetail?.detected ?? []).length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                        <CheckCircle2 size={13} /> Detected Items
+                      </h4>
+                      <ul className="space-y-1.5">
+                        {(jobDetail?.detected ?? []).map((item, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                            <CheckCircle2 size={14} className="flex-shrink-0 mt-0.5" style={{ color: '#16a34a' }} />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {/* Missing items */}
+                  {(jobDetail?.missing ?? []).length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                        <XCircle size={13} /> Missing Items
+                      </h4>
+                      <ul className="space-y-1.5">
+                        {(jobDetail?.missing ?? []).map((item, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                            <XCircle size={14} className="flex-shrink-0 mt-0.5" style={{ color: '#dc2626' }} />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {/* Unclear items */}
+                  {(jobDetail?.unclear ?? []).length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                        <AlertCircle size={13} /> Unclear / Needs Review
+                      </h4>
+                      <ul className="space-y-1.5">
+                        {(jobDetail?.unclear ?? []).map((item, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                            <AlertCircle size={14} className="flex-shrink-0 mt-0.5" style={{ color: '#d97706' }} />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {/* Recommended actions */}
+                  {(jobDetail?.recommended_actions ?? []).length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                        <Lightbulb size={13} /> Recommended Actions
+                      </h4>
+                      <ul className="space-y-1.5">
+                        {(jobDetail?.recommended_actions ?? []).map((item, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-gray-700 p-2 bg-blue-50 rounded-lg">
+                            <Lightbulb size={14} className="flex-shrink-0 mt-0.5" style={{ color: '#2563eb' }} />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {!jobDetail && !jobDetailLoading && (
+                    <div className="text-center py-8 text-gray-400 text-sm">
+                      No AI analysis data available for this job.
+                    </div>
+                  )}
+                  {jobDetail && !jobDetail.detected?.length && !jobDetail.missing?.length && !jobDetail.unclear?.length && (
+                    <div className="text-center py-8 text-gray-400 text-sm">
+                      No analysis items recorded for this job.
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Photos tab */
+                <div className="p-4">
+                  {!jobDetail?.photos?.length ? (
+                    <div className="py-12 text-center text-gray-400 text-sm">No photos available for this job.</div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      {jobDetail.photos.map((url, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setExpandedPhoto(url)}
+                          className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 group"
+                        >
+                          <img src={url} alt={`Job photo ${i + 1}`} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                            <ZoomIn size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer actions */}
+            <div className="px-5 py-4 border-t border-gray-100 flex gap-2 flex-shrink-0">
               <button
                 onClick={() => setPdfJobId(selectedJob.id)}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
                 style={{ backgroundColor: '#FF6B00' }}
               >
                 <FileText size={15} />
-                View PDF Report
+                Download PDF
+              </button>
+              <button
+                onClick={handleShareSummary}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <Share2 size={15} />
+                Share
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Photo expand modal */}
+      {expandedPhoto && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setExpandedPhoto(null)}>
+          <img src={expandedPhoto} alt="Full photo" className="max-w-full max-h-full rounded-xl object-contain" />
+          <button className="absolute top-4 right-4 text-white/80 hover:text-white" onClick={() => setExpandedPhoto(null)}>
+            <X size={24} />
+          </button>
         </div>
       )}
 
