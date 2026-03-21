@@ -13,6 +13,7 @@ Modal,
 Share,
 Linking,
 } from "react-native";
+import { COMPLIANCE_ENGINE_KEY, type ComplianceReport as EngineReport } from "@/lib/compliance-rules";
 import Svg, { Circle } from "react-native-svg";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -109,10 +110,10 @@ const SIGNATURE_KEY = "elemetric_signature_svg";
 const INSTALLER_NAME_KEY = "elemetric_installer_name";
 
 const JOB_TYPE_META: Record<string, { label: string; standard: string }> = {
-  hotwater:    { label: "Hot Water System Compliance Report",   standard: "AS/NZS 3500" },
-  gas:         { label: "Gas Installation Compliance Report",   standard: "AS/NZS 5601" },
-  drainage:    { label: "Drainage Compliance Report",           standard: "AS/NZS 3500.2" },
-  newinstall:  { label: "New Installation Compliance Report",   standard: "AS/NZS 3500" },
+  hotwater:    { label: "Hot Water System Compliance Report",   standard: "AS/NZS 3500.1:2025" },
+  gas:         { label: "Gas Installation Compliance Report",   standard: "AS/NZS 5601.1:2022" },
+  drainage:    { label: "Drainage Compliance Report",           standard: "AS/NZS 3500.2:2025" },
+  newinstall:  { label: "New Installation Compliance Report",   standard: "AS/NZS 3500.4:2025" },
   woodheater:  { label: "Wood Heater Compliance Report",        standard: "AS/NZS 2918" },
   gasheater:   { label: "Gas Heater Installation Report",       standard: "AS/NZS 5601.1" },
   electrical:  { label: "Electrical Compliance Report",         standard: "AS/NZS 3000" },
@@ -715,6 +716,16 @@ const showShareWhenReady = () => {
   setGeneratingPdf(false);
 };
 
+// Load compliance engine results
+let engineReport: EngineReport | null = null;
+try {
+  const engineRaw = await AsyncStorage.getItem(COMPLIANCE_ENGINE_KEY);
+  if (engineRaw) {
+    const parsed = JSON.parse(engineRaw);
+    engineReport = parsed.report ?? null;
+  }
+} catch {}
+
 startLoadingSteps(showShareWhenReady);
 try {
 setGeneratingPdf(true);
@@ -925,6 +936,38 @@ ${qrHtml}
 
 <div style="padding: 22px;">
 
+${engineReport ? `
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-bottom:20px;page-break-inside:avoid;">
+  <div style="font-size:12px;font-weight:bold;color:#15803d;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;font-family:Helvetica,Arial,sans-serif;">
+    ✓ Structured Compliance Assessment — AS/NZS 3500.4:2025
+  </div>
+  <div style="display:flex;gap:24px;margin-bottom:12px;font-family:Helvetica,Arial,sans-serif;">
+    <span style="font-size:13px;font-weight:bold;color:${engineReport.overallStatus === 'COMPLIANT' ? '#16a34a' : engineReport.overallStatus === 'NON_COMPLIANT' ? '#dc2626' : '#d97706'};">
+      ${engineReport.overallStatus === 'COMPLIANT' ? '✓ COMPLIANT' : engineReport.overallStatus === 'NON_COMPLIANT' ? '✗ NON-COMPLIANT' : '— NOT ASSESSED'}
+    </span>
+    <span style="font-size:12px;color:#6b7280;">Pass: ${engineReport.passCount} · Fail: ${engineReport.failCount} · N/A: ${engineReport.naCount}</span>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-family:Helvetica,Arial,sans-serif;">
+    <thead>
+      <tr style="background:#f3f4f6;">
+        <th style="padding:6px 8px;text-align:left;font-size:10px;border:1px solid #e5e7eb;">Rule</th>
+        <th style="padding:6px 8px;text-align:center;font-size:10px;border:1px solid #e5e7eb;">Result</th>
+        <th style="padding:6px 8px;text-align:left;font-size:10px;border:1px solid #e5e7eb;">Clause</th>
+        <th style="padding:6px 8px;text-align:left;font-size:10px;border:1px solid #e5e7eb;">Required Fix</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${engineReport.results.map((r) =>
+        `<tr style="background:${r.status === 'PASS' ? '#f0fdf4' : r.status === 'FAIL' ? '#fef2f2' : '#fafafa'};">
+          <td style="padding:5px 8px;font-size:10px;border:1px solid #e5e7eb;font-weight:bold;">${r.name}</td>
+          <td style="padding:5px 8px;font-size:10px;border:1px solid #e5e7eb;text-align:center;font-weight:bold;color:${r.status === 'PASS' ? '#16a34a' : r.status === 'FAIL' ? '#dc2626' : '#9ca3af'};">${r.status === 'NOT_APPLICABLE' ? 'N/A' : r.status}</td>
+          <td style="padding:5px 8px;font-size:10px;border:1px solid #e5e7eb;">${r.standard} Cl. ${r.clause}</td>
+          <td style="padding:5px 8px;font-size:10px;border:1px solid #e5e7eb;color:#dc2626;">${r.requiredFix ?? '—'}</td>
+        </tr>`
+      ).join('')}
+    </tbody>
+  </table>
+</div>` : ''}
 <div style="background:#f8fafc;border-left:4px solid #f97316;padding:16px;margin-bottom:20px;border-radius:0 6px 6px 0;">
   <div style="font-family:Helvetica,Arial,sans-serif;font-size:11px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Executive Summary</div>
   <table style="width:100%;border-collapse:collapse;">
@@ -1132,6 +1175,7 @@ ${liabilitySummary ? `
   <div style="color:#f97316;font-weight:900;font-size:12px;margin-bottom:6px;letter-spacing:0.5px;">ELEMETRIC — 7-YEAR LIABILITY RECORD</div>
   <div>This compliance report forms part of the 7-year liability documentation record required under Australian building regulations. Retain this document for the full 7-year liability period.</div>
   <div style="margin-top:6px;color:rgba(255,255,255,0.40);">Generated by Elemetric · ${reportDate} · This report is a documentation aid only. Compliance responsibility rests solely with the licensed tradesperson named above. Elemetric Pty Ltd accepts no liability for the accuracy of work described herein.</div>
+  <div style="margin-top:6px;color:rgba(255,255,255,0.30);font-size:10px;">This report references AS/NZS 3500 series standards as enforced by the Building and Plumbing Commission of Victoria under the Plumbing Regulations 2018 (Vic).</div>
 </div>
 </div>
 </body>
@@ -1267,6 +1311,7 @@ body { margin:0; padding:0; font-family: Georgia, serif; color: #07152b; backgro
 
   <div class="footer">
     Generated by Elemetric. This certificate is a documentation aid only. Elemetric Pty Ltd accepts no liability for the accuracy of work described herein. Compliance responsibility rests solely with the licensed tradesperson.<br/>
+    This report references AS/NZS 3500 series standards as enforced by the Building and Plumbing Commission of Victoria under the Plumbing Regulations 2018 (Vic).<br/>
     Certificate No: ${certNumber} · AI Confidence: ${confidence}%
   </div>
 </div>
