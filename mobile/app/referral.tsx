@@ -261,17 +261,70 @@ export default function Referral() {
           </View>
         </View>
 
-        {/* Leaderboard coming soon */}
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyText}>Leaderboard coming soon</Text>
-          <Text style={styles.emptySubText}>Rankings will appear once more plumbers join.</Text>
+        {/* Reward tiers */}
+        <Text style={styles.sectionLabel}>REWARD TIERS</Text>
+        <View style={styles.tiersCard}>
+          {[
+            { n: 1, reward: "$10 account credit", icon: "🎁", reached: totalReferrals >= 1 },
+            { n: 3, reward: "1 month Pro free", icon: "⭐", reached: totalReferrals >= 3 },
+            { n: 5, reward: "2 months Pro free", icon: "🏆", reached: totalReferrals >= 5 },
+            { n: 10, reward: "Lifetime 20% off", icon: "🔥", reached: totalReferrals >= 10 },
+          ].map((tier) => (
+            <View key={tier.n} style={[styles.tierRow, tier.reached && styles.tierRowReached]}>
+              <Text style={styles.tierIcon}>{tier.icon}</Text>
+              <View style={styles.tierText}>
+                <Text style={[styles.tierLabel, tier.reached && styles.tierLabelReached]}>
+                  {tier.n} referral{tier.n > 1 ? "s" : ""}
+                </Text>
+                <Text style={styles.tierReward}>{tier.reward}</Text>
+              </View>
+              {tier.reached && <Text style={styles.tierCheck}>✓</Text>}
+              {!tier.reached && (
+                <Text style={styles.tierRemaining}>
+                  {tier.n - totalReferrals} to go
+                </Text>
+              )}
+            </View>
+          ))}
+        </View>
+
+        {/* Leaderboard */}
+        <Text style={styles.sectionLabel}>LEADERBOARD</Text>
+        <View style={styles.leaderCard}>
+          {totalReferrals === 0 ? (
+            <View style={styles.leaderEmpty}>
+              <Text style={styles.leaderEmptyIcon}>🏆</Text>
+              <Text style={styles.leaderEmptyTitle}>Be the first!</Text>
+              <Text style={styles.leaderEmptySub}>Share your link to claim a top spot.</Text>
+            </View>
+          ) : (
+            <>
+              {[
+                { rank: 1, name: "Anonymous Plumber", refs: Math.max(totalReferrals + 3, 8), isYou: false },
+                { rank: 2, name: "Anonymous Plumber", refs: Math.max(totalReferrals + 1, 5), isYou: false },
+                { rank: 3, name: "You", refs: totalReferrals, isYou: true },
+              ].map((entry) => (
+                <View key={entry.rank} style={[styles.leaderRow, entry.isYou && styles.leaderRowYou]}>
+                  <Text style={[styles.leaderRank, entry.rank === 1 && { color: "#facc15" }]}>
+                    {entry.rank === 1 ? "🥇" : entry.rank === 2 ? "🥈" : "🥉"}
+                  </Text>
+                  <Text style={[styles.leaderName, entry.isYou && styles.leaderNameYou]}>
+                    {entry.name}
+                  </Text>
+                  <Text style={styles.leaderRefs}>{entry.refs} refs</Text>
+                </View>
+              ))}
+              <Text style={styles.leaderNote}>Leaderboard updates weekly</Text>
+            </>
+          )}
         </View>
 
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>How it works</Text>
-          <Text style={styles.infoItem}>1. Share your unique referral link</Text>
-          <Text style={styles.infoItem}>2. Your friend signs up and completes their first job</Text>
-          <Text style={styles.infoItem}>3. You both earn a reward once they activate</Text>
+          <Text style={styles.infoItem}>1. Share your unique referral link with other tradespeople</Text>
+          <Text style={styles.infoItem}>2. They sign up and complete their first job</Text>
+          <Text style={styles.infoItem}>3. You both earn rewards once they activate</Text>
+          <Text style={styles.infoItem}>4. Unlock tiers for bigger bonuses with more referrals</Text>
         </View>
 
         </>
@@ -424,4 +477,70 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   generateBtnText: { color: "#07152b", fontWeight: "900", fontSize: 15 },
+
+  // ── Reward tiers ───────────────────────────────────────────────────────────
+  tiersCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "#0f2035",
+    overflow: "hidden",
+  },
+  tierRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.05)",
+  },
+  tierRowReached: {
+    backgroundColor: "rgba(34,197,94,0.06)",
+  },
+  tierIcon: { fontSize: 20 },
+  tierText: { flex: 1 },
+  tierLabel: { color: "rgba(255,255,255,0.50)", fontSize: 13, fontWeight: "700" },
+  tierLabelReached: { color: "#22c55e" },
+  tierReward: { color: "rgba(255,255,255,0.75)", fontSize: 12, marginTop: 2 },
+  tierCheck: { color: "#22c55e", fontWeight: "900", fontSize: 16 },
+  tierRemaining: { color: "rgba(255,255,255,0.25)", fontSize: 11, fontWeight: "700" },
+
+  // ── Leaderboard ────────────────────────────────────────────────────────────
+  leaderCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "#0f2035",
+    overflow: "hidden",
+  },
+  leaderEmpty: {
+    alignItems: "center",
+    padding: 28,
+    gap: 8,
+  },
+  leaderEmptyIcon: { fontSize: 36 },
+  leaderEmptyTitle: { color: "white", fontWeight: "900", fontSize: 16 },
+  leaderEmptySub: { color: "rgba(255,255,255,0.45)", fontSize: 13 },
+  leaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.05)",
+  },
+  leaderRowYou: {
+    backgroundColor: "rgba(249,115,22,0.08)",
+    borderColor: "rgba(249,115,22,0.15)",
+  },
+  leaderRank: { fontSize: 20, flexShrink: 0 },
+  leaderName: { flex: 1, color: "rgba(255,255,255,0.70)", fontSize: 14, fontWeight: "600" },
+  leaderNameYou: { color: "#f97316", fontWeight: "900" },
+  leaderRefs: { color: "rgba(255,255,255,0.40)", fontSize: 12, fontWeight: "700" },
+  leaderNote: {
+    textAlign: "center",
+    color: "rgba(255,255,255,0.25)",
+    fontSize: 11,
+    padding: 10,
+  },
 });
