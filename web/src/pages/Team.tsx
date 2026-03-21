@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, memo } from 'react'
-import { Users, UserPlus, X, ChevronRight, Mail, Briefcase, AlertCircle } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { Users, UserPlus, X, ChevronRight, Mail, Briefcase, AlertCircle, Send, Clock } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts'
 import { useAuth } from '../lib/auth'
 
 interface Member {
@@ -22,6 +22,25 @@ interface MemberJob {
   created_at?: string
   status?: string
 }
+
+// Tiny inline sparkline SVG from an array of 0-100 scores
+const Sparkline = memo(function Sparkline({ scores }: { scores: number[] }) {
+  if (scores.length < 2) return <div className="h-10 flex items-center justify-center text-xs text-gray-300">—</div>
+  const w = 100, h = 36
+  const min = 0, max = 100
+  const pts = scores.map((s, i) => {
+    const x = (i / (scores.length - 1)) * w
+    const y = h - ((s - min) / (max - min)) * h
+    return `${x},${y}`
+  }).join(' ')
+  const last = scores[scores.length - 1]
+  const color = last >= 80 ? '#16a34a' : last >= 60 ? '#d97706' : '#dc2626'
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} width="100%" height="36" preserveAspectRatio="none">
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+})
 
 const ScoreRing = memo(function ScoreRing({ score }: { score?: number }) {
   const s = score ?? 0
@@ -70,7 +89,38 @@ export default function Team() {
   const [inviteError, setInviteError] = useState<string | null>(null)
   const [inviteSuccess, setInviteSuccess] = useState(false)
   const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null)
+  const [memberSparklines, setMemberSparklines] = useState<Record<string, number[]>>({})
+  const [memberTopFailures, setMemberTopFailures] = useState<string[]>([])
+  const [memberJobTypePie, setMemberJobTypePie] = useState<{ name: string; value: number }[]>([])
   const apiUrl = import.meta.env.VITE_API_URL
+  const PIE_COLORS = ['#FF6B00', '#07152B', '#2563eb', '#16a34a', '#d97706']
+
+  // After members load, fetch last-4-job sparkline scores per member from Supabase
+  const fetchSparklines = useCallback(async (memberList: Member[]) => {
+    if (!memberList.length || !profile?.team_id) return
+    try {
+      const { supabase } = await import('../lib/supabase')
+      const ids = memberList.map((m) => m.id)
+      const { data } = await supabase
+        .from('analyses')
+        .select('plumber_id, compliance_score, created_at')
+        .in('plumber_id', ids)
+        .eq('team_id', profile.team_id)
+        .not('compliance_score', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(ids.length * 4)
+      if (!data) return
+      const map: Record<string, number[]> = {}
+      for (const row of data) {
+        if (!row.plumber_id) continue
+        if (!map[row.plumber_id]) map[row.plumber_id] = []
+        if (map[row.plumber_id].length < 4) map[row.plumber_id].push(row.compliance_score)
+      }
+      // Reverse so oldest→newest for chart
+      for (const key of Object.keys(map)) map[key] = map[key].reverse()
+      setMemberSparklines(map)
+    } catch { /* silently fail */ }
+  }, [profile?.team_id])
 
   const fetchMembers = useCallback(async () => {
     if (!session || !profile?.team_id) {
@@ -85,19 +135,23 @@ export default function Team() {
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = await res.json()
-      setMembers(Array.isArray(json) ? json : (json.members ?? []))
+      const list: Member[] = Array.isArray(json) ? json : (json.members ?? [])
+      setMembers(list)
+      fetchSparklines(list)
     } catch (err) {
       setError((err as Error).message)
     } finally {
       setLoading(false)
     }
-  }, [session, profile?.team_id, apiUrl])
+  }, [session, profile?.team_id, apiUrl, fetchSparklines])
 
   useEffect(() => { fetchMembers() }, [fetchMembers])
 
   const handleSelectMember = async (member: Member) => {
     setSelectedMember(member)
     setMemberJobs([])
+    setMemberTopFailures([])
+    setMemberJobTypePie([])
     setMemberJobsLoading(true)
     try {
       const res = await fetch(`${apiUrl}/employer/analytics/plumber/${member.id}`, {
@@ -105,7 +159,19 @@ export default function Team() {
       })
       if (res.ok) {
         const json = await res.json()
-        setMemberJobs(Array.isArray(json.jobs) ? json.jobs : [])
+        const jobs: MemberJob[] = Array.isArray(json.jobs) ? json.jobs : []
+        setMemberJobs(jobs)
+        // Top 3 most common failure items
+        const failMap: Record<string, number> = {}
+        for (const job of jobs) {
+          const missing = (job as unknown as { missing?: string[] }).missing ?? []
+          for (const f of missing) failMap[f] = (failMap[f] ?? 0) + 1
+        }
+        setMemberTopFailures(Object.entries(failMap).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k))
+        // Job type breakdown pie
+        const typeMap: Record<string, number> = {}
+        for (const job of jobs) if (job.job_type) typeMap[job.job_type] = (typeMap[job.job_type] ?? 0) + 1
+        setMemberJobTypePie(Object.entries(typeMap).map(([name, value]) => ({ name, value })))
       }
     } catch { /* silently fail */ }
     finally {
@@ -248,6 +314,14 @@ export default function Team() {
                 </div>
               </div>
 
+              {/* 4-week sparkline */}
+              {(memberSparklines[member.id]?.length ?? 0) >= 2 && (
+                <div className="mt-2">
+                  <p className="text-xs text-gray-400 mb-0.5">4-week trend</p>
+                  <Sparkline scores={memberSparklines[member.id]} />
+                </div>
+              )}
+
               {/* Status */}
               <div className="mt-3 flex items-center justify-between">
                 <span
@@ -324,8 +398,9 @@ export default function Team() {
                 </div>
               </div>
 
+              {/* 12-week score trend */}
               <div className="p-5 border-b border-gray-100">
-                <h4 className="font-semibold text-gray-700 text-sm mb-3">Score Trend</h4>
+                <h4 className="font-semibold text-gray-700 text-sm mb-3">12-Week Score Trend</h4>
                 {memberJobsLoading ? (
                   <div className="h-40 bg-gray-100 rounded-lg animate-pulse" />
                 ) : memberJobs.length < 2 ? (
@@ -333,39 +408,78 @@ export default function Team() {
                 ) : (
                   <ResponsiveContainer width="100%" height={160}>
                     <LineChart
-                      data={memberJobs.slice(-8).map((job, i) => ({
-                        job: i + 1,
-                        score: job.compliance_score ?? 0,
-                      }))}
+                      data={memberJobs.slice(-12).map((job, i) => ({ job: i + 1, score: job.compliance_score ?? 0 }))}
                       margin={{ top: 4, right: 8, left: -24, bottom: 0 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="job" tick={{ fontSize: 11 }} label={{ value: 'Job', position: 'insideBottom', offset: -2, fontSize: 11 }} />
+                      <XAxis dataKey="job" tick={{ fontSize: 11 }} />
                       <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                      <Tooltip
-                        formatter={(value) => [`${value}%`, 'Score']}
-                        contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="score"
-                        stroke="#FF6B00"
-                        strokeWidth={2}
-                        dot={{ r: 3, fill: '#FF6B00' }}
-                        activeDot={{ r: 5 }}
-                      />
+                      <Tooltip formatter={(v) => [`${v}%`, 'Score']} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                      <Line type="monotone" dataKey="score" stroke="#FF6B00" strokeWidth={2} dot={{ r: 3, fill: '#FF6B00' }} activeDot={{ r: 5 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
               </div>
 
+              {/* Job type breakdown pie */}
+              {memberJobTypePie.length > 0 && (
+                <div className="p-5 border-b border-gray-100">
+                  <h4 className="font-semibold text-gray-700 text-sm mb-3">Job Type Breakdown</h4>
+                  <ResponsiveContainer width="100%" height={160}>
+                    <PieChart>
+                      <Pie data={memberJobTypePie} cx="50%" cy="50%" outerRadius={60} dataKey="value"
+                        label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={false}>
+                        {memberJobTypePie.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* Top 3 failures */}
+              {memberTopFailures.length > 0 && (
+                <div className="p-5 border-b border-gray-100">
+                  <h4 className="font-semibold text-gray-700 text-sm mb-3">Top 3 Compliance Failures</h4>
+                  <ul className="space-y-1.5">
+                    {memberTopFailures.map((f, i) => (
+                      <li key={i} className="flex items-center gap-2 text-sm text-gray-700">
+                        <span className="w-5 h-5 rounded-full bg-red-50 text-red-600 flex items-center justify-center text-xs font-bold flex-shrink-0">{i + 1}</span>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Avg response time */}
+              {memberJobs.length > 0 && (() => {
+                const withTime = memberJobs.filter((j) => (j as unknown as { scheduled_at?: string }).scheduled_at && j.created_at)
+                const avg = withTime.length > 0
+                  ? Math.round(withTime.reduce((sum, j) => {
+                      const sched = new Date((j as unknown as { scheduled_at: string }).scheduled_at)
+                      const done = new Date(j.created_at!)
+                      return sum + Math.abs(done.getTime() - sched.getTime()) / 3600000
+                    }, 0) / withTime.length)
+                  : null
+                if (!avg) return null
+                return (
+                  <div className="p-5 border-b border-gray-100 flex items-center gap-3">
+                    <Clock size={16} style={{ color: '#6b7280' }} />
+                    <div>
+                      <p className="text-xs text-gray-500">Avg response time</p>
+                      <p className="text-sm font-semibold text-gray-800">{avg}h</p>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Last 10 jobs */}
               <div className="p-5">
-                <h4 className="font-semibold text-gray-700 text-sm mb-3">Job History</h4>
+                <h4 className="font-semibold text-gray-700 text-sm mb-3">Last 10 Jobs</h4>
                 {memberJobsLoading ? (
                   <div className="space-y-2">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />
-                    ))}
+                    {[1, 2, 3].map((i) => <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />)}
                   </div>
                 ) : memberJobs.length === 0 ? (
                   <div className="text-center py-6">
@@ -374,20 +488,17 @@ export default function Team() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {memberJobs.map((job) => (
+                    {memberJobs.slice(0, 10).map((job) => (
                       <div key={job.id} className="p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium text-gray-800">{job.job_type}</p>
                           {job.compliance_score != null && (
-                            <span
-                              className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                            <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
                               style={{
                                 backgroundColor: job.compliance_score >= 80 ? '#f0fdf4' : job.compliance_score >= 60 ? '#fffbeb' : '#fef2f2',
                                 color: job.compliance_score >= 80 ? '#16a34a' : job.compliance_score >= 60 ? '#d97706' : '#dc2626',
                               }}
-                            >
-                              {job.compliance_score}%
-                            </span>
+                            >{job.compliance_score}%</span>
                           )}
                         </div>
                         <p className="text-xs text-gray-500 mt-0.5">
@@ -398,6 +509,19 @@ export default function Team() {
                   </div>
                 )}
               </div>
+
+              {/* Send coaching note */}
+              {selectedMember.email && (
+                <div className="p-5 border-t border-gray-100">
+                  <a
+                    href={`mailto:${selectedMember.email}?subject=Compliance Coaching Note&body=Hi ${selectedMember.full_name ?? 'there'},%0A%0AI wanted to share some compliance feedback with you...`}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <Send size={14} />
+                    Send Coaching Note
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         </div>
