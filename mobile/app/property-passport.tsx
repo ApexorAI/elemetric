@@ -13,6 +13,7 @@ import {
   Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import QRCode from "qrcode";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -81,6 +82,7 @@ function complianceLabel(score: number | null): string {
 
 export default function PropertyPassportScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [passport, setPassport] = useState<PassportData | null>(null);
@@ -286,7 +288,7 @@ ${tradies.length > 0 ? `
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(52, insets.top + 12) }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back">
           <Text style={styles.backBtnText}>← Back</Text>
         </Pressable>
