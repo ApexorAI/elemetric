@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -34,6 +34,19 @@ export default function Layout({ children }: LayoutProps) {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [unreviewedAlerts, setUnreviewedAlerts] = useState(() => {
+    const v = localStorage.getItem('elemetric_unreviewed_alerts')
+    return v ? parseInt(v, 10) : 0
+  })
+
+  useEffect(() => {
+    const sync = () => {
+      const v = localStorage.getItem('elemetric_unreviewed_alerts')
+      setUnreviewedAlerts(v ? parseInt(v, 10) : 0)
+    }
+    window.addEventListener('storage', sync)
+    return () => window.removeEventListener('storage', sync)
+  }, [])
 
   const handleSignOut = async () => {
     await signOut()
@@ -77,7 +90,12 @@ export default function Layout({ children }: LayoutProps) {
             }
           >
             <Icon size={18} />
-            {label}
+            <span className="flex-1">{label}</span>
+            {to === '/compliance' && unreviewedAlerts > 0 && (
+              <span className="w-5 h-5 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                {unreviewedAlerts > 9 ? '9+' : unreviewedAlerts}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

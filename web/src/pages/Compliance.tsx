@@ -47,6 +47,17 @@ interface RegulatoryUpdate {
   source?: string
 }
 
+interface RegulatoryAlert {
+  id: string
+  alert_type?: string
+  standard_reference?: string
+  description?: string
+  change_date?: string
+  affected_job_types?: string[]
+  severity?: string
+  reviewed?: boolean
+}
+
 interface NearMiss {
   id: string
   job_type?: string
@@ -74,6 +85,12 @@ export default function Compliance() {
   const [filterPlumber, setFilterPlumber] = useState('')
   const [regulatoryUpdates, setRegulatoryUpdates] = useState<RegulatoryUpdate[]>([])
   const [regulatoryLoading, setRegulatoryLoading] = useState(false)
+  const [regulatoryAlerts, setRegulatoryAlerts] = useState<RegulatoryAlert[]>([])
+  const [alertsLoading, setAlertsLoading] = useState(false)
+  const [reviewedAlertIds, setReviewedAlertIds] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('elemetric_reviewed_alerts') ?? '[]')) }
+    catch { return new Set() }
+  })
   const [nearMisses, setNearMisses] = useState<NearMiss[]>([])
   const [nearMissLoading, setNearMissLoading] = useState(false)
   const apiUrl = import.meta.env.VITE_API_URL
@@ -124,6 +141,42 @@ export default function Compliance() {
     }
   }, [session, profile?.team_id, apiUrl])
 
+  const fetchRegulatoryAlerts = useCallback(async () => {
+    if (!session || !profile?.team_id) return
+    setAlertsLoading(true)
+    try {
+      const res = await fetch(
+        `${apiUrl}/regulatory-alerts?team_id=${profile.team_id}`,
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
+      )
+      if (res.ok) {
+        const json = await res.json()
+        const alerts: RegulatoryAlert[] = Array.isArray(json) ? json : (json.alerts ?? json.data ?? [])
+        setRegulatoryAlerts(alerts)
+        // Write unreviewed count to localStorage for nav badge
+        const reviewed = new Set(JSON.parse(localStorage.getItem('elemetric_reviewed_alerts') ?? '[]'))
+        const unreviewedCount = alerts.filter((a) => !reviewed.has(a.id)).length
+        localStorage.setItem('elemetric_unreviewed_alerts', String(unreviewedCount))
+        window.dispatchEvent(new Event('storage'))
+      }
+    } catch { /* silently fail */ }
+    finally { setAlertsLoading(false) }
+  }, [session, profile?.team_id, apiUrl])
+
+  const handleMarkReviewed = async (alertId: string) => {
+    const next = new Set(reviewedAlertIds)
+    next.add(alertId)
+    setReviewedAlertIds(next)
+    localStorage.setItem('elemetric_reviewed_alerts', JSON.stringify([...next]))
+    const unreviewedCount = regulatoryAlerts.filter((a) => !next.has(a.id)).length
+    localStorage.setItem('elemetric_unreviewed_alerts', String(unreviewedCount))
+    window.dispatchEvent(new Event('storage'))
+    // Save to Supabase
+    try {
+      await supabase.from('regulatory_alert_reviews' as never).upsert({ alert_id: alertId, team_id: profile!.team_id, reviewed_at: new Date().toISOString() } as never)
+    } catch { /* silently fail */ }
+  }
+
   // Fetch near miss reports directly from Supabase: jobs with score 60–70 (near the fail threshold)
   const fetchNearMisses = useCallback(async () => {
     if (!profile?.team_id) return
@@ -148,6 +201,7 @@ export default function Compliance() {
 
   useEffect(() => { fetchCompliance() }, [fetchCompliance])
   useEffect(() => { fetchRegulatoryUpdates() }, [fetchRegulatoryUpdates])
+  useEffect(() => { fetchRegulatoryAlerts() }, [fetchRegulatoryAlerts])
   useEffect(() => { fetchNearMisses() }, [fetchNearMisses])
 
   const stats = data?.stats
@@ -492,6 +546,107 @@ export default function Compliance() {
           )}
         </div>
       </div>
+
+      {/* Regulatory Alerts */}
+      {(() => {
+        const unreviewed = regulatoryAlerts.filter((a) => !reviewedAlertIds.has(a.id))
+        const reviewed = regulatoryAlerts.filter((a) => reviewedAlertIds.has(a.id))
+        return (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 mt-6">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <h2 className="font-semibold text-gray-800">Regulatory Alerts</h2>
+                {unreviewed.length > 0 && (
+                  <span className="text-xs px-2 py-0.5 rounded-full font-bold text-white" style={{ backgroundColor: '#FF6B00' }}>
+                    {unreviewed.length} new
+                  </span>
+                )}
+              </div>
+              {regulatoryAlerts.length > 0 && (
+                <span className="text-xs text-gray-400">{reviewed.length}/{regulatoryAlerts.length} reviewed</span>
+              )}
+            </div>
+            <div className="divide-y divide-gray-50">
+              {alertsLoading ? (
+                <div className="p-4 space-y-3">
+                  {[1, 2].map((i) => <div key={i} className="h-20 bg-gray-100 rounded-lg animate-pulse" />)}
+                </div>
+              ) : unreviewed.length === 0 && !alertsLoading ? (
+                <div className="p-8 text-center">
+                  <Bell size={28} className="mx-auto text-green-300 mb-2" />
+                  <p className="text-sm text-gray-500">No new regulatory alerts</p>
+                </div>
+              ) : (
+                unreviewed.map((alert) => (
+                  <div key={alert.id} className="px-5 py-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          {alert.alert_type && (
+                            <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: '#fff7ed', color: '#FF6B00' }}>
+                              {alert.alert_type}
+                            </span>
+                          )}
+                          {alert.standard_reference && (
+                            <span className="text-xs px-2 py-0.5 rounded-full font-mono bg-gray-100 text-gray-600">
+                              {alert.standard_reference}
+                            </span>
+                          )}
+                          {alert.severity && (
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                              style={{
+                                backgroundColor: alert.severity === 'high' ? '#fef2f2' : alert.severity === 'medium' ? '#fffbeb' : '#f3f4f6',
+                                color: alert.severity === 'high' ? '#dc2626' : alert.severity === 'medium' ? '#d97706' : '#6b7280',
+                              }}
+                            >{alert.severity}</span>
+                          )}
+                        </div>
+                        {alert.description && <p className="text-sm text-gray-700">{alert.description}</p>}
+                        {alert.change_date && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Changed: {new Date(alert.change_date).toLocaleDateString()}
+                          </p>
+                        )}
+                        {alert.affected_job_types && alert.affected_job_types.length > 0 && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Affects: {alert.affected_job_types.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleMarkReviewed(alert.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex-shrink-0"
+                      >
+                        Mark Reviewed
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {reviewed.length > 0 && (
+              <div className="border-t border-gray-100">
+                <div className="px-5 py-3 flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-gray-500">Regulatory Update History</h3>
+                  <span className="text-xs text-gray-400">{reviewed.length} reviewed</span>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {reviewed.map((alert) => (
+                    <div key={alert.id} className="px-5 py-3 opacity-60">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {alert.alert_type && <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{alert.alert_type}</span>}
+                        {alert.standard_reference && <span className="text-xs font-mono text-gray-400">{alert.standard_reference}</span>}
+                        <span className="text-xs text-gray-500">{alert.description}</span>
+                        <span className="ml-auto text-xs text-green-600">✓ Reviewed</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Near Miss Reports */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 mt-6">
