@@ -18,10 +18,14 @@ const API_BASE = "https://elemetric-ai-production.up.railway.app";
 const CHAT_KEY = "elemetric_chat_history";
 
 const SUGGESTED_QUESTIONS = [
-  "What is the 7-year liability?",
+  "What is the 7-year liability period?",
   "What photos do I need for a gas job?",
   "How do I share my report with a client?",
   "What does my confidence score mean?",
+  "What are the BPC licence requirements in Victoria?",
+  "Minimum depth of cover for hot water pipes?",
+  "What is AS/NZS 3500.4:2025?",
+  "How do I dispute a compliance notice?",
 ];
 
 type Message = {
@@ -236,6 +240,13 @@ export default function Chatbot() {
         </Pressable>
       </View>
 
+      {/* BPC regulatory banner */}
+      <View style={styles.bpcBanner}>
+        <Text style={styles.bpcBannerText}>
+          BPC Victoria — AS/NZS 3500 series · Plumbing Regulations 2018 (Vic)
+        </Text>
+      </View>
+
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -361,6 +372,22 @@ const styles = StyleSheet.create({
   },
   clearIcon: {
     fontSize: 18,
+  },
+
+  bpcBanner: {
+    backgroundColor: "rgba(249,115,22,0.10)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(249,115,22,0.20)",
+    paddingVertical: 7,
+    paddingHorizontal: 16,
+    alignItems: "center",
+  },
+  bpcBannerText: {
+    color: "#f97316",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    textAlign: "center",
   },
 
   listContent: {
